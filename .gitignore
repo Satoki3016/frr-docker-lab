@@ -1,0 +1,18 @@
+# SONiC firmware binary (1.5GB)
+Edgecore/*.bin
+Edgecore/SONiC\ Installation\ &\ Upgrade\ image
+
+# 計測結果ログ・生成ファイル (再生成可能)
+results/*/Tx*_ping.log
+results/*/Rx*_server.json
+results/*/rsvp_monitor.log
+results/*/throughput.csv
+results/*/packet_loss.csv
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# macOS
+.DS_Store
