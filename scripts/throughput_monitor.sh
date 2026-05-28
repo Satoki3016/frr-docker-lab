@@ -9,9 +9,15 @@
 RESULTS_DIR="$1"
 INTERVAL=1
 
+<<<<<<< HEAD
 # LER_Egress namespace から3インターフェース統計を一括取得
 get_all_bytes() {
     ip netns exec LER_Egress_ns bash -c "
+=======
+# LER_Egress 1コンテナから3インターフェース統計を一括取得 (高速)
+get_all_bytes() {
+    docker exec LER_Egress bash -c "
+>>>>>>> a871d29236fc25033b139708afa500660335c698
         cat /sys/class/net/lere-rx1/statistics/tx_bytes
         cat /sys/class/net/lere-rx2/statistics/tx_bytes
         cat /sys/class/net/lere-rx3/statistics/tx_bytes

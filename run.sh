@@ -12,10 +12,17 @@ echo "================================================"
 # ----------------------------------------------------------------
 # 1. コンテナセットアップ（既存ならスキップ）
 # ----------------------------------------------------------------
+<<<<<<< HEAD
 if ip netns list 2>/dev/null | awk '{print $1}' | grep -qxF "LER_Ingress"; then
     echo "[skip] namespace は既に起動中"
 else
     echo "[1/4] namespace 起動..."
+=======
+if docker ps --format '{{.Names}}' | grep -q "^LER_Ingress$"; then
+    echo "[skip] コンテナは既に起動中"
+else
+    echo "[1/4] コンテナ起動..."
+>>>>>>> a871d29236fc25033b139708afa500660335c698
     bash "$SCRIPT_DIR/scripts/10_up.sh"
     echo "[2/4] 配線・ルート設定..."
     bash "$SCRIPT_DIR/scripts/20_wire.sh"

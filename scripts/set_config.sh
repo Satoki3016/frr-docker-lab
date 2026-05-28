@@ -139,6 +139,7 @@ show_config
 # ----------------------------------------------------------------
 if [ "$DO_APPLY" -eq 1 ]; then
     echo ""
+<<<<<<< HEAD
     if ip netns list 2>/dev/null | awk '{print $1}' | grep -qxF "LER_Ingress_ns"; then
         echo "=== TC 設定を即時適用中 (virttrx_tc.sh) ==="
         bash "$SCRIPT_DIR/virttrx_tc.sh"
@@ -149,5 +150,13 @@ if [ "$DO_APPLY" -eq 1 ]; then
         echo "適用完了"
     else
         echo "[WARN] namespace が起動していません。次回セットアップ時に反映されます。"
+=======
+    if docker inspect LER_Ingress --format '{{.State.Running}}' 2>/dev/null | grep -q true; then
+        echo "=== TC 設定を即時適用中 ==="
+        bash "$SCRIPT_DIR/30_tc.sh"
+        echo "適用完了"
+    else
+        echo "[WARN] コンテナが起動していません。次回 30_tc.sh 実行時に反映されます。"
+>>>>>>> a871d29236fc25033b139708afa500660335c698
     fi
 fi

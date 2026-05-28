@@ -20,7 +20,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/lab_config.sh"
 
 CR_DEV=(leri-cr1 leri-cr2 leri-cr3)
+<<<<<<< HEAD
 CR_NH_IP=(10.0.1.2 10.0.3.2 10.0.5.2)
+=======
+CR_NH_IP=(10.1.3.2 10.1.4.2 10.1.5.2)
+>>>>>>> a871d29236fc25033b139708afa500660335c698
 CR_LABEL_AF41=(100 110 120)
 CR_LABEL_AF42=(200 200 210)
 CR_LABEL_AF43=(300 310 300)
@@ -53,7 +57,11 @@ log() {
 }
 
 get_link_state() {
+<<<<<<< HEAD
     ip netns exec LER_Ingress_ns cat /sys/class/net/${CR_DEV[$1]}/operstate 2>/dev/null || echo "unknown"
+=======
+    docker exec LER_Ingress cat /sys/class/net/${CR_DEV[$1]}/operstate 2>/dev/null || echo "unknown"
+>>>>>>> a871d29236fc25033b139708afa500660335c698
 }
 
 # ----------------------------------------------------------------
@@ -76,11 +84,19 @@ rebuild_ecmp() {
     fi
 
     # shellcheck disable=SC2086
+<<<<<<< HEAD
     ip netns exec LER_Ingress_ns ip route replace table 41 10.20.1.1/32 $nh41
     # shellcheck disable=SC2086
     ip netns exec LER_Ingress_ns ip route replace table 42 10.20.2.1/32 $nh42
     # shellcheck disable=SC2086
     ip netns exec LER_Ingress_ns ip route replace table 43 10.20.3.1/32 $nh43
+=======
+    docker exec LER_Ingress ip route replace table 41 10.2.1.2/32 $nh41
+    # shellcheck disable=SC2086
+    docker exec LER_Ingress ip route replace table 42 10.2.2.2/32 $nh42
+    # shellcheck disable=SC2086
+    docker exec LER_Ingress ip route replace table 43 10.2.3.2/32 $nh43
+>>>>>>> a871d29236fc25033b139708afa500660335c698
 
     local up=""
     for j in 0 1 2; do [ "${state[$j]}" -eq 0 ] && up="$up CR$((j+1))"; done
@@ -105,11 +121,19 @@ rebuild_ingress_police() {
     # burst = rate[kbps] × 1000 / 8 / 100 (10ms, 最小16KB)
     _pb() { local b=$(( $1 * 1000 / 8 / 100 )); echo $(( b < 16384 ? 16384 : b )); }
 
+<<<<<<< HEAD
     for dev_class in "enp23s0f1np1 $hi" "enp179s0f1np1 $me" "enp5s0f1 $lo"; do
         local dev rate_kbps
         dev=${dev_class% *}; rate_kbps=${dev_class#* }
         ip netns exec LER_Ingress_ns tc filter del dev "$dev" parent ffff: 2>/dev/null || true
         ip netns exec LER_Ingress_ns tc filter add dev "$dev" parent ffff: protocol all \
+=======
+    for dev_class in "leri-tx1 $hi" "leri-tx2 $me" "leri-tx3 $lo"; do
+        local dev rate_kbps
+        dev=${dev_class% *}; rate_kbps=${dev_class#* }
+        docker exec LER_Ingress tc filter del dev "$dev" parent ffff: 2>/dev/null || true
+        docker exec LER_Ingress tc filter add dev "$dev" parent ffff: protocol all \
+>>>>>>> a871d29236fc25033b139708afa500660335c698
             u32 match u32 0 0 \
             police rate "${rate_kbps}kbit" burst "$(_pb "$rate_kbps")b" drop flowid :1
     done

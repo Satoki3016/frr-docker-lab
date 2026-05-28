@@ -27,12 +27,15 @@ source "$(dirname "$0")/lab_config.sh"
 DURATION=${1:-60}
 SCENARIO=${2:-normal}
 
+<<<<<<< HEAD
 # namespace が存在しない場合は自動セットアップ
 if ! ip netns list | grep -q "LER_Ingress_ns"; then
     echo "=== namespace が未起動のため自動セットアップ ==="
     bash "$(dirname "$0")/virttrx_setup.sh"
 fi
 
+=======
+>>>>>>> a871d29236fc25033b139708afa500660335c698
 RESULTS_DIR="$LAB_DIR/results/$SCENARIO"
 mkdir -p "$RESULTS_DIR"
 
@@ -44,15 +47,25 @@ echo "結果保存先: $RESULTS_DIR"
 
 # ----------------------------------------------------------------
 # QoS・ルーティング設定を再適用
+<<<<<<< HEAD
 # ----------------------------------------------------------------
 echo ""
 echo "=== QoS/ルーティング設定を再適用 ==="
 bash "$(dirname "$0")/virttrx_tc.sh"  > /dev/null 2>&1
+=======
+#   30_tc.sh: 全leri-cr? にWRR HTB (4:2:1) を設定
+#   60_rsvp_te.sh: ECMP MPLSルートを設定
+# ----------------------------------------------------------------
+echo ""
+echo "=== QoS/ルーティング設定を再適用 ==="
+bash "$(dirname "$0")/30_tc.sh"    > /dev/null 2>&1
+>>>>>>> a871d29236fc25033b139708afa500660335c698
 bash "$(dirname "$0")/60_rsvp_te.sh" > /dev/null 2>&1
 echo "  30_tc.sh / 60_rsvp_te.sh 適用完了"
 echo "  CR1=${CR1_BW} CR2=${CR2_BW} CR3=${CR3_BW}"
 echo "  ECMP: AF41→CR1+CR2+CR3, AF42→CR1+CR2+CR3, AF43→CR1+CR2+CR3"
 
+<<<<<<< HEAD
 # iperf3 確認
 # ~/bin/iperf3 (静的バイナリ) があればそちらを優先
 if [ -x "$HOME/bin/iperf3" ]; then
@@ -65,6 +78,11 @@ if ! which iperf3 &>/dev/null; then
     echo "    apt-get download iperf3 libiperf0"
     echo "    dpkg-deb -x iperf3_*.deb /tmp/ex/ && dpkg-deb -x libiperf0_*.deb /tmp/ex/"
     echo "    scp /tmp/ex/usr/bin/iperf3 /tmp/ex/usr/lib/*/libiperf.so.0 admin@<switch>:~/bin/"
+=======
+# iperf3 がコンテナ内に存在するか確認
+if ! docker exec Rx1 which iperf3 &>/dev/null; then
+    echo "[ERROR] iperf3 がコンテナ内に見つかりません"
+>>>>>>> a871d29236fc25033b139708afa500660335c698
     exit 1
 fi
 
@@ -73,6 +91,7 @@ fi
 # ----------------------------------------------------------------
 echo ""
 echo "=== iperf3 サーバー起動 ==="
+<<<<<<< HEAD
 pkill -f "iperf3 -s -p 1000" 2>/dev/null || true
 pkill -f "iperf3 -s -p 2000" 2>/dev/null || true
 pkill -f "iperf3 -s -p 3000" 2>/dev/null || true
@@ -80,6 +99,15 @@ sleep 2
 ip netns exec Rx1_ns iperf3 -s -p 1000 &
 ip netns exec Rx2_ns iperf3 -s -p 2000 &
 ip netns exec Rx3_ns iperf3 -s -p 3000 &
+=======
+docker exec Rx1 pkill iperf3 2>/dev/null || true
+docker exec Rx2 pkill iperf3 2>/dev/null || true
+docker exec Rx3 pkill iperf3 2>/dev/null || true
+sleep 2
+docker exec -d Rx1 iperf3 -s -p 1000
+docker exec -d Rx2 iperf3 -s -p 2000
+docker exec -d Rx3 iperf3 -s -p 3000
+>>>>>>> a871d29236fc25033b139708afa500660335c698
 sleep 2
 echo "  Rx1:1000, Rx2:2000, Rx3:3000 起動完了"
 
@@ -105,10 +133,17 @@ if [ "$SCENARIO" = "failure" ] || [ "$SCENARIO" = "failure_rsvp" ]; then
         sleep 20
         echo ""
         echo "[FAILURE] t=20s: LER_Ingress leri-cr1 ダウン (AF41 PRIMARY LSP 切断)"
+<<<<<<< HEAD
         ip netns exec LER_Ingress_ns ip link set leri-cr1 down
         sleep 20
         echo "[RECOVER] t=40s: LER_Ingress leri-cr1 復旧"
         ip netns exec LER_Ingress_ns ip link set leri-cr1 up
+=======
+        docker exec LER_Ingress ip link set leri-cr1 down
+        sleep 20
+        echo "[RECOVER] t=40s: LER_Ingress leri-cr1 復旧"
+        docker exec LER_Ingress ip link set leri-cr1 up
+>>>>>>> a871d29236fc25033b139708afa500660335c698
     ) &
     FAILURE_PID=$!
     echo ""
@@ -139,6 +174,7 @@ echo ""
 echo "=== 計測開始 (${DURATION}s) ==="
 
 # ping: RTT計測
+<<<<<<< HEAD
 ip netns exec Tx1_ns ping -D -i 0.1 -w "$DURATION" 10.20.1.1 \
     > "$RESULTS_DIR/Tx1_ping.log" 2>&1 &
 PIDS="$!"
@@ -146,12 +182,22 @@ ip netns exec Tx2_ns ping -D -i 0.1 -w "$DURATION" 10.20.2.1 \
     > "$RESULTS_DIR/Tx2_ping.log" 2>&1 &
 PIDS="$PIDS $!"
 ip netns exec Tx3_ns ping -D -i 0.1 -w "$DURATION" 10.20.3.1 \
+=======
+docker exec Tx1 ping -D -i 0.1 -w "$DURATION" 10.2.1.2 \
+    > "$RESULTS_DIR/Tx1_ping.log" 2>&1 &
+PIDS="$!"
+docker exec Tx2 ping -D -i 0.1 -w "$DURATION" 10.2.2.2 \
+    > "$RESULTS_DIR/Tx2_ping.log" 2>&1 &
+PIDS="$PIDS $!"
+docker exec Tx3 ping -D -i 0.1 -w "$DURATION" 10.2.3.2 \
+>>>>>>> a871d29236fc25033b139708afa500660335c698
     > "$RESULTS_DIR/Tx3_ping.log" 2>&1 &
 PIDS="$PIDS $!"
 
 # iperf3: UDP スループット計測
 # -P 3: 並列3ストリームで異なる送信元ポート → ECMP で3リンク全てに分散
 echo "  Tx1 rate=${TX1_RATE}  Tx2 rate=${TX2_RATE}  Tx3 rate=${TX3_RATE}"
+<<<<<<< HEAD
 ip netns exec Tx1_ns iperf3 -c 10.20.1.1 -p 1000 -u -b "$TX1_RATE" -l 1400 -P 9 \
     -t "$DURATION" 2>&1 &
 PIDS="$PIDS $!"
@@ -159,6 +205,15 @@ ip netns exec Tx2_ns iperf3 -c 10.20.2.1 -p 2000 -u -b "$TX2_RATE" -l 1400 -P 9 
     -t "$DURATION" 2>&1 &
 PIDS="$PIDS $!"
 ip netns exec Tx3_ns iperf3 -c 10.20.3.1 -p 3000 -u -b "$TX3_RATE" -l 1400 -P 9 \
+=======
+docker exec Tx1 iperf3 -c 10.2.1.2 -p 1000 -u -b "$TX1_RATE" -l 1400 -P 3 \
+    -t "$DURATION" 2>&1 &
+PIDS="$PIDS $!"
+docker exec Tx2 iperf3 -c 10.2.2.2 -p 2000 -u -b "$TX2_RATE" -l 1400 -P 3 \
+    -t "$DURATION" 2>&1 &
+PIDS="$PIDS $!"
+docker exec Tx3 iperf3 -c 10.2.3.2 -p 3000 -u -b "$TX3_RATE" -l 1400 -P 3 \
+>>>>>>> a871d29236fc25033b139708afa500660335c698
     -t "$DURATION" 2>&1 &
 PIDS="$PIDS $!"
 
@@ -170,7 +225,11 @@ echo "計測完了"
 # 障害リンク確実復旧
 if [ -n "$FAILURE_PID" ]; then
     wait "$FAILURE_PID" 2>/dev/null || true
+<<<<<<< HEAD
     ip netns exec LER_Ingress_ns ip link set leri-cr1 up 2>/dev/null || true
+=======
+    docker exec LER_Ingress ip link set leri-cr1 up 2>/dev/null || true
+>>>>>>> a871d29236fc25033b139708afa500660335c698
 fi
 
 kill "$THR_MONITOR_PID" 2>/dev/null || true
@@ -180,6 +239,7 @@ if [ -n "$MONITOR_PID" ]; then
     echo "  [RSVP-TE] モニター停止: ログ→ $MONITOR_LOG"
 fi
 
+<<<<<<< HEAD
 # サーバー停止 (ホストプロセスとして動作しているため pkill で停止)
 pkill -f "iperf3 -s -p 1000" 2>/dev/null || true
 pkill -f "iperf3 -s -p 2000" 2>/dev/null || true
@@ -189,12 +249,24 @@ sleep 1
 cat /tmp/rx1_server.json > "$RESULTS_DIR/Rx1_server.json" 2>/dev/null || true
 cat /tmp/rx2_server.json > "$RESULTS_DIR/Rx2_server.json" 2>/dev/null || true
 cat /tmp/rx3_server.json > "$RESULTS_DIR/Rx3_server.json" 2>/dev/null || true
+=======
+# サーバー側JSON取得
+sleep 1
+docker exec Rx1 cat /tmp/rx1_server.json > "$RESULTS_DIR/Rx1_server.json" 2>/dev/null || true
+docker exec Rx2 cat /tmp/rx2_server.json > "$RESULTS_DIR/Rx2_server.json" 2>/dev/null || true
+docker exec Rx3 cat /tmp/rx3_server.json > "$RESULTS_DIR/Rx3_server.json" 2>/dev/null || true
+
+docker exec Rx1 pkill iperf3 2>/dev/null || true
+docker exec Rx2 pkill iperf3 2>/dev/null || true
+docker exec Rx3 pkill iperf3 2>/dev/null || true
+>>>>>>> a871d29236fc25033b139708afa500660335c698
 
 echo ""
 echo "=== 収集ファイル ==="
 ls -lh "$RESULTS_DIR"/*.csv "$RESULTS_DIR"/*.log 2>/dev/null || true
 
 echo ""
+<<<<<<< HEAD
 echo "=== 計測完了 ==="
 echo "結果: $RESULTS_DIR"
 
@@ -209,3 +281,7 @@ if python3 "$PLOT_SCRIPT" "$RESULTS_DIR"; then
 else
     echo "[WARN] グラフ生成失敗: python3 $PLOT_SCRIPT $RESULTS_DIR"
 fi
+=======
+echo "=== グラフ生成 ==="
+/home/kannolab/venv-mpl/bin/python3 "$PLOT_SCRIPT" "$RESULTS_DIR"
+>>>>>>> a871d29236fc25033b139708afa500660335c698

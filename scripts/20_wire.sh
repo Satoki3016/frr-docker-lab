@@ -1,4 +1,5 @@
 #!/bin/bash
+<<<<<<< HEAD
 # veth ペアをnamespace間に配線して IP アドレスを設定
 set -e
 source "$(dirname "$0")/00_env.sh"
@@ -10,10 +11,24 @@ add_link() {
     # 既存インターフェースをクリーンアップ（namespace内・ホスト上）
     ip netns exec "$ns1" ip link del "$if1" 2>/dev/null || true
     ip netns exec "$ns2" ip link del "$if2" 2>/dev/null || true
+=======
+# veth ペアをコンテナ間に配線して IP アドレスを設定
+set -e
+source "$(dirname "$0")/00_env.sh"
+
+# veth ペアを作成してコンテナ namespace に移動（冪等: 既存インターフェースを事前削除）
+add_link() {
+    local ns1=$1 if1=$2 ip1=$3 ns2=$4 if2=$5 ip2=$6
+
+    # 既存インターフェースをクリーンアップ（コンテナ内・ホスト上）
+    docker exec "$ns1" ip link del "$if1" 2>/dev/null || true
+    docker exec "$ns2" ip link del "$if2" 2>/dev/null || true
+>>>>>>> a871d29236fc25033b139708afa500660335c698
     ip link del "$if1" 2>/dev/null || true
     ip link del "$if2" 2>/dev/null || true
 
     ip link add "$if1" type veth peer name "$if2"
+<<<<<<< HEAD
     ip link set "$if1" netns "$ns1"
     ip link set "$if2" netns "$ns2"
 
@@ -21,6 +36,15 @@ add_link() {
     ip netns exec "$ns2" ip addr add "$ip2" dev "$if2"
     ip netns exec "$ns1" ip link set "$if1" up
     ip netns exec "$ns2" ip link set "$if2" up
+=======
+    ip link set "$if1" netns "$(get_pid "$ns1")"
+    ip link set "$if2" netns "$(get_pid "$ns2")"
+
+    docker exec "$ns1" ip addr add "$ip1" dev "$if1"
+    docker exec "$ns2" ip addr add "$ip2" dev "$if2"
+    docker exec "$ns1" ip link set "$if1" up
+    docker exec "$ns2" ip link set "$if2" up
+>>>>>>> a871d29236fc25033b139708afa500660335c698
     echo "  [ok] $ns1($if1 $ip1) <-> $ns2($if2 $ip2)"
 }
 
@@ -42,13 +66,18 @@ add_link  LER_Egress  lere-rx3 10.2.3.1/30  Rx3          rx3-lere   10.2.3.2/30
 echo ""
 echo "=== Applying host configs ==="
 for h in $HOSTS; do
+<<<<<<< HEAD
     ip netns exec "$h" bash "$CONFIGS_DIR/hosts/${h}.sh"
+=======
+    docker exec "$h" bash /lab/configs/hosts/${h}.sh
+>>>>>>> a871d29236fc25033b139708afa500660335c698
     echo "  [ok] $h"
 done
 
 echo ""
 echo "=== Applying router static routes ==="
 # LER_Ingress
+<<<<<<< HEAD
 ip netns exec LER_Ingress ip route add 10.2.1.0/24 via 10.1.3.2 metric 1
 ip netns exec LER_Ingress ip route add 10.2.1.0/24 via 10.1.4.2 metric 2
 ip netns exec LER_Ingress ip route add 10.2.1.0/24 via 10.1.5.2 metric 3
@@ -101,3 +130,57 @@ echo "  [ok] LER_Egress"
 
 echo ""
 echo "Done. Test with: ip netns exec Tx1 ping -c3 10.2.1.2"
+=======
+docker exec LER_Ingress ip route add 10.2.1.0/24 via 10.1.3.2 metric 1
+docker exec LER_Ingress ip route add 10.2.1.0/24 via 10.1.4.2 metric 2
+docker exec LER_Ingress ip route add 10.2.1.0/24 via 10.1.5.2 metric 3
+docker exec LER_Ingress ip route add 10.2.2.0/24 via 10.1.4.2 metric 1
+docker exec LER_Ingress ip route add 10.2.2.0/24 via 10.1.5.2 metric 2
+docker exec LER_Ingress ip route add 10.2.2.0/24 via 10.1.3.2 metric 3
+docker exec LER_Ingress ip route add 10.2.3.0/24 via 10.1.5.2 metric 1
+docker exec LER_Ingress ip route add 10.2.3.0/24 via 10.1.4.2 metric 2
+docker exec LER_Ingress ip route add 10.2.3.0/24 via 10.1.3.2 metric 3
+echo "  [ok] LER_Ingress"
+
+docker exec CoreRouter1 ip route add 10.0.1.0/24 via 10.1.3.1 metric 1
+docker exec CoreRouter1 ip route add 10.0.2.0/24 via 10.1.3.1 metric 1
+docker exec CoreRouter1 ip route add 10.0.3.0/24 via 10.1.3.1 metric 1
+docker exec CoreRouter1 ip route add 10.2.1.0/24 via 10.2.10.1 metric 1
+docker exec CoreRouter1 ip route add 10.2.2.0/24 via 10.2.10.1 metric 1
+docker exec CoreRouter1 ip route add 10.2.3.0/24 via 10.2.10.1 metric 1
+docker exec CoreRouter1 ip route add default    via 10.2.10.1 metric 10
+echo "  [ok] CoreRouter1"
+
+docker exec CoreRouter2 ip route add 10.0.1.0/24 via 10.1.4.1 metric 1
+docker exec CoreRouter2 ip route add 10.0.2.0/24 via 10.1.4.1 metric 1
+docker exec CoreRouter2 ip route add 10.0.3.0/24 via 10.1.4.1 metric 1
+docker exec CoreRouter2 ip route add 10.2.1.0/24 via 10.2.11.1 metric 1
+docker exec CoreRouter2 ip route add 10.2.2.0/24 via 10.2.11.1 metric 1
+docker exec CoreRouter2 ip route add 10.2.3.0/24 via 10.2.11.1 metric 1
+docker exec CoreRouter2 ip route add default    via 10.2.11.1 metric 10
+echo "  [ok] CoreRouter2"
+
+docker exec CoreRouter3 ip route add 10.0.1.0/24 via 10.1.5.1 metric 1
+docker exec CoreRouter3 ip route add 10.0.2.0/24 via 10.1.5.1 metric 1
+docker exec CoreRouter3 ip route add 10.0.3.0/24 via 10.1.5.1 metric 1
+docker exec CoreRouter3 ip route add 10.2.1.0/24 via 10.2.12.1 metric 1
+docker exec CoreRouter3 ip route add 10.2.2.0/24 via 10.2.12.1 metric 1
+docker exec CoreRouter3 ip route add 10.2.3.0/24 via 10.2.12.1 metric 1
+docker exec CoreRouter3 ip route add default    via 10.2.12.1 metric 10
+echo "  [ok] CoreRouter3"
+
+docker exec LER_Egress ip route add 10.0.1.0/24 via 10.2.10.2 metric 1
+docker exec LER_Egress ip route add 10.0.2.0/24 via 10.2.10.2 metric 1
+docker exec LER_Egress ip route add 10.0.3.0/24 via 10.2.10.2 metric 1
+docker exec LER_Egress ip route add 10.0.1.0/24 via 10.2.11.2 metric 2
+docker exec LER_Egress ip route add 10.0.2.0/24 via 10.2.11.2 metric 2
+docker exec LER_Egress ip route add 10.0.3.0/24 via 10.2.11.2 metric 2
+docker exec LER_Egress ip route add 10.0.1.0/24 via 10.2.12.2 metric 3
+docker exec LER_Egress ip route add 10.0.2.0/24 via 10.2.12.2 metric 3
+docker exec LER_Egress ip route add 10.0.3.0/24 via 10.2.12.2 metric 3
+docker exec LER_Egress ip route add default via 10.2.10.2 metric 10
+echo "  [ok] LER_Egress"
+
+echo ""
+echo "Done. Test with: docker exec Tx1 ping -c3 10.2.1.2"
+>>>>>>> a871d29236fc25033b139708afa500660335c698

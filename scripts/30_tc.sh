@@ -16,10 +16,13 @@ set -e
 source "$(dirname "$0")/00_env.sh"
 source "$(dirname "$0")/lab_config.sh"
 
+<<<<<<< HEAD
 # iptables モジュール確認 (フルパス: SONiC では /sbin/ がPATHに入らない場合がある)
 /sbin/modprobe xt_DSCP 2>/dev/null || true
 /sbin/modprobe xt_mark 2>/dev/null || true
 
+=======
+>>>>>>> a871d29236fc25033b139708afa500660335c698
 # ----------------------------------------------------------------
 # WRR 帯域自動計算
 #   rate_to_kbps <rate>  → kbps 整数値を出力
@@ -101,8 +104,13 @@ DROPTAIL_PKTS=100
 
 clear_qdisc() {
     local ns=$1 dev=$2
+<<<<<<< HEAD
     ip netns exec "$ns" tc qdisc del dev "$dev" root 2>/dev/null || true
     ip netns exec "$ns" tc qdisc del dev "$dev" ingress 2>/dev/null || true
+=======
+    docker exec "$ns" tc qdisc del dev "$dev" root 2>/dev/null || true
+    docker exec "$ns" tc qdisc del dev "$dev" ingress 2>/dev/null || true
+>>>>>>> a871d29236fc25033b139708afa500660335c698
 }
 
 add_wrr_htb_dscp() {
@@ -125,11 +133,17 @@ add_wrr_htb_dscp() {
     burst_lo=$(_b "$(rate_to_kbps "$r_lo")")
 
     # クラス別 netem 遅延を計算
+<<<<<<< HEAD
+=======
+    # LER_Ingress: リンク遅延 + クラス固有遅延 (extra_me/extra_lo)
+    # CoreRouter:  リンク遅延のみ (extra_me/extra_lo は 0ms のまま)
+>>>>>>> a871d29236fc25033b139708afa500660335c698
     local d_hi d_me d_lo
     d_hi=$(normalize_tc_delay "$(add_delay_ms "$link_delay" "0ms")")
     d_me=$(normalize_tc_delay "$(add_delay_ms "$link_delay" "$extra_me")")
     d_lo=$(normalize_tc_delay "$(add_delay_ms "$link_delay" "$extra_lo")")
 
+<<<<<<< HEAD
     ip netns exec "$ns" tc qdisc add dev "$dev" root handle 1: htb default 13
     ip netns exec "$ns" tc class add dev "$dev" parent 1:  classid 1:0 htb rate "$tc_rate" ceil "$tc_rate" burst "${burst_root}b" cburst "${burst_root}b"
     ip netns exec "$ns" tc class add dev "$dev" parent 1:0 classid 1:1 htb rate "$r_hi" ceil "$tc_rate" burst "${burst_hi}b" cburst "${burst_root}b" prio 0 quantum "$Q_AF41"
@@ -154,18 +168,49 @@ add_wrr_htb_dscp() {
             u32 match u32 0x00980000 0x00FC0000 at 4 flowid 1:3   # DSCP AF43
     fi
     ip netns exec "$ns" tc filter add dev "$dev" parent 1: protocol all prio 10 \
+=======
+    docker exec "$ns" tc qdisc add dev "$dev" root handle 1: htb default 13
+    docker exec "$ns" tc class add dev "$dev" parent 1:  classid 1:0 htb rate "$tc_rate" ceil "$tc_rate" burst "${burst_root}b" cburst "${burst_root}b"
+    docker exec "$ns" tc class add dev "$dev" parent 1:0 classid 1:1 htb rate "$r_hi" ceil "$tc_rate" burst "${burst_hi}b" cburst "${burst_root}b" prio 0 quantum "$Q_AF41"
+    docker exec "$ns" tc class add dev "$dev" parent 1:0 classid 1:2 htb rate "$r_me" ceil "$tc_rate" burst "${burst_me}b" cburst "${burst_root}b" prio 1 quantum "$Q_AF42"
+    docker exec "$ns" tc class add dev "$dev" parent 1:0 classid 1:3 htb rate "$r_lo" ceil "$tc_rate" burst "${burst_lo}b" cburst "${burst_root}b" prio 2 quantum "$Q_AF43"
+    # リーフ qdisc: netem でクラス別遅延付与 (0ms でも netem を使用し一貫性を保つ)
+    docker exec "$ns" tc qdisc add dev "$dev" parent 1:1 handle 11: netem delay "$d_hi" limit "$NETEM_LIMIT"
+    docker exec "$ns" tc qdisc add dev "$dev" parent 1:2 handle 12: netem delay "$d_me" limit "$NETEM_LIMIT"
+    docker exec "$ns" tc qdisc add dev "$dev" parent 1:3 handle 13: netem delay "$d_lo" limit "$NETEM_LIMIT"
+    if [ "$ns" = "LER_Ingress" ]; then
+        # LER_Ingress では iptables で付与した fwmark を利用
+        docker exec "$ns" tc filter add dev "$dev" parent 1: protocol all prio 1 handle 41 fw flowid 1:1
+        docker exec "$ns" tc filter add dev "$dev" parent 1: protocol all prio 1 handle 42 fw flowid 1:2
+        docker exec "$ns" tc filter add dev "$dev" parent 1: protocol all prio 1 handle 43 fw flowid 1:3
+    else
+        # CoreRouter: MPLS内IPのTOS(u32 at 4) でクラス分け
+        docker exec "$ns" tc filter add dev "$dev" parent 1: protocol 0x8847 prio 1 \
+            u32 match u32 0x00880000 0x00FC0000 at 4 flowid 1:1   # DSCP AF41
+        docker exec "$ns" tc filter add dev "$dev" parent 1: protocol 0x8847 prio 1 \
+            u32 match u32 0x00900000 0x00FC0000 at 4 flowid 1:2   # DSCP AF42
+        docker exec "$ns" tc filter add dev "$dev" parent 1: protocol 0x8847 prio 1 \
+            u32 match u32 0x00980000 0x00FC0000 at 4 flowid 1:3   # DSCP AF43
+    fi
+    docker exec "$ns" tc filter add dev "$dev" parent 1: protocol all prio 10 \
+>>>>>>> a871d29236fc25033b139708afa500660335c698
         u32 match u32 0 0 flowid 1:3
 }
 
 add_droptail() {
     local ns=$1 dev=$2
+<<<<<<< HEAD
     ip netns exec "$ns" tc qdisc add dev "$dev" root handle 1: pfifo limit $DROPTAIL_PKTS
+=======
+    docker exec "$ns" tc qdisc add dev "$dev" root handle 1: pfifo limit $DROPTAIL_PKTS
+>>>>>>> a871d29236fc25033b139708afa500660335c698
 }
 
 # ----------------------------------------------------------------
 # 1. DSCP マーキング (LER_Ingress, iptables mangle PREROUTING)
 # ----------------------------------------------------------------
 echo "=== DSCP マーキング (LER_Ingress) ==="
+<<<<<<< HEAD
 ip netns exec LER_Ingress iptables -t mangle -F PREROUTING 2>/dev/null || true
 
 ip netns exec LER_Ingress iptables -t mangle -A PREROUTING \
@@ -185,6 +230,22 @@ ip netns exec LER_Ingress iptables -t mangle -A PREROUTING \
 echo "  port 1000 -> DSCP AF41 (TOS=0x88) fwmark=41"
 echo "  port 2000 -> DSCP AF42 (TOS=0x90) fwmark=42"
 echo "  port 3000 -> DSCP AF43 (TOS=0x98) fwmark=43"
+=======
+# DSCPをIPヘッダTOSバイトにセット
+# tcフィルタがこのTOSバイトを直接読んでHTBクラスに振り分ける
+docker exec LER_Ingress iptables -t mangle -F PREROUTING 2>/dev/null || true
+
+docker exec LER_Ingress iptables -t mangle -A PREROUTING \
+    -p udp --dport 1000 -j DSCP --set-dscp-class AF41
+docker exec LER_Ingress iptables -t mangle -A PREROUTING \
+    -p udp --dport 2000 -j DSCP --set-dscp-class AF42
+docker exec LER_Ingress iptables -t mangle -A PREROUTING \
+    -p udp --dport 3000 -j DSCP --set-dscp-class AF43
+
+echo "  port 1000 -> DSCP AF41 (TOS=0x88)"
+echo "  port 2000 -> DSCP AF42 (TOS=0x90)"
+echo "  port 3000 -> DSCP AF43 (TOS=0x98)"
+>>>>>>> a871d29236fc25033b139708afa500660335c698
 
 # ----------------------------------------------------------------
 # 2. WRR (DRR 4:2:1) - LER_Ingress egress to CoreRouters
@@ -233,7 +294,11 @@ echo "  CoreRouter3:cr3-lere  total=${CR3_BW} delay=${CR3_DELAY}"
 # ----------------------------------------------------------------
 echo ""
 echo "=== DropTail ${DROPTAIL_PKTS}pkt (LER_Egress -> Rx) ==="
+<<<<<<< HEAD
 for dev in rx1-out rx2-out rx3-out; do
+=======
+for dev in lere-rx1 lere-rx2 lere-rx3; do
+>>>>>>> a871d29236fc25033b139708afa500660335c698
     clear_qdisc LER_Egress "$dev"
     add_droptail LER_Egress "$dev"
     echo "  LER_Egress:$dev"
@@ -245,7 +310,11 @@ done
 #    総帯域 = CR1_BW + CR2_BW + CR3_BW
 # ----------------------------------------------------------------
 echo ""
+<<<<<<< HEAD
 echo "=== Ingress policing (tx1-in/tx2-in/tx3-in, WRR 4:2:1) ==="
+=======
+echo "=== Ingress policing (leri-tx1/2/3, WRR 4:2:1) ==="
+>>>>>>> a871d29236fc25033b139708afa500660335c698
 
 total_bw_kbps=$(( $(rate_to_kbps "$CR1_BW") + $(rate_to_kbps "$CR2_BW") + $(rate_to_kbps "$CR3_BW") ))
 total_bw_tc="${total_bw_kbps}kbit"
@@ -260,6 +329,7 @@ pb_hi=$(_pb "$hi_kbps")
 pb_me=$(_pb "$me_kbps")
 pb_lo=$(_pb "$lo_kbps")
 
+<<<<<<< HEAD
 for dev in tx1-in tx2-in tx3-in; do
     ip netns exec LER_Ingress tc qdisc del dev "$dev" ingress 2>/dev/null || true
 done
@@ -276,10 +346,29 @@ ip netns exec LER_Ingress tc filter add dev tx2-in parent ffff: protocol all \
 
 ip netns exec LER_Ingress tc qdisc add dev tx3-in handle ffff: ingress
 ip netns exec LER_Ingress tc filter add dev tx3-in parent ffff: protocol all \
+=======
+for dev in leri-tx1 leri-tx2 leri-tx3; do
+    docker exec LER_Ingress tc qdisc del dev "$dev" ingress 2>/dev/null || true
+done
+
+docker exec LER_Ingress tc qdisc add dev leri-tx1 handle ffff: ingress
+docker exec LER_Ingress tc filter add dev leri-tx1 parent ffff: protocol all \
+    u32 match u32 0 0 \
+    police rate "$ingress_hi" burst "${pb_hi}b" drop flowid :1
+
+docker exec LER_Ingress tc qdisc add dev leri-tx2 handle ffff: ingress
+docker exec LER_Ingress tc filter add dev leri-tx2 parent ffff: protocol all \
+    u32 match u32 0 0 \
+    police rate "$ingress_me" burst "${pb_me}b" drop flowid :1
+
+docker exec LER_Ingress tc qdisc add dev leri-tx3 handle ffff: ingress
+docker exec LER_Ingress tc filter add dev leri-tx3 parent ffff: protocol all \
+>>>>>>> a871d29236fc25033b139708afa500660335c698
     u32 match u32 0 0 \
     police rate "$ingress_lo" burst "${pb_lo}b" drop flowid :1
 
 echo "  総帯域: ${total_bw_tc}"
+<<<<<<< HEAD
 echo "  tx1-in (AF41 高優先): police rate ${ingress_hi} burst ${pb_hi}b"
 echo "  tx2-in (AF42 中優先): police rate ${ingress_me} burst ${pb_me}b"
 echo "  tx3-in (AF43 低優先): police rate ${ingress_lo} burst ${pb_lo}b"
@@ -287,3 +376,12 @@ echo "  tx3-in (AF43 低優先): police rate ${ingress_lo} burst ${pb_lo}b"
 echo ""
 echo "TC 設定完了"
 echo "確認: ip netns exec LER_Ingress tc qdisc show"
+=======
+echo "  leri-tx1 (AF41 高優先): police rate ${ingress_hi} burst ${pb_hi}b"
+echo "  leri-tx2 (AF42 中優先): police rate ${ingress_me} burst ${pb_me}b"
+echo "  leri-tx3 (AF43 低優先): police rate ${ingress_lo} burst ${pb_lo}b"
+
+echo ""
+echo "TC 設定完了"
+echo "確認: docker exec LER_Ingress tc qdisc show"
+>>>>>>> a871d29236fc25033b139708afa500660335c698
