@@ -57,9 +57,9 @@ FAILURE_START = 20   # 障害開始 (s)
 FAILURE_END   = 40   # 障害終了 (s)
 
 # RSVP-TE ingress police 適用タイミング (failure_rsvp のみ)
-# DOWN後 ~10s で 2-link レートに更新、UP後 ~10s で 3-link に復旧
-POLICE_DOWN = 30   # 2-link police 適用 (s)
-POLICE_UP   = 50   # 3-link police 復旧 (s)
+# rsvp_monitor は 1s ポーリングで検知→即時 ECMP/police 更新
+POLICE_DOWN = 21   # 2-link police 適用: 障害検知 ~1s後
+POLICE_UP   = 41   # 3-link police 復旧: 復旧検知 ~1s後
 
 # 画像のDPI
 FIG_DPI = 200
@@ -152,7 +152,7 @@ def add_failure_zone(ax, x_max, rsvp=False):
         return
     rsvp_note = " + RSVP-TE reroute" if rsvp else ""
     ax.axvspan(FAILURE_START, FAILURE_END,
-               alpha=0.15, color="red", label=f"Failure zone (leri-cr2 Down{rsvp_note})")
+               alpha=0.15, color="red", label=f"Failure zone (leri-cr1 Down{rsvp_note})")
     ax.axvline(FAILURE_START, color="red", linestyle="--", linewidth=1.0, alpha=0.7)
     ax.axvline(FAILURE_END,   color="blue", linestyle="--", linewidth=1.0, alpha=0.7)
     y_top = ax.get_ylim()[1]
@@ -403,7 +403,7 @@ def plot_packet_loss(outdir: Path, scenario_title: str):
                     transform=ax.transAxes, ha="center", va="top",
                     fontsize=8, color="green", fontweight="bold")
         elif any(v > 0 for v in vals):
-            ax.text(0.5, 0.97, "✗ Priority inversion",
+            ax.text(0.5, 0.97, "x Priority inversion",
                     transform=ax.transAxes, ha="center", va="top",
                     fontsize=8, color="red", fontweight="bold")
 
@@ -433,7 +433,7 @@ def plot_packet_loss(outdir: Path, scenario_title: str):
                     transform=ax.transAxes, ha="center", va="top",
                     fontsize=8, color="green", fontweight="bold")
         elif any(v > 0 for v in vals):
-            ax.text(0.5, 0.97, "✗ Priority inversion",
+            ax.text(0.5, 0.97, "x Priority inversion",
                     transform=ax.transAxes, ha="center", va="top",
                     fontsize=8, color="red", fontweight="bold")
 
@@ -499,5 +499,6 @@ if __name__ == "__main__":
         outdir = Path(__file__).resolve().parent
     main(outdir)
     # 引数がベースディレクトリ (results/) または比較モードのとき
-    if outdir == Path(__file__).resolve().parent or sys.argv[-1] == "--compare":
-        compare_scenarios(Path(__file__).resolve().parent)
+    base = Path(__file__).resolve().parent
+    if outdir.resolve() == base or sys.argv[-1] == "--compare":
+        compare_scenarios(base)

@@ -27,14 +27,25 @@ source "$(dirname "$0")/lab_config.sh"
 DURATION=${1:-60}
 SCENARIO=${2:-normal}
 
+RESULTS_DIR="$LAB_DIR/results/$SCENARIO"
+mkdir -p "$RESULTS_DIR"
+PLOT_SCRIPT="$LAB_DIR/results/plot_rx.py"
+
+echo "計測時間: ${DURATION}秒"
+echo "シナリオ: ${SCENARIO}"
+echo "結果保存先: $RESULTS_DIR"
+
 # namespace が存在しない場合は自動セットアップ
 if ! ip netns list | grep -q "LER_Ingress_ns"; then
     echo "=== namespace が未起動のため自動セットアップ ==="
     bash "$(dirname "$0")/virttrx_setup.sh"
 fi
 
+echo ""
+echo "=== QoS/ルーティング設定を再適用 ==="
+bash "$(dirname "$0")/virttrx_tc.sh"  > /dev/null 2>&1
 bash "$(dirname "$0")/60_rsvp_te.sh" > /dev/null 2>&1
-echo "  30_tc.sh / 60_rsvp_te.sh 適用完了"
+echo "  virttrx_tc.sh / 60_rsvp_te.sh 適用完了"
 echo "  CR1=${CR1_BW} CR2=${CR2_BW} CR3=${CR3_BW}"
 echo "  ECMP: AF41→CR1+CR2+CR3, AF42→CR1+CR2+CR3, AF43→CR1+CR2+CR3"
 
@@ -86,22 +97,31 @@ fi
 # ----------------------------------------------------------------
 FAILURE_PID=""
 if [ "$SCENARIO" = "failure" ] || [ "$SCENARIO" = "failure_rsvp" ]; then
+    # カーネルの自動ルート更新を無効化
+    # → leri-cr1 がダウンしてもカーネルはルートを自動で切り替えない
+    # → failure: 静的ルートのまま 1/3 が損失
+    # → failure_rsvp: rsvp_monitor が明示的にルートを更新して復旧
+    ip netns exec LER_Ingress_ns sysctl -qw net.ipv4.conf.leri-cr1.ignore_routes_with_linkdown=1
+    echo "  [設定] leri-cr1: ignore_routes_with_linkdown=1 (カーネル自動復旧を無効化)"
+
     (
         sleep 20
         echo ""
-        echo "[FAILURE] t=20s: LER_Ingress leri-cr1 ダウン (AF41 PRIMARY LSP 切断)"
+        echo "[FAILURE] t=20s: leri-cr1 リンクダウン"
         ip netns exec LER_Ingress_ns ip link set leri-cr1 down
         sleep 20
-        echo "[RECOVER] t=40s: LER_Ingress leri-cr1 復旧"
+        echo "[RECOVER] t=40s: leri-cr1 復旧"
         ip netns exec LER_Ingress_ns ip link set leri-cr1 up
+        ip netns exec LER_Ingress_ns sysctl -qw net.ipv4.conf.leri-cr1.ignore_routes_with_linkdown=0
     ) &
     FAILURE_PID=$!
-    echo ""
-    echo "  障害注入: t=20s leri-cr1ダウン(AF41 PRIMARY), t=40s 復旧"
+
     if [ "$SCENARIO" = "failure" ]; then
-        echo "  (failure: 静的経路のまま → AF41 は t=20-40s 間スループット 0)"
+        echo "  障害注入: t=20s leri-cr1 ダウン"
+        echo "  (failure: ルート更新なし → leri-cr1 経由の 1/3 が t=20-40s 間すべて損失)"
     else
-        echo "  (failure_rsvp: MPLS-TE FRR → AF41 は残存リンク(CR2+CR3)に迂回、ingress police も更新し優先度制御継続)"
+        echo "  障害注入: t=20s leri-cr1 ダウン → rsvp_monitor が CR2+CR3 に迂回"
+        echo "  (failure_rsvp: ECMP 再構築 + ingress police 更新で優先度制御を継続)"
     fi
 fi
 
@@ -189,8 +209,30 @@ bash "$(dirname "$0")/packet_loss.sh" "$RESULTS_DIR"
 
 echo ""
 echo "=== グラフ生成 ==="
-if python3 "$PLOT_SCRIPT" "$RESULTS_DIR"; then
+# sudo 実行時は結果ファイルのオーナーを一般ユーザーに変更
+if [ -n "$SUDO_USER" ]; then
+    chown -R "$SUDO_USER:$SUDO_USER" "$RESULTS_DIR" 2>/dev/null || true
+fi
+# グラフ生成は一般ユーザーとして実行 (sudo 時は sudo -u)
+if [ -n "$SUDO_USER" ]; then
+    PLOT_CMD="sudo -u $SUDO_USER python3"
+else
+    PLOT_CMD="python3"
+fi
+if $PLOT_CMD "$PLOT_SCRIPT" "$RESULTS_DIR"; then
     echo "グラフ保存先: $RESULTS_DIR"
 else
     echo "[WARN] グラフ生成失敗: python3 $PLOT_SCRIPT $RESULTS_DIR"
+fi
+
+# 3シナリオ全揃っていれば比較グラフも自動生成
+RESULTS_BASE="$LAB_DIR/results"
+if [ -f "$RESULTS_BASE/failure/throughput.csv" ] && \
+   [ -f "$RESULTS_BASE/failure_rsvp/throughput.csv" ] && \
+   [ -f "$RESULTS_BASE/normal/throughput.csv" ]; then
+    echo ""
+    echo "=== 3シナリオ比較グラフ生成 ==="
+    if $PLOT_CMD "$PLOT_SCRIPT" "$RESULTS_BASE"; then
+        echo "比較グラフ: $RESULTS_BASE/compare_all_scenarios.png"
+    fi
 fi
