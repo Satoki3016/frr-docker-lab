@@ -444,52 +444,147 @@ def plot_packet_loss(outdir: Path, scenario_title: str):
     print(f"[*] saved: {out}")
 
 
+def _baseline_mean(t_vals, mbps_vals, t_start=2, t_end=None):
+    """障害前ベースライン平均を計算 (t_end=None → FAILURE_START の 1s 前まで)"""
+    if t_end is None:
+        t_end = FAILURE_START - 1
+    vals = [v for tv, v in zip(t_vals, mbps_vals) if t_start <= tv <= t_end]
+    return float(np.mean(vals)) if vals else None
+
+
 def compare_scenarios(base_dir: Path):
-    """3シナリオ比較グラフ: failure / failure_rsvp / normal の Rx3 スループット"""
+    """3シナリオ比較グラフ (絶対値 + 正規化の2種)"""
     scenarios = [
-        ("normal",       "normal",       "tab:green",  "-"),
-        ("failure",      "failure\n(static ECMP)", "tab:red",    "--"),
-        ("failure_rsvp", "failure_rsvp\n(RSVP-TE)", "tab:blue",   "-"),
+        ("normal",       "normal",                   "tab:green", "-"),
+        ("failure",      "failure (static ECMP)",    "tab:red",   "--"),
+        ("failure_rsvp", "failure_rsvp (RSVP-TE)",  "tab:blue",  "-"),
     ]
+    rx_labels  = ["Rx1 (AF41 High)", "Rx2 (AF42 Med)", "Rx3 (AF43 Low)"]
+    rx_indices = [1, 2, 3]
 
-    fig, axes = plt.subplots(3, 1, figsize=(11, 12), sharex=True)
-    rx_labels = ["Rx1 (AF41 High)", "Rx2 (AF42 Med)", "Rx3 (AF43 Low)"]
+    # ---- 1枚目: 絶対値 ----
+    fig1, axes1 = plt.subplots(3, 1, figsize=(11, 12), sharex=True)
+    fig1.suptitle("3-Scenario Comparison  [Absolute Throughput]", fontsize=12)
 
-    for ax, rx_idx, rx_label in zip(axes, [1, 2, 3], rx_labels):
+    # ---- 2枚目: ベースライン正規化 (ECMP ハッシュばらつきを除去) ----
+    fig2, axes2 = plt.subplots(3, 1, figsize=(11, 12), sharex=True)
+    fig2.suptitle(
+        "3-Scenario Comparison  [Normalized to Pre-Failure Baseline]\n"
+        "ECMP hash randomness removed — shows true QoS effect",
+        fontsize=11,
+    )
+
+    for ax1, ax2, rx_idx, rx_label in zip(axes1, axes2, rx_indices, rx_labels):
         for dirname, legend_name, color, ls in scenarios:
             csv_path = base_dir / dirname / "throughput.csv"
             if not csv_path.exists():
                 continue
             t, mbps = load_csv_throughput(csv_path, rx_idx)
-            ax.plot(t, mbps, label=legend_name, color=color, linestyle=ls, linewidth=1.5)
+            if not t:
+                continue
 
-        # 障害区間マーカー
-        ax.axvspan(FAILURE_START, FAILURE_END, alpha=0.08, color="red")
-        ax.axvline(FAILURE_START, color="red",  linestyle="--", linewidth=1.0, alpha=0.6)
-        ax.axvline(FAILURE_END,   color="blue", linestyle="--", linewidth=1.0, alpha=0.6)
-        # RSVP-TE POLICE タイミング
-        ax.axvline(POLICE_DOWN, color="darkorange", linestyle=":", linewidth=1.2, alpha=0.7)
-        ax.axvline(POLICE_UP,   color="green",      linestyle=":", linewidth=1.2, alpha=0.7)
+            # 絶対値グラフ
+            ax1.plot(t, mbps, label=legend_name, color=color, linestyle=ls, linewidth=1.5)
 
-        ax.set_xlim(0, 60)
-        ax.set_ylabel("Throughput (Mbit/s)")
-        ax.set_title(rx_label)
-        ax.legend(fontsize=8)
-        ax.grid(True)
+            # 正規化グラフ: failure/failure_rsvp はベースライン比, normal は 100% 基準線
+            if dirname == "normal":
+                ax2.axhline(100, color=color, linestyle=ls, linewidth=1.2,
+                            alpha=0.6, label=legend_name)
+            else:
+                base = _baseline_mean(t, mbps)
+                if base and base > 0:
+                    norm = [v / base * 100 for v in mbps]
+                    ax2.plot(t, norm, label=f"{legend_name}\n(base={base:.0f}Mbps)",
+                             color=color, linestyle=ls, linewidth=1.5)
 
-    # 凡例注記
-    axes[0].text(FAILURE_START + 0.3, axes[0].get_ylim()[1] * 0.97, "↓ Down", color="red",       fontsize=7, va="top")
-    axes[0].text(FAILURE_END   + 0.3, axes[0].get_ylim()[1] * 0.97, "↑ Up",   color="blue",      fontsize=7, va="top")
-    axes[0].text(POLICE_DOWN   + 0.3, axes[0].get_ylim()[1] * 0.86, "Police\n2-link", color="darkorange", fontsize=7, va="top")
-    axes[0].text(POLICE_UP     + 0.3, axes[0].get_ylim()[1] * 0.86, "Police\n3-link", color="green",      fontsize=7, va="top")
+        for ax in (ax1, ax2):
+            ax.axvspan(FAILURE_START, FAILURE_END, alpha=0.08, color="red")
+            ax.axvline(FAILURE_START, color="red",  linestyle="--", linewidth=1.0, alpha=0.6)
+            ax.axvline(FAILURE_END,   color="blue", linestyle="--", linewidth=1.0, alpha=0.6)
+            ax.axvline(POLICE_DOWN, color="darkorange", linestyle=":", linewidth=1.2, alpha=0.7)
+            ax.axvline(POLICE_UP,   color="green",      linestyle=":", linewidth=1.2, alpha=0.7)
+            ax.set_xlim(0, 60)
+            ax.set_title(rx_label)
+            ax.legend(fontsize=8)
+            ax.grid(True)
 
-    axes[-1].set_xlabel("Time (s)")
-    fig.suptitle("3-Scenario Comparison: normal / failure / failure_rsvp", fontsize=12)
-    fig.tight_layout()
-    out = base_dir / "compare_all_scenarios.png"
-    fig.savefig(out, dpi=FIG_DPI, bbox_inches="tight")
-    plt.close(fig)
-    print(f"[*] saved: {out}")
+        ax1.set_ylabel("Throughput (Mbit/s)")
+        ax2.set_ylabel("Throughput (% of pre-failure baseline)")
+
+    for axes in (axes1, axes2):
+        axes[0].text(FAILURE_START + 0.3, axes[0].get_ylim()[1] * 0.97,
+                     "↓ Down", color="red",  fontsize=7, va="top")
+        axes[0].text(FAILURE_END   + 0.3, axes[0].get_ylim()[1] * 0.97,
+                     "↑ Up",   color="blue", fontsize=7, va="top")
+        axes[-1].set_xlabel("Time (s)")
+
+    fig1.tight_layout()
+    out1 = base_dir / "compare_all_scenarios.png"
+    fig1.savefig(out1, dpi=FIG_DPI, bbox_inches="tight")
+    plt.close(fig1)
+    print(f"[*] saved: {out1}")
+
+    fig2.tight_layout()
+    out2 = base_dir / "compare_normalized.png"
+    fig2.savefig(out2, dpi=FIG_DPI, bbox_inches="tight")
+    plt.close(fig2)
+    print(f"[*] saved: {out2}")
+
+    # ---- 3枚目: 障害区間の平均ドロップ率バーチャート ----
+    _bar_data = {}
+    for dirname, legend_name, color, ls in scenarios:
+        if dirname == "normal":
+            continue
+        csv_path = base_dir / dirname / "throughput.csv"
+        if not csv_path.exists():
+            continue
+        drops = []
+        for rx_idx in rx_indices:
+            t, mbps = load_csv_throughput(csv_path, rx_idx)
+            base = _baseline_mean(t, mbps)
+            fail = _baseline_mean(t, mbps, t_start=FAILURE_START+1, t_end=FAILURE_END-1)
+            if base and base > 0 and fail is not None:
+                drops.append((1.0 - fail / base) * 100)
+            else:
+                drops.append(0.0)
+        _bar_data[legend_name] = (color, drops)
+
+    if _bar_data:
+        fig3, ax3 = plt.subplots(figsize=(8, 5))
+        cls_names = ["AF41\n(High)", "AF42\n(Med)", "AF43\n(Low)"]
+        x = np.arange(len(cls_names))
+        width = 0.35
+        for i, (legend_name, (color, drops)) in enumerate(_bar_data.items()):
+            offset = (i - (len(_bar_data) - 1) / 2) * width
+            bars = ax3.bar(x + offset, drops, width, label=legend_name,
+                           color=color, alpha=0.8, edgecolor="white")
+            for bar, v in zip(bars, drops):
+                ax3.text(bar.get_x() + bar.get_width() / 2,
+                         bar.get_height() + 0.5,
+                         f"{v:.1f}%", ha="center", va="bottom", fontsize=9)
+        ax3.set_xticks(x)
+        ax3.set_xticklabels(cls_names)
+        ax3.set_ylabel("Throughput Drop during Failure (%)")
+        ax3.set_title(
+            "Priority Class Impact during Failure\n"
+            "(% drop vs pre-failure baseline, t=20-40s)",
+            fontsize=11,
+        )
+        ax3.legend()
+        ax3.grid(axis="y", alpha=0.3)
+        all_drops = [v for _, (_, drops) in _bar_data.items() for v in drops]
+        ax3.set_ylim(0, max(max(all_drops) * 1.3, 10) + 5)
+        # WRR priority annotation
+        ax3.text(0.98, 0.98,
+                 "Ideal: AF41 < AF42 < AF43\n(high priority drops less)",
+                 transform=ax3.transAxes, ha="right", va="top",
+                 fontsize=8, color="gray",
+                 bbox=dict(boxstyle="round", fc="white", alpha=0.7))
+        fig3.tight_layout()
+        out3 = base_dir / "compare_priority_drop.png"
+        fig3.savefig(out3, dpi=FIG_DPI, bbox_inches="tight")
+        plt.close(fig3)
+        print(f"[*] saved: {out3}")
 
 
 if __name__ == "__main__":
