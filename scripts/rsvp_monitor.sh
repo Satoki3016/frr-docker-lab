@@ -125,9 +125,14 @@ log "  監視間隔: ${INTERVAL}s"
 log "  WRR: ${WRR_HI}:${WRR_ME}:${WRR_LO}  リンク帯域: CR1=${CR_BW[0]} CR2=${CR_BW[1]} CR3=${CR_BW[2]}"
 log ""
 # 起動時に現在のリンク状態を確認し ingress police を初期化
+# veth の operstate は "up" ではなく "unknown" を返すことがある
+# → "down" のみを障害とみなす ("unknown" / "up" はどちらも動作中)
+is_down() { [ "$1" = "down" ]; }
+is_up()   { [ "$1" != "down" ]; }
+
 for _i in 0 1 2; do
     _ls=$(get_link_state "$_i")
-    [ "$_ls" != "up" ] && state[$_i]=1
+    is_down "$_ls" && state[$_i]=1
 done
 rebuild_ingress_police
 log ""
@@ -138,7 +143,7 @@ while true; do
         ls=$(get_link_state "$i")
         cr="CR$((i+1))"
 
-        if [ "${state[$i]}" -eq 0 ] && [ "$ls" = "down" ]; then
+        if [ "${state[$i]}" -eq 0 ] && is_down "$ls"; then
             state[$i]=1
             if [ "$i" -eq "$AF41_PRIMARY_IDX" ]; then
                 log "[DOWN] ${cr} (${CR_DEV[$i]}) ダウン ← AF41 PRIMARY LSP 切断"
@@ -148,7 +153,7 @@ while true; do
             fi
             rebuild_ecmp
 
-        elif [ "${state[$i]}" -eq 1 ] && [ "$ls" = "up" ]; then
+        elif [ "${state[$i]}" -eq 1 ] && is_up "$ls"; then
             state[$i]=0
             if [ "$i" -eq "$AF41_PRIMARY_IDX" ]; then
                 log "[UP]   ${cr} (${CR_DEV[$i]}) 復旧 → AF41 PRIMARY LSP 復旧"
