@@ -1,0 +1,75 @@
+===================================================
+実験設定: FRR OSPF-SR + DiffServ-TE
+日付: 2026-06-21
+===================================================
+
+【実験環境】
+  ホスト    : sonic (192.168.128.1) 単一マシン構成
+  コンテナ  : Tx1/Tx2/Tx3, LER_Ingress, CR1/CR2/CR3, LER_Egress, Rx1/Rx2/Rx3
+              FRR サイドカー: frr-ler-ingress, frr-cr1/cr2/cr3, frr-ler-egress
+  接続      : veth ペア (Docker ネットワーク外, 手動作成)
+
+【トポロジー】
+
+  Tx1 ─┐
+  Tx2 ─┼─ LER_Ingress ─── leri-cr1 ──▶ CR1 ──▶ LER_Egress ─┬─▶ Rx1
+  Tx3 ─┘       │           leri-cr2 ──▶ CR2  (失敗時迂回先)  ├─▶ Rx2
+                │           leri-cr3 ──▶ CR3  (未使用)        └─▶ Rx3
+                │
+            HTB WRR シェーピング (AF41/42/43 全クラスを leri-cr1 で整形)
+
+  正常時: 全トラフィック → CR1
+  failure_reroute: OSPF-SR が CR1 障害を検出 → CR2 に自動切り替え (~1s)
+
+【送信設定 (iperf3 UDP)】
+  TX1_RATE (AF41 高優先): 500 Mbps
+  TX2_RATE (AF42 中優先): 500 Mbps
+  TX3_RATE (AF43 低優先): 500 Mbps
+  パケット長              : 1400 byte
+  ※ 合計 1500 Mbps を 100 Mbps リンクに送信 → 意図的な輻輳状態
+
+【リンク帯域 (lab_config.sh)】
+  CR1_BW : 100 Mbps (実効 99 Mbps, 主経路)
+  CR2_BW : 100 Mbps (迂回路)
+  CR3_BW : 100 Mbps (未使用)
+
+【WRR シェーピング (LER_Ingress HTB, leri-cr1)】
+  AF41 高優先  重み 4  →  56.6 Mbps
+  AF42 中優先  重み 2  →  28.3 Mbps
+  AF43 低優先  重み 1  →  14.1 Mbps
+
+【遅延付与 (HTB リーフ netem)】
+  AF41 : 追加遅延なし
+  AF42 : +10 ms (DELAY_ME)
+  AF43 : +40 ms (DELAY_LO)
+
+【計測設定】
+  計測時間    : 60 秒
+  障害注入    : t = 20 s (CR1 リンクダウン)
+  障害回復    : t = 40 s (CR1 リンクアップ / OSPF 再収束)
+  スループット監視: LER_Egress の lere-rx1/rx2/rx3 TX バイト数を 1 秒ごとに記録
+
+【シナリオ】
+  normal          : 障害なし。WRR 4:2:1 動作確認
+  failure         : t=20s に CR1 障害注入, 迂回なし → 通信断
+  failure_reroute : t=20s に CR1 障害注入, OSPF-SR が ~1s で CR2 へ自動迂回
+
+【ルーティング / 制御プレーン】
+  プロトコル      : OSPF-SR (Segment Routing over IPv4)
+  デーモン        : FRR 8.4 (各ノードのサイドカーコンテナで動作)
+  DSCP マーキング : AF41=34, AF42=36, AF43=38 (iptables PREROUTING)
+  ポリシールーティング: fwmark → ip rule → テーブル 41/42/43 → MPLS encap
+  障害検知/切替   : frr_te_monitor.sh (OSPF 隣接断を監視, CR2 に即時切替, ~1s)
+
+【結果ファイル】
+  frr_normal/          : 正常時の生データ (throughput.csv, owd_af4*.log, tc_drops.csv)
+  frr_failure/         : 障害時の生データ
+  frr_failure_reroute/ : 迂回時の生データ
+  summary/             : 本ファイル + 比較グラフ (PNG)
+
+【グラフ一覧】
+  compare_throughput.png     : クラス別スループット時系列 (WRR 目標線付き)
+  compare_rtt.png            : クラス別 OWD (片道遅延) 時系列
+  compare_packetloss.png     : 障害区間 (t=20-40s) パケットロス率 棒グラフ
+  compare_loss_timeseries.png: 秒ごとパケットロス率 時系列
+  compare_drop_location.png  : ドロップ発生箇所 (LER_Ingress leri-cr1/cr2)

@@ -1,0 +1,81 @@
+Connecting to host 10.20.1.1, port 1000
+[  5] local 10.10.1.1 port 47131 connected to 10.20.1.1 port 1000
+[ ID] Interval           Transfer     Bitrate         Total Datagrams
+[  5]   0.00-60.06  sec  6.99 GBytes  1000 Mbits/sec  5362346  
+- - - - - - - - - - - - - - - - - - - - - - - - -
+[ ID] Interval           Transfer     Bitrate         Jitter    Lost/Total Datagrams
+[  5]   0.00-60.06  sec  6.99 GBytes  1000 Mbits/sec  0.000 ms  0/5362346 (0%)  sender
+[  5]   0.00-60.10  sec   814 MBytes   114 Mbits/sec  0.038 ms  4752529/5362337 (89%)  receiver
+
+Server output:
+Accepted connection from 10.10.1.1, port 60476
+[  5] local 10.20.1.1 port 1000 connected to 10.10.1.1 port 47131
+[ ID] Interval           Transfer     Bitrate         Jitter    Lost/Total Datagrams
+[  5]   0.00-1.00   sec  13.9 MBytes   116 Mbits/sec  0.029 ms  78774/89155 (88%)  
+[  5]   1.00-2.00   sec  13.0 MBytes   110 Mbits/sec  0.011 ms  79378/89141 (89%)  
+[  5]   2.00-3.00   sec  13.2 MBytes   110 Mbits/sec  0.030 ms  79422/89284 (89%)  
+[  5]   3.00-4.00   sec  13.2 MBytes   111 Mbits/sec  0.022 ms  79449/89334 (89%)  
+[  5]   4.00-5.00   sec  13.2 MBytes   111 Mbits/sec  0.020 ms  79361/89234 (89%)  
+[  5]   5.00-6.00   sec  13.1 MBytes   110 Mbits/sec  0.007 ms  79456/89296 (89%)  
+[  5]   6.00-7.00   sec  13.2 MBytes   111 Mbits/sec  0.019 ms  79493/89373 (89%)  
+[  5]   7.00-8.00   sec  13.2 MBytes   111 Mbits/sec  0.030 ms  79333/89202 (89%)  
+[  5]   8.00-9.00   sec  13.2 MBytes   111 Mbits/sec  0.014 ms  79404/89277 (89%)  
+[  5]   9.00-10.00  sec  13.1 MBytes   110 Mbits/sec  0.011 ms  79529/89370 (89%)  
+[  5]  10.00-11.00  sec  13.2 MBytes   111 Mbits/sec  0.036 ms  79345/89221 (89%)  
+[  5]  11.00-12.00  sec  13.2 MBytes   111 Mbits/sec  0.016 ms  79471/89353 (89%)  
+[  5]  12.00-13.00  sec  13.2 MBytes   111 Mbits/sec  0.021 ms  79411/89290 (89%)  
+[  5]  13.00-14.00  sec  13.1 MBytes   110 Mbits/sec  0.023 ms  79361/89203 (89%)  
+[  5]  14.00-15.00  sec  13.2 MBytes   111 Mbits/sec  0.012 ms  79476/89365 (89%)  
+[  5]  15.00-16.00  sec  13.2 MBytes   111 Mbits/sec  0.011 ms  79340/89209 (89%)  
+[  5]  16.00-17.00  sec  13.2 MBytes   110 Mbits/sec  0.080 ms  79435/89305 (89%)  
+[  5]  17.00-18.00  sec  13.2 MBytes   111 Mbits/sec  0.014 ms  79393/89259 (89%)  
+[  5]  18.00-19.00  sec  13.2 MBytes   111 Mbits/sec  0.026 ms  79433/89315 (89%)  
+[  5]  19.00-20.00  sec  22.3 MBytes   187 Mbits/sec  0.026 ms  72764/89441 (81%)  
+[  5]  20.00-21.00  sec  22.9 MBytes   192 Mbits/sec  0.019 ms  72098/89254 (81%)  
+[  5]  21.00-22.00  sec  16.6 MBytes   139 Mbits/sec  0.009 ms  76797/89218 (86%)  
+[  5]  22.00-23.00  sec  13.1 MBytes   110 Mbits/sec  0.028 ms  79392/89209 (89%)  
+[  5]  23.00-24.00  sec  13.1 MBytes   110 Mbits/sec  0.034 ms  79568/89355 (89%)  
+[  5]  24.00-25.00  sec  13.2 MBytes   111 Mbits/sec  0.011 ms  79350/89210 (89%)  
+[  5]  25.00-26.00  sec  13.2 MBytes   111 Mbits/sec  0.021 ms  79478/89366 (89%)  
+[  5]  26.00-27.00  sec  13.2 MBytes   111 Mbits/sec  0.012 ms  79404/89282 (89%)  
+[  5]  27.00-28.00  sec  13.2 MBytes   111 Mbits/sec  0.014 ms  79410/89289 (89%)  
+[  5]  28.00-29.00  sec  13.2 MBytes   111 Mbits/sec  0.010 ms  79348/89218 (89%)  
+[  5]  29.00-30.00  sec  13.1 MBytes   110 Mbits/sec  0.013 ms  79425/89268 (89%)  
+[  5]  30.00-31.00  sec  13.2 MBytes   111 Mbits/sec  0.041 ms  79419/89300 (89%)  
+[  5]  31.00-32.00  sec  13.2 MBytes   111 Mbits/sec  0.025 ms  79450/89334 (89%)  
+[  5]  32.00-33.00  sec  13.2 MBytes   111 Mbits/sec  0.013 ms  79434/89312 (89%)  
+[  5]  33.00-34.00  sec  13.2 MBytes   111 Mbits/sec  0.014 ms  79323/89192 (89%)  
+[  5]  34.00-35.00  sec  13.1 MBytes   110 Mbits/sec  0.060 ms  78767/88566 (89%)  
+[  5]  35.00-36.00  sec  13.2 MBytes   111 Mbits/sec  0.023 ms  80098/90012 (89%)  
+[  5]  36.00-37.00  sec  13.2 MBytes   110 Mbits/sec  0.020 ms  79436/89292 (89%)  
+[  5]  37.00-38.00  sec  13.2 MBytes   111 Mbits/sec  0.013 ms  79472/89360 (89%)  
+[  5]  38.00-39.00  sec  13.2 MBytes   111 Mbits/sec  0.011 ms  79352/89222 (89%)  
+[  5]  39.00-40.00  sec  13.1 MBytes   110 Mbits/sec  0.009 ms  79549/89335 (89%)  
+[  5]  40.00-41.00  sec  13.0 MBytes   109 Mbits/sec  0.012 ms  79514/89282 (89%)  
+[  5]  41.00-42.00  sec  13.7 MBytes   115 Mbits/sec  0.034 ms  79016/89304 (88%)  
+[  5]  42.00-43.00  sec  13.2 MBytes   111 Mbits/sec  0.025 ms  79407/89286 (89%)  
+[  5]  43.00-44.00  sec  13.1 MBytes   110 Mbits/sec  0.024 ms  79452/89275 (89%)  
+[  5]  44.00-45.00  sec  13.0 MBytes   110 Mbits/sec  0.028 ms  79458/89231 (89%)  
+[  5]  45.00-46.00  sec  13.2 MBytes   111 Mbits/sec  0.020 ms  79479/89359 (89%)  
+[  5]  46.00-47.00  sec  13.2 MBytes   111 Mbits/sec  0.008 ms  79382/89258 (89%)  
+[  5]  47.00-48.00  sec  13.2 MBytes   111 Mbits/sec  0.035 ms  79401/89279 (89%)  
+[  5]  48.00-49.00  sec  13.2 MBytes   111 Mbits/sec  0.031 ms  79360/89233 (89%)  
+[  5]  49.00-50.00  sec  13.2 MBytes   111 Mbits/sec  0.027 ms  79416/89296 (89%)  
+[  5]  50.00-51.00  sec  13.2 MBytes   111 Mbits/sec  0.024 ms  79393/89270 (89%)  
+[  5]  51.00-52.00  sec  13.2 MBytes   111 Mbits/sec  0.013 ms  79484/89373 (89%)  
+[  5]  52.00-53.00  sec  13.2 MBytes   111 Mbits/sec  0.018 ms  79332/89201 (89%)  
+[  5]  53.00-54.00  sec  13.2 MBytes   111 Mbits/sec  0.018 ms  79483/89372 (89%)  
+[  5]  54.00-55.00  sec  13.2 MBytes   111 Mbits/sec  0.023 ms  79406/89285 (89%)  
+[  5]  55.00-56.00  sec  13.2 MBytes   111 Mbits/sec  0.008 ms  79328/89197 (89%)  
+[  5]  56.00-57.00  sec  13.2 MBytes   110 Mbits/sec  0.016 ms  79256/89116 (89%)  
+[  5]  57.00-58.00  sec  13.1 MBytes   110 Mbits/sec  0.016 ms  79675/89459 (89%)  
+[  5]  58.00-59.00  sec  13.2 MBytes   111 Mbits/sec  0.043 ms  79493/89369 (89%)  
+[  5]  59.00-60.00  sec  13.2 MBytes   111 Mbits/sec  0.032 ms  79334/89204 (89%)  
+[  5]  60.00-60.10  sec   827 KBytes  68.9 Mbits/sec  0.038 ms  4862/5467 (89%)  
+- - - - - - - - - - - - - - - - - - - - - - - - -
+[ ID] Interval           Transfer     Bitrate         Jitter    Lost/Total Datagrams
+[SUM]  0.0-60.1 sec  181 datagrams received out-of-order
+[  5]   0.00-60.10  sec   814 MBytes   114 Mbits/sec  0.038 ms  4752529/5362337 (89%)  receiver
+
+
+iperf Done.

@@ -1,0 +1,144 @@
+# frr-docker-lab ネットワークトポロジー
+# OMNeT++ MPLS-TE シミュレーションを Docker コンテナで再現
+#
+# 各ノードは Docker コンテナ (--network none --privileged)
+# リンクは veth ペアでコンテナ間を接続
+
+nodes:
+  hosts:
+    - name: Tx1
+      type: host
+      image: frr-lab-node
+      interfaces:
+        - name: tx1-ler
+          ip: 10.0.1.2/30
+          peer: LER_Ingress/leri-tx1
+    - name: Tx2
+      type: host
+      image: frr-lab-node
+      interfaces:
+        - name: tx2-ler
+          ip: 10.0.2.2/30
+          peer: LER_Ingress/leri-tx2
+    - name: Tx3
+      type: host
+      image: frr-lab-node
+      interfaces:
+        - name: tx3-ler
+          ip: 10.0.3.2/30
+          peer: LER_Ingress/leri-tx3
+    - name: Rx1
+      type: host
+      image: frr-lab-node
+      interfaces:
+        - name: rx1-lere
+          ip: 10.2.1.2/30
+          peer: LER_Egress/lere-rx1
+    - name: Rx2
+      type: host
+      image: frr-lab-node
+      interfaces:
+        - name: rx2-lere
+          ip: 10.2.2.2/30
+          peer: LER_Egress/lere-rx2
+    - name: Rx3
+      type: host
+      image: frr-lab-node
+      interfaces:
+        - name: rx3-lere
+          ip: 10.2.3.2/30
+          peer: LER_Egress/lere-rx3
+
+  routers:
+    - name: LER_Ingress
+      type: router
+      image: frr-lab-node
+      interfaces:
+        - name: leri-tx1
+          ip: 10.0.1.1/30   # ppp0 in OMNeT++
+          peer: Tx1/tx1-ler
+        - name: leri-tx2
+          ip: 10.0.2.1/30   # ppp1 in OMNeT++
+          peer: Tx2/tx2-ler
+        - name: leri-tx3
+          ip: 10.0.3.1/30   # ppp2 in OMNeT++
+          peer: Tx3/tx3-ler
+        - name: leri-cr1
+          ip: 10.1.3.1/30   # ppp3 in OMNeT++
+          peer: CoreRouter1/cr1-leri
+        - name: leri-cr2
+          ip: 10.1.4.1/30   # ppp4 in OMNeT++
+          peer: CoreRouter2/cr2-leri
+        - name: leri-cr3
+          ip: 10.1.5.1/30   # ppp5 in OMNeT++
+          peer: CoreRouter3/cr3-leri
+
+    - name: CoreRouter1
+      type: router
+      image: frr-lab-node
+      interfaces:
+        - name: cr1-leri
+          ip: 10.1.3.2/30   # ppp0 in OMNeT++
+          peer: LER_Ingress/leri-cr1
+        - name: cr1-lere
+          ip: 10.2.10.2/30  # ppp1 in OMNeT++
+          peer: LER_Egress/lere-cr1
+
+    - name: CoreRouter2
+      type: router
+      image: frr-lab-node
+      interfaces:
+        - name: cr2-leri
+          ip: 10.1.4.2/30   # ppp0 in OMNeT++
+          peer: LER_Ingress/leri-cr2
+        - name: cr2-lere
+          ip: 10.2.11.2/30  # ppp1 in OMNeT++
+          peer: LER_Egress/lere-cr2
+
+    - name: CoreRouter3
+      type: router
+      image: frr-lab-node
+      interfaces:
+        - name: cr3-leri
+          ip: 10.1.5.2/30   # ppp0 in OMNeT++
+          peer: LER_Ingress/leri-cr3
+        - name: cr3-lere
+          ip: 10.2.12.2/30  # ppp1 in OMNeT++
+          peer: LER_Egress/lere-cr3
+
+    - name: LER_Egress
+      type: router
+      image: frr-lab-node
+      interfaces:
+        - name: lere-cr1
+          ip: 10.2.10.1/30  # ppp3 in OMNeT++
+          peer: CoreRouter1/cr1-lere
+        - name: lere-cr2
+          ip: 10.2.11.1/30  # ppp4 in OMNeT++
+          peer: CoreRouter2/cr2-lere
+        - name: lere-cr3
+          ip: 10.2.12.1/30  # ppp5 in OMNeT++
+          peer: CoreRouter3/cr3-lere
+        - name: lere-rx1
+          ip: 10.2.1.1/30   # ppp0 in OMNeT++
+          peer: Rx1/rx1-lere
+        - name: lere-rx2
+          ip: 10.2.2.1/30   # ppp1 in OMNeT++
+          peer: Rx2/rx2-lere
+        - name: lere-rx3
+          ip: 10.2.3.1/30   # ppp2 in OMNeT++
+          peer: Rx3/rx3-lere
+
+mpls_tunnels:
+  - id: 1
+    traffic_class: AF41
+    path: LER_Ingress -> CoreRouter1 -> LER_Egress -> Rx1
+    labels: {push: 100, swap: 101, pop: 101}
+  - id: 2
+    traffic_class: AF42
+    path: LER_Ingress -> CoreRouter2 -> LER_Egress -> Rx2
+    labels: {push: 200, swap: 201, pop: 201}
+  - id: 3
+    traffic_class: AF43
+    path: LER_Ingress -> CoreRouter2 -> LER_Egress -> Rx3
+    labels: {push: 300, swap: 301, pop: 301}
