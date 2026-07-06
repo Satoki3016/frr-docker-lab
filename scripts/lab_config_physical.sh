@@ -1,0 +1,24 @@
+#!/bin/bash
+# 物理2SW環境用パラメータ
+# CR=30M（KNETのCoPP制限内で確認済みの最大値）
+# AF41はSP割当(17.14M)以内に収めて無損失を実証
+
+TX1_RATE="${TX1_RATE:-500M}"    # AF41: 4×3M=12M  < SP割当 4/7×30M=17.14M → 無損失
+TX2_RATE="${TX2_RATE:-500M}"    # AF42: 4×5M=20M >> WRR割当 2/7×30M=8.57M  → 意図的輻輳
+TX3_RATE="${TX3_RATE:-500M}"    # AF43: 4×5M=20M >> WRR割当 1/7×30M=4.28M  → 意図的輻輳
+
+CR1_BW="${CR1_BW:-100M}"       # 確認済み動作上限。50Mは未確認
+CR2_BW="${CR2_BW:-100M}"
+CR3_BW="${CR3_BW:-100M}"
+
+CR1_DELAY="${CR1_DELAY:-0ms}"
+CR2_DELAY="${CR2_DELAY:-0ms}"
+CR3_DELAY="${CR3_DELAY:-0ms}"
+
+WRR_HI="${WRR_HI:-4}"
+WRR_ME="${WRR_ME:-2}"
+WRR_LO="${WRR_LO:-1}"
+
+PFIFO_LIMIT_HI="${PFIFO_LIMIT_HI:-1000}"
+PFIFO_LIMIT_ME="${PFIFO_LIMIT_ME:-2000}"
+PFIFO_LIMIT_LO="${PFIFO_LIMIT_LO:-4000}"

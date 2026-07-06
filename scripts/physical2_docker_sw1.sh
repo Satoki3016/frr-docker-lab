@@ -43,48 +43,37 @@ modprobe xt_DSCP       2>/dev/null || true
 modprobe xt_mark       2>/dev/null || true
 sysctl -qw net.ipv4.ip_forward=1
 
-# ── 3. 物理ポート → bridge+veth → コンテナ ───────────────────────
+# ── 3. コンテナ間直接vethペア接続 (KNET loopbackバイパス) ──────────
+#
+# intra-SW接続 (Tx↔LER_Ingress, LER_Ingress↔CR) は物理loopback経由だと
+# BCM ASIC KNETのCPUパス(~38kbps実効)がボトルネックになる。
+# kernel vethペアで直結することでKNETを完全バイパスし、kernel速度で動作。
+# cross-SW link (Ethernet14→SW2) は引き続き物理ポートを使用。
 echo ""
-echo "=== [SW1] 物理ポート接続 ==="
+echo "=== [SW1] vethペア接続 (KNET loopbackバイパス) ==="
 
-# bridge+veth でコンテナに物理ポートを接続する
-# 物理ポートは root ns に残す（SONiC KNET 制約）
-connect_port() {
-    local eth=$1 container=$2 ifname=$3 ip=$4
-    local br="br-${eth}"
-    local vr="vr-${eth}"
-    local vpid
-    vpid=$(docker inspect --format='{{.State.Pid}}' "$container")
-
-    ip link del "$br" 2>/dev/null || true
-    ip link add "$br" type bridge stp_state 0
-    ip link set "$eth" mtu 1500 up
-    ip link set "$eth" master "$br"
-    ip link set "$br" mtu 1500 up
-
-    ip link del "$vr" 2>/dev/null || true
-    ip link add "$vr" type veth peer name "$ifname"
-    ip link set "$vr" master "$br"
-    ip link set "$vr" mtu 1500 up
-    ip link set "$ifname" netns "$vpid"
-
-    docker exec "$container" ip link set "$ifname" mtu 1500 up
-    docker exec "$container" ip addr add "$ip" dev "$ifname"
-    echo "  $eth → $container/$ifname ($ip)"
+connect_veth_pair() {
+    local ca=$1 ifa=$2 ipa=$3 cb=$4 ifb=$5 ipb=$6
+    local pid_a; pid_a=$(docker inspect --format='{{.State.Pid}}' "$ca")
+    local pid_b; pid_b=$(docker inspect --format='{{.State.Pid}}' "$cb")
+    local tmp_a="tmp-${ifa}" tmp_b="tmp-${ifb}"
+    ip link del "$tmp_a" 2>/dev/null || true
+    ip link add "$tmp_a" mtu 1500 type veth peer name "$tmp_b" mtu 1500
+    ip link set "$tmp_a" netns "$pid_a" name "$ifa"
+    ip link set "$tmp_b" netns "$pid_b" name "$ifb"
+    docker exec "$ca" ip link set "$ifa" up
+    docker exec "$ca" ip addr add "$ipa" dev "$ifa"
+    docker exec "$cb" ip link set "$ifb" up
+    docker exec "$cb" ip addr add "$ipb" dev "$ifb"
+    echo "  veth: $ca/$ifa ($ipa) ↔ $cb/$ifb ($ipb)"
 }
 
-connect_port Ethernet0  Tx1        tx1-ler   10.10.1.2/30
-connect_port Ethernet1  LER_Ingress leri-tx1  10.10.1.1/30
-connect_port Ethernet2  Tx2        tx2-ler   10.10.2.2/30
-connect_port Ethernet3  LER_Ingress leri-tx2  10.10.2.1/30
-connect_port Ethernet4  Tx3        tx3-ler   10.10.3.2/30
-connect_port Ethernet5  LER_Ingress leri-tx3  10.10.3.1/30
-connect_port Ethernet6  LER_Ingress leri-cr1  10.0.1.1/30
-connect_port Ethernet7  CR1        cr1-leri  10.0.1.2/30
-connect_port Ethernet8  LER_Ingress leri-cr2  10.0.3.1/30
-connect_port Ethernet9  CR2        cr2-leri  10.0.3.2/30
-connect_port Ethernet10 LER_Ingress leri-cr3  10.0.5.1/30
-connect_port Ethernet11 CR3        cr3-leri  10.0.5.2/30
+connect_veth_pair Tx1        tx1-ler  10.10.1.2/30  LER_Ingress leri-tx1  10.10.1.1/30
+connect_veth_pair Tx2        tx2-ler  10.10.2.2/30  LER_Ingress leri-tx2  10.10.2.1/30
+connect_veth_pair Tx3        tx3-ler  10.10.3.2/30  LER_Ingress leri-tx3  10.10.3.1/30
+connect_veth_pair LER_Ingress leri-cr1 10.0.1.1/30  CR1        cr1-leri  10.0.1.2/30
+connect_veth_pair LER_Ingress leri-cr2 10.0.3.1/30  CR2        cr2-leri  10.0.3.2/30
+connect_veth_pair LER_Ingress leri-cr3 10.0.5.1/30  CR3        cr3-leri  10.0.5.2/30
 # CR1/CR2/CR3 egress → br-xsw ブリッジ経由で Ethernet14 に集約
 BR_XSW="br-xsw"
 ip link del "$BR_XSW" 2>/dev/null || true
@@ -117,15 +106,8 @@ add_to_bridge "$BR_XSW" CR3 cr3-lere 10.0.6.1/30
 # loopbackポート(Eth0-11)を各1ポートのみのVLANに隔離。
 # inter-switchポート(Eth12-14)も同様にVLAN 42-44に設定。
 echo ""
-echo "=== [SW1] ASIC per-port VLAN設定 ==="
-# loopbackポート Ethernet0-11 → VLAN 30-41
-for i in $(seq 0 11); do
-    vlan=$((30 + i))
-    bcmcmd "vlan create $vlan pbm=xe${i},cpu ubm=xe${i},cpu" 2>/dev/null || true
-    bcmcmd "pvlan set xe${i} $vlan"
-    bcmcmd "vlan remove 1 pbm=xe${i}" 2>/dev/null || true
-    echo "  Ethernet${i} → VLAN ${vlan}"
-done
+echo "=== [SW1] ASIC VLAN設定 (Ethernet14のみ) ==="
+# Ethernet0-11はvethペア接続に変更したため設定不要
 # inter-switchポート Ethernet14 のみ → VLAN 44 (1本クロスケーブル)
 bcmcmd "vlan create 44 pbm=xe14,cpu ubm=xe14,cpu" 2>/dev/null || true
 bcmcmd "pvlan set xe14 44"
@@ -144,14 +126,8 @@ echo "  [ok] ARP ACCEPT rules added"
 # BCM ASICはcpuポートへフレームを届ける際にVLANタグを付加する（ubmにcpuを
 # 追加できないハードウェア仕様）。tc ingressでブリッジ処理より前にタグを剥がす。
 echo ""
-echo "=== [SW1] tc ingress VLAN pop ==="
-for i in $(seq 0 11); do
-    vlan=$((30 + i))
-    tc qdisc del dev "Ethernet${i}" handle ffff: ingress 2>/dev/null || true
-    tc qdisc add dev "Ethernet${i}" handle ffff: ingress
-    tc filter add dev "Ethernet${i}" parent ffff: protocol 802.1Q flower vlan_id "$vlan" action vlan pop
-    echo "  Ethernet${i}: vlan pop $vlan"
-done
+echo "=== [SW1] tc ingress VLAN pop (Ethernet14のみ) ==="
+# Ethernet0-11はvethペア接続のためVLAN pop不要
 tc qdisc del dev "Ethernet14" handle ffff: ingress 2>/dev/null || true
 tc qdisc add dev "Ethernet14" handle ffff: ingress
 tc filter add dev "Ethernet14" parent ffff: protocol 802.1Q flower vlan_id 44 action vlan pop

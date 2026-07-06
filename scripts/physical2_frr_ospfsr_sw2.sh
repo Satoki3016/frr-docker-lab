@@ -103,58 +103,56 @@ add_to_bridge "$BR_XSW" LER_Egress lere-cr1 10.0.2.2/30
 add_to_bridge "$BR_XSW" LER_Egress lere-cr2 10.0.4.2/30
 add_to_bridge "$BR_XSW" LER_Egress lere-cr3 10.0.6.2/30
 
-# LER_Egress ↔ Rx (SW2内ループバックケーブル)
-connect_port Ethernet3 LER_Egress lere-rx1 10.20.1.2/30
-connect_port Ethernet4 Rx1        rx1-lere 10.20.1.1/30
-connect_port Ethernet5 LER_Egress lere-rx2 10.20.2.2/30
-connect_port Ethernet6 Rx2        rx2-lere 10.20.2.1/30
-connect_port Ethernet7 LER_Egress lere-rx3 10.20.3.2/30
-connect_port Ethernet8 Rx3        rx3-lere 10.20.3.1/30
+# LER_Egress↔Rx vethペア (LER_Egress=.2, Rx=.1 — measure_sw1.shは.1へiperf3接続)
+# KNETループバックボトルネックをバイパスするためvethペアで直結
+connect_veth_pair() {
+    local ca=$1 ifa=$2 ipa=$3 cb=$4 ifb=$5 ipb=$6
+    local pid_a; pid_a=$(docker inspect --format='{{.State.Pid}}' "$ca")
+    local pid_b; pid_b=$(docker inspect --format='{{.State.Pid}}' "$cb")
+    local tmp_a="tmp-${ifa}" tmp_b="tmp-${ifb}"
+    ip link del "$tmp_a" 2>/dev/null || true
+    ip link add "$tmp_a" mtu 1500 type veth peer name "$tmp_b" mtu 1500
+    ip link set "$tmp_a" netns "$pid_a" name "$ifa"
+    ip link set "$tmp_b" netns "$pid_b" name "$ifb"
+    dc "$ca" ip link set "$ifa" up
+    dc "$ca" ip addr add "$ipa" dev "$ifa"
+    dc "$cb" ip link set "$ifb" up
+    dc "$cb" ip addr add "$ipb" dev "$ifb"
+    echo "  veth: $ca/$ifa ($ipa) ↔ $cb/$ifb ($ipb)"
+}
 
-# ── 5. ASIC per-port VLAN 設定 ────────────────────────────────────────────
+connect_veth_pair LER_Egress lere-rx1 10.20.1.2/30  Rx1 rx1-lere 10.20.1.1/30
+connect_veth_pair LER_Egress lere-rx2 10.20.2.2/30  Rx2 rx2-lere 10.20.2.1/30
+connect_veth_pair LER_Egress lere-rx3 10.20.3.2/30  Rx3 rx3-lere 10.20.3.1/30
+
+# ── 5. ASIC VLAN 設定 ─────────────────────────────────────────────────────
+#
+# Ethernet3-8 (旧loopback) はvethペアに変更したためASIC設定不要。
+# Ethernet2 (inter-switch, SW1:Ethernet14側) のみ VLAN 44 に設定。
 echo ""
-echo "=== [5] ASIC per-port VLAN設定 ==="
-
-# スイッチ間ポート Ethernet2 のみ → VLAN 44 (1本クロスケーブル、SW1側もVLAN44)
+echo "=== [5] ASIC VLAN設定 (Ethernet2のみ) ==="
 bcmcmd "vlan create 44 pbm=xe2,cpu ubm=xe2,cpu" 2>/dev/null || true
 bcmcmd "pvlan set xe2 44"
 bcmcmd "vlan remove 1 pbm=xe2" 2>/dev/null || true
 echo "  Ethernet2 → VLAN 44"
 
-# ループバックポート Ethernet3-8 → VLAN 20-25
-for i in 3 4 5 6 7 8; do
-    vlan=$(( 20 + i - 3 ))
-    bcmcmd "vlan create $vlan pbm=xe${i},cpu ubm=xe${i},cpu" 2>/dev/null || true
-    bcmcmd "pvlan set xe${i} $vlan"
-    bcmcmd "vlan remove 1 pbm=xe${i}" 2>/dev/null || true
-    echo "  Ethernet${i} → VLAN ${vlan}"
-done
-
 # ── 6. ebtables ARP修正 ───────────────────────────────────────────────────
+# vr-lere+ = vr-lere-cr1/2/3 (br-xsw cross-SW側のveth peer)
+# vr-Ethernet+ はvethペア化後不要
 echo ""
 echo "=== [6] ebtables ARP修正 ==="
-ebtables -I FORWARD 1 -i 'vr-Ethernet+' -p ARP -j ACCEPT 2>/dev/null || true
-ebtables -I FORWARD 2 -o 'vr-Ethernet+' -p ARP -j ACCEPT 2>/dev/null || true
-# 共有ブリッジ側 veth (vr-lere-cr1 等) も許可
-ebtables -I FORWARD 3 -i 'vr-lere+' -p ARP -j ACCEPT 2>/dev/null || true
-ebtables -I FORWARD 4 -o 'vr-lere+' -p ARP -j ACCEPT 2>/dev/null || true
-echo "  [ok]"
+ebtables -I FORWARD 1 -i 'vr-lere+' -p ARP -j ACCEPT 2>/dev/null || true
+ebtables -I FORWARD 2 -o 'vr-lere+' -p ARP -j ACCEPT 2>/dev/null || true
+echo "  [ok] ARP ACCEPT rules added (vr-lere+ for br-xsw)"
 
 # ── 7. tc ingress VLAN pop ────────────────────────────────────────────────
+# Ethernet3-8はvethペア化後不要。Ethernet2(inter-switch)のみ設定。
 echo ""
-echo "=== [7] tc ingress VLAN pop ==="
-# スイッチ間: Ethernet2 のみ (VLAN 44)
+echo "=== [7] tc ingress VLAN pop (Ethernet2のみ) ==="
 tc qdisc del dev "Ethernet2" handle ffff: ingress 2>/dev/null || true
 tc qdisc add dev "Ethernet2" handle ffff: ingress
 tc filter add dev "Ethernet2" parent ffff: protocol 802.1Q flower vlan_id 44 action vlan pop
 echo "  Ethernet2: vlan pop 44"
-for i in 3 4 5 6 7 8; do
-    vlan=$(( 20 + i - 3 ))
-    tc qdisc del dev "Ethernet${i}" handle ffff: ingress 2>/dev/null || true
-    tc qdisc add dev "Ethernet${i}" handle ffff: ingress
-    tc filter add dev "Ethernet${i}" parent ffff: protocol 802.1Q flower vlan_id "$vlan" action vlan pop
-    echo "  Ethernet${i}: vlan pop $vlan"
-done
 
 # ── 8. ループバックIP・MPLS有効化 ─────────────────────────────────────────
 echo ""

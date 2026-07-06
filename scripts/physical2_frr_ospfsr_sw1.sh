@@ -58,49 +58,40 @@ for name in Tx1 Tx2 Tx3 LER_Ingress CR1 CR2 CR3; do
     echo "  [ok] $name"
 done
 
-# ── 4. 物理ポート → bridge+veth → コンテナ ───────────────────────────────
+# ── 4. コンテナ間接続 ────────────────────────────────────────────────────
+#
+# intra-SW接続(Tx↔LER_Ingress, LER_Ingress↔CR)は物理loopback経由だと
+# BCM ASIC KNETのCPUパス(~38kbps実効)がボトルネックになる。
+# kernel vethペアで直結することでKNETを完全バイパスし kernel速度で動作。
+# cross-SW link (Ethernet14→SW2) は引き続き物理ポートを使用。
 echo ""
-echo "=== [4] 物理ポート接続 ==="
-# SONiC KNET制約: 物理ポートはroot nsに残し bridge 経由でコンテナに接続
-# br-EthX (bridge) ── EthX (物理) + vr-EthX (root ns veth端) ── ifname (コンテナ内)
+echo "=== [4] vethペア接続 (KNET loopbackバイパス) ==="
 
-connect_port() {
-    local eth=$1 container=$2 ifname=$3 ip=$4
-    local br="br-${eth}" vr="vr-${eth}"
-    local vpid; vpid=$(docker inspect --format='{{.State.Pid}}' "$container")
-
-    ip link del "$br" 2>/dev/null || true
-    ip link add "$br" type bridge stp_state 0
-    ip link set "$eth" mtu 1500 up
-    ip link set "$eth" master "$br"
-    ip link set "$br" mtu 1500 up
-
-    ip link del "$vr" 2>/dev/null || true
-    ip link add "$vr" type veth peer name "$ifname"
-    ip link set "$vr" master "$br"
-    ip link set "$vr" mtu 1500 up
-    ip link set "$ifname" netns "$vpid"
-
-    dc "$container" ip link set "$ifname" mtu 1500 up
-    dc "$container" ip addr add "$ip" dev "$ifname"
-    echo "  $eth → $container/$ifname ($ip)"
+connect_veth_pair() {
+    local ca=$1 ifa=$2 ipa=$3 cb=$4 ifb=$5 ipb=$6
+    local pid_a; pid_a=$(docker inspect --format='{{.State.Pid}}' "$ca")
+    local pid_b; pid_b=$(docker inspect --format='{{.State.Pid}}' "$cb")
+    local tmp_a="tmp-${ifa}" tmp_b="tmp-${ifb}"
+    ip link del "$tmp_a" 2>/dev/null || true
+    ip link add "$tmp_a" mtu 1500 type veth peer name "$tmp_b" mtu 1500
+    ip link set "$tmp_a" netns "$pid_a" name "$ifa"
+    ip link set "$tmp_b" netns "$pid_b" name "$ifb"
+    dc "$ca" ip link set "$ifa" up
+    dc "$ca" ip addr add "$ipa" dev "$ifa"
+    dc "$cb" ip link set "$ifb" up
+    dc "$cb" ip addr add "$ipb" dev "$ifb"
+    echo "  veth: $ca/$ifa ($ipa) ↔ $cb/$ifb ($ipb)"
 }
 
 # Tx ↔ LER_Ingress
-connect_port Ethernet0  Tx1         tx1-leri  10.10.1.1/30
-connect_port Ethernet1  LER_Ingress leri-tx1  10.10.1.2/30
-connect_port Ethernet2  Tx2         tx2-leri  10.10.2.1/30
-connect_port Ethernet3  LER_Ingress leri-tx2  10.10.2.2/30
-connect_port Ethernet4  Tx3         tx3-leri  10.10.3.1/30
-connect_port Ethernet5  LER_Ingress leri-tx3  10.10.3.2/30
+connect_veth_pair Tx1        tx1-leri 10.10.1.1/30 LER_Ingress leri-tx1 10.10.1.2/30
+connect_veth_pair Tx2        tx2-leri 10.10.2.1/30 LER_Ingress leri-tx2 10.10.2.2/30
+connect_veth_pair Tx3        tx3-leri 10.10.3.1/30 LER_Ingress leri-tx3 10.10.3.2/30
 
 # LER_Ingress ↔ CoreRouters
-connect_port Ethernet6  LER_Ingress leri-cr1  10.0.1.1/30
-connect_port Ethernet7  CR1         cr1-leri  10.0.1.2/30
-connect_port Ethernet8  LER_Ingress leri-cr2  10.0.3.1/30
-connect_port Ethernet9  CR2         cr2-leri  10.0.3.2/30
-connect_port Ethernet10 LER_Ingress leri-cr3  10.0.5.1/30
-connect_port Ethernet11 CR3         cr3-leri  10.0.5.2/30
+connect_veth_pair LER_Ingress leri-cr1 10.0.1.1/30 CR1 cr1-leri 10.0.1.2/30
+connect_veth_pair LER_Ingress leri-cr2 10.0.3.1/30 CR2 cr2-leri 10.0.3.2/30
+connect_veth_pair LER_Ingress leri-cr3 10.0.5.1/30 CR3 cr3-leri 10.0.5.2/30
 
 # CoreRouters → SW2 (inter-switch: 1本クロスケーブル Ethernet14 共有)
 # CR1/CR2/CR3 の egress を br-xsw ブリッジに集約し Ethernet14 経由で SW2 へ
@@ -129,51 +120,30 @@ add_to_bridge "$BR_XSW" CR1 cr1-lere 10.0.2.1/30
 add_to_bridge "$BR_XSW" CR2 cr2-lere 10.0.4.1/30
 add_to_bridge "$BR_XSW" CR3 cr3-lere 10.0.6.1/30
 
-# ── 5. ASIC per-port VLAN 設定 ────────────────────────────────────────────
+# ── 5. ASIC VLAN 設定 ─────────────────────────────────────────────────────
+#
+# Ethernet0-11 (旧loopback) はvethペアに変更したためASIC設定不要。
+# Ethernet14 (inter-switch, SW2:Ethernet2側) のみ VLAN 44 に設定。
 echo ""
-echo "=== [5] ASIC per-port VLAN設定 ==="
-# BCM ASICのFDB→cpu0パスはKNETのper-portフィルタをバイパスするため
-# 各ポートを1ポートのみのVLANに隔離してflood→cpu0→KNET経由に強制する
-
-# ループバックポート Ethernet0-11 → VLAN 30-41
-for i in $(seq 0 11); do
-    vlan=$(( 30 + i ))
-    bcmcmd "vlan create $vlan pbm=xe${i},cpu ubm=xe${i},cpu" 2>/dev/null || true
-    bcmcmd "pvlan set xe${i} $vlan"
-    bcmcmd "vlan remove 1 pbm=xe${i}" 2>/dev/null || true
-    echo "  Ethernet${i} → VLAN ${vlan}"
-done
-
-# スイッチ間ポート Ethernet14 のみ → VLAN 44 (1本クロスケーブル)
+echo "=== [5] ASIC VLAN設定 (Ethernet14のみ) ==="
 bcmcmd "vlan create 44 pbm=xe14,cpu ubm=xe14,cpu" 2>/dev/null || true
 bcmcmd "pvlan set xe14 44"
 bcmcmd "vlan remove 1 pbm=xe14" 2>/dev/null || true
 echo "  Ethernet14 → VLAN 44"
 
 # ── 6. ebtables ARP修正 ───────────────────────────────────────────────────
+# vr-cr+ = vr-cr1-lere/vr-cr2-lere/vr-cr3-lere (br-xsw cross-SW側のveth peer)
+# vr-Ethernet+ はvethペア化後不要 (bridge-side veth peer がなくなった)
 echo ""
 echo "=== [6] ebtables ARP修正 ==="
-ebtables -I FORWARD 1 -i 'vr-Ethernet+' -p ARP -j ACCEPT 2>/dev/null || true
-ebtables -I FORWARD 2 -o 'vr-Ethernet+' -p ARP -j ACCEPT 2>/dev/null || true
-# 共有ブリッジ側 veth (vr-cr1-lere 等) も許可
-ebtables -I FORWARD 3 -i 'vr-cr+' -p ARP -j ACCEPT 2>/dev/null || true
-ebtables -I FORWARD 4 -o 'vr-cr+' -p ARP -j ACCEPT 2>/dev/null || true
-echo "  [ok]"
+ebtables -I FORWARD 1 -i 'vr-cr+' -p ARP -j ACCEPT 2>/dev/null || true
+ebtables -I FORWARD 2 -o 'vr-cr+' -p ARP -j ACCEPT 2>/dev/null || true
+echo "  [ok] ARP ACCEPT rules added (vr-cr+ for br-xsw)"
 
 # ── 7. tc ingress VLAN pop ────────────────────────────────────────────────
+# Ethernet0-11はvethペア化後不要。Ethernet14(inter-switch)のみ設定。
 echo ""
-echo "=== [7] tc ingress VLAN pop ==="
-# BCM ASICはcpuへフレームを届ける際にVLANタグを付加する
-# tc ingressでブリッジ処理より前にタグを剥がす
-
-for i in $(seq 0 11); do
-    vlan=$(( 30 + i ))
-    tc qdisc del dev "Ethernet${i}" handle ffff: ingress 2>/dev/null || true
-    tc qdisc add dev "Ethernet${i}" handle ffff: ingress
-    tc filter add dev "Ethernet${i}" parent ffff: protocol 802.1Q flower vlan_id "$vlan" action vlan pop
-    echo "  Ethernet${i}: vlan pop $vlan"
-done
-# スイッチ間: Ethernet14 のみ (VLAN 44)
+echo "=== [7] tc ingress VLAN pop (Ethernet14のみ) ==="
 tc qdisc del dev "Ethernet14" handle ffff: ingress 2>/dev/null || true
 tc qdisc add dev "Ethernet14" handle ffff: ingress
 tc filter add dev "Ethernet14" parent ffff: protocol 802.1Q flower vlan_id 44 action vlan pop

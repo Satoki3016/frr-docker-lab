@@ -9,6 +9,7 @@
 
 set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export LAB_MODE=physical
 source "${SCRIPT_DIR}/lab_config.sh"
 
 DURATION=${1:-60}
@@ -19,6 +20,16 @@ if ! [[ "$DURATION" =~ ^[0-9]+$ ]]; then
     echo "[ERROR] durationは数値で指定してください: '$DURATION'"
     exit 1
 fi
+
+# 前回の残骸をクリーンアップ（自分自身・親プロセスは除外）
+for pid in $(pgrep -f "physical2_frr_measure_sw1" 2>/dev/null); do
+    [ "$pid" = "$$" ] || [ "$pid" = "$PPID" ] || kill -9 "$pid" 2>/dev/null || true
+done
+for c in Tx1 Tx2 Tx3; do
+    docker exec "$c" pkill -9 -f iperf3 2>/dev/null || true
+    docker exec "$c" pkill -9 -f owd_sender 2>/dev/null || true
+done
+sleep 1
 if ! [[ "$SCENARIO" =~ ^(normal|failure|failure_reroute)$ ]]; then
     echo "[ERROR] シナリオは normal / failure / failure_reroute のいずれか"
     exit 1
@@ -166,7 +177,7 @@ failure_reroute)
     done
     echo "  [ok] 初期ルート設定完了 (CR1 + unreachable / CR2なし)"
     echo "  frr_te_monitor起動 (障害検知時のみ CR2 を primary として追加)"
-    bash "${SCRIPT_DIR}/frr_te_monitor.sh" /tmp/frr_te_monitor.log &
+    bash "${SCRIPT_DIR}/frr_te_monitor.sh" /tmp/frr_te_monitor.log > /dev/null 2>&1 &
     TE_MONITOR_PID=$!
     echo "  [ok] frr_te_monitor PID=$TE_MONITOR_PID"
     sleep 3
@@ -182,10 +193,10 @@ if [[ "$SCENARIO" = "failure" || "$SCENARIO" = "failure_reroute" ]]; then
     (
         set +e
         sleep 20
-        echo "[t=20s] leri-cr1 DOWN → CR1障害注入"
+        echo "[t=20s] leri-cr1 DOWN → CR1障害注入" >> /tmp/failure_inject.log
         docker exec LER_Ingress ip link set leri-cr1 down
         sleep 20
-        echo "[t=40s] leri-cr1 UP → CR1復旧"
+        echo "[t=40s] leri-cr1 UP → CR1復旧" >> /tmp/failure_inject.log
         docker exec LER_Ingress ip link set leri-cr1 up
         if [ "$SCENARIO" = "failure" ]; then
             sleep 1
@@ -197,9 +208,9 @@ if [[ "$SCENARIO" = "failure" || "$SCENARIO" = "failure_reroute" ]]; then
                     ip route add unreachable 10.20.0.0/16 table \$tbl metric 100
                 done
             "
-            echo "[t=41s] failure: ルート再設定完了 (CR1 + unreachable)"
+            echo "[t=41s] failure: ルート再設定完了 (CR1 + unreachable)" >> /tmp/failure_inject.log
         fi
-    ) &
+    ) > /dev/null 2>&1 &
     FAILURE_PID=$!
 fi
 
@@ -266,7 +277,7 @@ CR1_PID=$(docker inspect  --format '{{.State.Pid}}' CR1)
         prev_tx=$b_tx; prev_td=$b_td; prev_rx=$b_rx; prev_rd=$b_rd
         t_prev_ms=$now_ms
     done
-) &
+) > /dev/null 2>&1 &
 PATH_MON_PID=$!
 
 # HTB クラス別スループットモニター (leri-cr1 WRR per-class bytes)
@@ -310,7 +321,7 @@ echo "time,af41_bps,af42_bps,af43_bps" > "$HTB_CSV"
         t_prev_ms=$now_ms
         t_target_ms=$(( t_target_ms + 1000 ))
     done
-) &
+) > /dev/null 2>&1 &
 HTB_MON_PID=$!
 
 # HTB クラス別スループットモニター (leri-cr2 — failure_reroute 時に te_monitor がここに切り替え)
@@ -354,7 +365,7 @@ echo "time,af41_bps,af42_bps,af43_bps" > "$HTB_CR2_CSV"
         t_prev_ms=$now_ms
         t_target_ms=$(( t_target_ms + 1000 ))
     done
-) &
+) > /dev/null 2>&1 &
 HTB_MON_CR2_PID=$!
 
 # Tx3ルートキャッシュをクリア (以前のICMP unreachableがキャッシュされている可能性)
@@ -380,14 +391,24 @@ wait $PID1 $PID2 $PID3 || true
 kill "$PATH_MON_PID"     2>/dev/null || true
 kill "$HTB_MON_PID"     2>/dev/null || true
 kill "$HTB_MON_CR2_PID" 2>/dev/null || true
+wait "$PATH_MON_PID" "$HTB_MON_PID" "$HTB_MON_CR2_PID" 2>/dev/null || true
 rm -f "$_PID_FILE"
 echo "  [ok] iperf3 計測完了"
 
 # ── クリーンアップ ───────────────────────────────────────────────────────
 [ -n "$FAILURE_PID" ] && { wait "$FAILURE_PID" 2>/dev/null || true; }
 docker exec LER_Ingress ip link set leri-cr1 up 2>/dev/null || true
-[ -n "$TE_MONITOR_PID" ] && kill "$TE_MONITOR_PID" 2>/dev/null || true
-pkill -f "frr_te_monitor.sh" 2>/dev/null || true
+if [ -n "$TE_MONITOR_PID" ]; then
+    kill "$TE_MONITOR_PID" 2>/dev/null || true
+    for _i in 1 2 3 4 5; do
+        kill -0 "$TE_MONITOR_PID" 2>/dev/null || break
+        sleep 0.5
+    done
+    kill -9 "$TE_MONITOR_PID"  2>/dev/null || true
+    pkill -9 -P "$TE_MONITOR_PID" 2>/dev/null || true
+    wait "$TE_MONITOR_PID" 2>/dev/null || true
+fi
+pkill -9 -f "frr_te_monitor.sh" 2>/dev/null || true
 for tx in Tx1 Tx2 Tx3; do
     docker exec "$tx" pkill -f "owd_sender" 2>/dev/null || true
 done

@@ -183,11 +183,12 @@ add_htb_wrr() {
     local tc_rate; tc_rate=$(normalize_rate "$total")
     local total_kbps; total_kbps=$(rate_to_kbps "$total")
     local sum=$(( WRR_HI + WRR_ME + WRR_LO ))
-    # r_hi は意図的に小さく(10%)設定: AF41が常にYELLOWゾーン(保証超過)に入り、
-    # prio=0のSP(Strict Priority)が有効になるようにする。GREENゾーンではprio無効。
+    # 全クラスの保証rateを1/10に縮小: HTBは保証(green)をprioに関係なく先に配るため、
+    # 保証を小さくして帯域の約85%を借用(yellow)プールに置く。借用分配は
+    # prio=0のAF41が最優先(SP)、残余をAF42/AF43がquantum比2:1(WRR)で分ける。
     local r_hi=$(( total_kbps / 10 ))
-    local r_me=$(( total_kbps * WRR_ME / sum ))
-    local r_lo=$(( total_kbps * WRR_LO / sum ))
+    local r_me=$(( total_kbps * WRR_ME / sum / 10 ))
+    local r_lo=$(( total_kbps * WRR_LO / sum / 10 ))
 
     dc "$cname" tc qdisc del dev "$dev" root    2>/dev/null || true
     dc "$cname" tc qdisc add dev "$dev" root handle 1: htb default 13

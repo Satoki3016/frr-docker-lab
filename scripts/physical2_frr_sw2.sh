@@ -88,7 +88,7 @@ cat << 'USAGE'
 ■ SW1, SW2両方セットアップ後のフェイルオーバーテスト (SW1で実行):
 
   # [端末1] 連続ping + タイムスタンプ
-  docker exec Tx1 ping -i 0.2 10.20.1.2 | while read l; do echo "$(date +%T.%3N) $l"; done
+  docker exec Tx1 ping -i 0.2 10.20.1.1 | while read l; do echo "$(date +%T.%3N) $l"; done
 
   # [端末2] CR1障害シミュレーション
   docker exec LER_Ingress ip link set leri-cr1 down

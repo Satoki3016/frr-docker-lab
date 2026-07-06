@@ -240,6 +240,96 @@ echo "  [ok] LER_Egress PID=${LER_EGRESS_PID} → ${NETDEV_FILE} 直読みモー
 THR_MONITOR_PID=$!
 echo "  [ok] PID=$THR_MONITOR_PID → $CSV_PATH"
 
+# ── HTB クラスドロップ + IP routing ドロップ モニター ────────────────────
+echo ""
+echo "=== [5b] ドロップモニター起動 ==="
+HTB_CSV="$RESULTS_DIR/tc_drops.csv"
+echo "time,node,iface,class,drops_per_sec" > "$HTB_CSV"
+IP_DROP_CSV="$RESULTS_DIR/ip_drops.csv"
+echo "time,node,out_no_routes_per_sec,tx_drop_cr1_per_sec,tx_drop_cr2_per_sec,tx_drop_cr3_per_sec" > "$IP_DROP_CSV"
+LER_INGRESS_PID=$(docker inspect --format '{{.State.Pid}}' LER_Ingress)
+NETDEV_LERI="/proc/${LER_INGRESS_PID}/net/dev"
+SNMP_LERI="/proc/${LER_INGRESS_PID}/net/snmp"
+echo "  [ok] LER_Ingress PID=${LER_INGRESS_PID}"
+
+(
+    set +e
+    t_start=$(date +%s)
+    declare -A prev
+
+    # HTB クラスドロップ (tc -s class show)
+    _poll_tc_drops() {
+        for dev in leri-cr1 leri-cr2 leri-cr3; do
+            nsenter -t "$LER_INGRESS_PID" -n -- tc -s class show dev "$dev" 2>/dev/null \
+                | awk -v d="$dev" '
+                    /class htb 1:1/ { cls="AF41" }
+                    /class htb 1:2/ { cls="AF42" }
+                    /class htb 1:3/ { cls="AF43" }
+                    cls && /dropped/ {
+                        for (i=1; i<=NF; i++)
+                            if (index($i, "dropped") > 0) { print d ":" cls ":" $(i+1)+0; break }
+                        cls=""
+                    }
+                '
+        done
+    }
+
+    # /proc/net/dev から TX drop (col 13) を取得
+    _get_tx_drops() {
+        awk '
+            $1=="leri-cr1:"{cr1=$13}
+            $1=="leri-cr2:"{cr2=$13}
+            $1=="leri-cr3:"{cr3=$13}
+            END{printf "%.0f:%.0f:%.0f\n", cr1+0, cr2+0, cr3+0}
+        ' "$NETDEV_LERI" 2>/dev/null
+    }
+
+    # /proc/net/snmp から OutNoRoutes を取得
+    _get_out_no_routes() {
+        awk '
+            /^Ip:/ && NR%2==0 {
+                for(i=1;i<=NF;i++) if($i=="OutNoRoutes"){print $(i); exit}
+            }
+        ' "$SNMP_LERI" 2>/dev/null || echo 0
+    }
+
+    # TC drops 初期化
+    while IFS=: read -r iface cls cnt; do
+        prev["tc:${iface}:${cls}"]=${cnt:-0}
+    done < <(_poll_tc_drops)
+    # IP/TX drops 初期化
+    IFS=: read -r p_cr1 p_cr2 p_cr3 < <(_get_tx_drops)
+    prev["tx:cr1"]=${p_cr1:-0}; prev["tx:cr2"]=${p_cr2:-0}; prev["tx:cr3"]=${p_cr3:-0}
+    prev["ip:no_route"]=$(_get_out_no_routes)
+
+    while true; do
+        sleep 1
+        t=$(( $(date +%s) - t_start ))
+
+        # HTB クラスドロップ
+        while IFS=: read -r iface cls cnt; do
+            key="tc:${iface}:${cls}"
+            delta=$(( ${cnt:-0} - ${prev[$key]:-0} ))
+            [ "$delta" -lt 0 ] && delta=0
+            echo "$t,LER_Ingress,$iface,$cls,$delta" >> "$HTB_CSV"
+            prev[$key]=${cnt:-0}
+        done < <(_poll_tc_drops)
+
+        # TX queue drops + IP routing drops
+        IFS=: read -r c_cr1 c_cr2 c_cr3 < <(_get_tx_drops)
+        c_nr=$(_get_out_no_routes)
+        d_cr1=$(( ${c_cr1:-0} - ${prev["tx:cr1"]:-0} )); [ "$d_cr1" -lt 0 ] && d_cr1=0
+        d_cr2=$(( ${c_cr2:-0} - ${prev["tx:cr2"]:-0} )); [ "$d_cr2" -lt 0 ] && d_cr2=0
+        d_cr3=$(( ${c_cr3:-0} - ${prev["tx:cr3"]:-0} )); [ "$d_cr3" -lt 0 ] && d_cr3=0
+        d_nr=$(( ${c_nr:-0}  - ${prev["ip:no_route"]:-0} )); [ "$d_nr" -lt 0 ] && d_nr=0
+        echo "$t,LER_Ingress,$d_nr,$d_cr1,$d_cr2,$d_cr3" >> "$IP_DROP_CSV"
+        prev["tx:cr1"]=${c_cr1:-0}; prev["tx:cr2"]=${c_cr2:-0}; prev["tx:cr3"]=${c_cr3:-0}
+        prev["ip:no_route"]=${c_nr:-0}
+    done
+) &
+DROP_MONITOR_PID=$!
+echo "  [ok] PID=$DROP_MONITOR_PID → $HTB_CSV / $IP_DROP_CSV"
+
 # ── 障害注入プロセス ──────────────────────────────────────────────────
 FAILURE_PID=""
 if [[ "$SCENARIO" = "failure" || "$SCENARIO" = "failure_reroute" ]]; then
@@ -297,15 +387,16 @@ docker exec -d Tx3 python3 /tmp/owd_sender.py \
     --dst 10.20.3.1 --port 5003 --dscp 38 --interval 0.02 --duration "$DURATION" --label "AF43"
 
 # iperf3 UDP — 出力をキャプチャしてパケットロス統計を保存
+# -i 1: 毎秒サーバ側の受信統計を記録 → E2E損失率の時系列取得に使用
 # --get-server-output: サーバ側の受信統計もクライアント出力に含める
 docker exec Tx1 iperf3 -c 10.20.1.1 -p 1000 -u -b "$TX1_RATE" -l 8950 -P 4 -t "$DURATION" \
-    -i 0 --get-server-output > "$RESULTS_DIR/iperf3_af41.log" 2>&1 &
+    -i 1 --get-server-output > "$RESULTS_DIR/iperf3_af41.log" 2>&1 &
 PIDS="$!"
 docker exec Tx2 iperf3 -c 10.20.2.1 -p 2000 -u -b "$TX2_RATE" -l 8950 -P 4 -t "$DURATION" \
-    -i 0 --get-server-output > "$RESULTS_DIR/iperf3_af42.log" 2>&1 &
+    -i 1 --get-server-output > "$RESULTS_DIR/iperf3_af42.log" 2>&1 &
 PIDS="$PIDS $!"
 docker exec Tx3 iperf3 -c 10.20.3.1 -p 3000 -u -b "$TX3_RATE" -l 8950 -P 4 -t "$DURATION" \
-    -i 0 --get-server-output > "$RESULTS_DIR/iperf3_af43.log" 2>&1 &
+    -i 1 --get-server-output > "$RESULTS_DIR/iperf3_af43.log" 2>&1 &
 PIDS="$PIDS $!"
 
 echo "  計測中... ${DURATION}秒待機"
@@ -325,11 +416,21 @@ echo "  [ok] OWD ログ回収完了"
 # CR1 を確実に復旧
 docker exec LER_Ingress ip link set leri-cr1 up 2>/dev/null || true
 
-kill "$THR_MONITOR_PID" 2>/dev/null || true
+kill "$THR_MONITOR_PID"       2>/dev/null || true
+kill "${DROP_MONITOR_PID:-}" 2>/dev/null || true
 
 # failure_reroute の場合はモニターも停止
-[ -n "${TE_MONITOR_PID:-}" ] && kill "$TE_MONITOR_PID" 2>/dev/null || true
-pkill -f "frr_te_monitor.sh" > /dev/null 2>&1 || true
+if [ -n "${TE_MONITOR_PID:-}" ]; then
+    kill "$TE_MONITOR_PID" 2>/dev/null || true
+    for _i in 1 2 3 4 5; do
+        kill -0 "$TE_MONITOR_PID" 2>/dev/null || break
+        sleep 0.5
+    done
+    kill -9 "$TE_MONITOR_PID" 2>/dev/null || true
+    pkill -9 -P "$TE_MONITOR_PID" 2>/dev/null || true
+    wait "$TE_MONITOR_PID" 2>/dev/null || true
+fi
+pkill -9 -f "frr_te_monitor.sh" > /dev/null 2>&1 || true
 
 for rx in Rx1 Rx2 Rx3; do
     docker exec "$rx" pkill -f "iperf3"       2>/dev/null || true
@@ -362,11 +463,8 @@ _bw_to_mbps() {
     esac
 }
 CR_MBPS=$(_bw_to_mbps "${CR1_BW:-3G}")
-TX_MBPS=$(_bw_to_mbps "${TX1_RATE:-7G}")
 
-# シナリオ別パケロス + 全体比較グラフを一括生成
-# --base で実験ディレクトリを指定、--cr-mbps / --tx-mbps で WRR 目標値を設定
-if $PLOT_CMD "$PLOT_SCRIPT" --base "$FRR_BASE" --cr-mbps "$CR_MBPS" --tx-mbps "$TX_MBPS"; then
+if $PLOT_CMD "$PLOT_SCRIPT" --base "$FRR_BASE" --cr-mbps "$CR_MBPS"; then
     echo "グラフ保存先: $FRR_BASE/figures/"
 else
     echo "[WARN] グラフ生成失敗"

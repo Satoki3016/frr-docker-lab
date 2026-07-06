@@ -24,6 +24,7 @@ DURATION=${1:-60}
 TARGET=${2:-all}
 EXP_TAG="${3:-$(date +%Y%m%d)}"
 
+export LAB_MODE=physical
 source "${SCRIPT_DIR}/lab_config.sh"
 _to_mbps() {
     local r; r=$(echo "$1" | tr '[:upper:]' '[:lower:]')
@@ -72,8 +73,12 @@ $SCP "${SCRIPT_DIR}/physical2_frr_measure_sw1.sh" "${SW1}:/home/kannolab/scripts
     && echo "  [ok] sw1.sh → SW1" || echo "  [warn] sw1.sh デプロイ失敗"
 $SCP "${SCRIPT_DIR}/physical2_frr_measure_sw2.sh" "${SW2}:/home/kannolab/scripts/" \
     && echo "  [ok] sw2.sh → SW2" || echo "  [warn] sw2.sh デプロイ失敗"
-$SCP "${SCRIPT_DIR}/lab_config.sh" "${SW1}:/home/kannolab/scripts/" \
+$SCP "${SCRIPT_DIR}/lab_config.sh"          "${SW1}:/home/kannolab/scripts/" \
     && echo "  [ok] lab_config.sh → SW1" || echo "  [warn] lab_config.sh デプロイ失敗"
+$SCP "${SCRIPT_DIR}/lab_config_veth.sh"     "${SW1}:/home/kannolab/scripts/" \
+    && echo "  [ok] lab_config_veth.sh → SW1" || echo "  [warn] lab_config_veth.sh デプロイ失敗"
+$SCP "${SCRIPT_DIR}/lab_config_physical.sh" "${SW1}:/home/kannolab/scripts/" \
+    && echo "  [ok] lab_config_physical.sh → SW1" || echo "  [warn] lab_config_physical.sh デプロイ失敗"
 $SCP "${SCRIPT_DIR}/frr_dscp_te.sh" "${SW1}:/home/kannolab/scripts/" \
     && echo "  [ok] frr_dscp_te.sh → SW1" || echo "  [warn] frr_dscp_te.sh デプロイ失敗"
 $SCP "${SCRIPT_DIR}/frr_te_monitor.sh" "${SW1}:/home/kannolab/scripts/" \
@@ -128,7 +133,7 @@ echo ""
 
 # SW1でfrr_dscp_te.shを実行 (SP fix + AF43 TCP fix + cburst を毎回適用)
 echo "=== TC/HTB QoS 適用 (SW1: frr_dscp_te.sh) ==="
-$SSH "$SW1" "sudo bash /home/kannolab/scripts/frr_dscp_te.sh" \
+$SSH "$SW1" "sudo LAB_MODE=physical bash /home/kannolab/scripts/frr_dscp_te.sh" \
     && echo "  [ok] TC/HTB/iptables 再設定完了" \
     || echo "  [warn] frr_dscp_te.sh 失敗 — 継続しますが設定が古い可能性あり"
 echo ""
@@ -162,20 +167,30 @@ run_scenario() {
         sleep 1
     done
     kill "$SW2_PID" 2>/dev/null || true
+    sleep 2
+    kill -9 "$SW2_PID" 2>/dev/null || true
     wait "$SW2_PID" 2>/dev/null || true
 
     # 結果収集
     echo "  [PC] 結果収集中..."
-    $SCP "${SW2}:/tmp/frr_results_${scenario}/throughput.csv" "$results_dir/" 2>/dev/null || true
-    $SCP "${SW2}:/tmp/frr_results_${scenario}/owd_af41.log"   "$results_dir/" 2>/dev/null || true
-    $SCP "${SW2}:/tmp/frr_results_${scenario}/owd_af42.log"   "$results_dir/" 2>/dev/null || true
-    $SCP "${SW2}:/tmp/frr_results_${scenario}/owd_af43.log"   "$results_dir/" 2>/dev/null || true
-    $SCP "${SW1}:/tmp/frr_results_${scenario}/iperf3_af41.log"  "$results_dir/" 2>/dev/null || true
-    $SCP "${SW1}:/tmp/frr_results_${scenario}/iperf3_af42.log"  "$results_dir/" 2>/dev/null || true
-    $SCP "${SW1}:/tmp/frr_results_${scenario}/iperf3_af43.log"  "$results_dir/" 2>/dev/null || true
-    $SCP "${SW1}:/tmp/frr_results_${scenario}/path_stats.csv"      "$results_dir/" 2>/dev/null || true
-    $SCP "${SW1}:/tmp/frr_results_${scenario}/htb_class_stats.csv"     "$results_dir/" 2>/dev/null || true
-    $SCP "${SW1}:/tmp/frr_results_${scenario}/htb_class_stats_cr2.csv" "$results_dir/" 2>/dev/null || true
+    _scp() {
+        local src=$1 dst=$2
+        if $SCP "$src" "$dst"; then
+            echo "    [ok] $(basename "$src")"
+        else
+            echo "    [warn] SCP失敗: $src"
+        fi
+    }
+    _scp "${SW2}:/tmp/frr_results_${scenario}/throughput.csv"        "$results_dir/"
+    _scp "${SW2}:/tmp/frr_results_${scenario}/owd_af41.log"          "$results_dir/"
+    _scp "${SW2}:/tmp/frr_results_${scenario}/owd_af42.log"          "$results_dir/"
+    _scp "${SW2}:/tmp/frr_results_${scenario}/owd_af43.log"          "$results_dir/"
+    _scp "${SW1}:/tmp/frr_results_${scenario}/iperf3_af41.log"       "$results_dir/"
+    _scp "${SW1}:/tmp/frr_results_${scenario}/iperf3_af42.log"       "$results_dir/"
+    _scp "${SW1}:/tmp/frr_results_${scenario}/iperf3_af43.log"       "$results_dir/"
+    _scp "${SW1}:/tmp/frr_results_${scenario}/path_stats.csv"        "$results_dir/"
+    _scp "${SW1}:/tmp/frr_results_${scenario}/htb_class_stats.csv"   "$results_dir/"
+    _scp "${SW1}:/tmp/frr_results_${scenario}/htb_class_stats_cr2.csv" "$results_dir/"
 
     echo ""
     echo "  [ok] ${scenario} 完了 → $results_dir"
@@ -201,7 +216,7 @@ SRC_PLOT="${LAB_DIR}/results/frr/plot_frr.py"
 PLOT_SCRIPT="${EXP_DIR}/plot_frr.py"
 if [ -f "$SRC_PLOT" ]; then
     cp "$SRC_PLOT" "$PLOT_SCRIPT"
-    python3 "$PLOT_SCRIPT" --cr-mbps "$CR_MBPS" --tx-mbps "$TX_MBPS" \
+    python3 "$PLOT_SCRIPT" --cr-mbps "$CR_MBPS" \
         && echo "  [ok] グラフ生成完了: ${EXP_DIR}/"
 else
     echo "  [warn] plot_frr.py が見つかりません: $SRC_PLOT"

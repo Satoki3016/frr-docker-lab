@@ -18,6 +18,16 @@ if ! [[ "$DURATION" =~ ^[0-9]+$ ]]; then
     echo "[ERROR] durationは数値で指定してください: '$DURATION'"
     exit 1
 fi
+
+# 前回の残骸をクリーンアップ（自分自身・親プロセスは除外）
+for pid in $(pgrep -f "physical2_frr_measure_sw2" 2>/dev/null); do
+    [ "$pid" = "$$" ] || [ "$pid" = "$PPID" ] || kill -9 "$pid" 2>/dev/null || true
+done
+for c in Rx1 Rx2 Rx3; do
+    docker exec "$c" pkill -9 -f iperf3 2>/dev/null || true
+    docker exec "$c" pkill -9 -f owd_receiver 2>/dev/null || true
+done
+sleep 1
 if ! [[ "$SCENARIO" =~ ^(normal|failure|failure_reroute)$ ]]; then
     echo "[ERROR] シナリオは normal / failure / failure_reroute のいずれか"
     exit 1
@@ -127,7 +137,7 @@ echo "  [ok] スループットモニター (LER_Egress PID=${LER_EGRESS_PID}) �
         prev1=$b1; prev2=$b2; prev3=$b3
         t_prev_ms=$now_ms
     done
-) &
+) < /dev/null > /dev/null 2>&1 &
 THR_MONITOR_PID=$!
 
 echo ""
@@ -150,11 +160,15 @@ docker cp Rx2:/tmp/owd_af42.log "${RESULTS_DIR}/owd_af42.log" 2>/dev/null \
 docker cp Rx3:/tmp/owd_af43.log "${RESULTS_DIR}/owd_af43.log" 2>/dev/null \
     && echo "  [ok] owd_af43.log" || echo "  [warn] owd_af43.log なし"
 
-# クリーンアップ
+# クリーンアップ (SIGTERM → SIGKILL でサブシェル+子プロセスを確実に終了)
 kill "$THR_MONITOR_PID" 2>/dev/null || true
+sleep 0.5
+kill -9 "$THR_MONITOR_PID" 2>/dev/null || true
+pkill -9 -P "$THR_MONITOR_PID" 2>/dev/null || true
+wait "$THR_MONITOR_PID" 2>/dev/null || true
 for rx in Rx1 Rx2 Rx3; do
-    docker exec "$rx" pkill -f "iperf3"       2>/dev/null || true
-    docker exec "$rx" pkill -f "owd_receiver" 2>/dev/null || true
+    timeout 5 docker exec "$rx" pkill -9 -f "iperf3"       2>/dev/null || true
+    timeout 5 docker exec "$rx" pkill -9 -f "owd_receiver" 2>/dev/null || true
 done
 
 echo ""
@@ -164,7 +178,9 @@ echo "████████████████████████�
 echo ""
 ls -lh "${RESULTS_DIR}/" 2>/dev/null || true
 echo ""
-echo "■ PCへ結果転送 (PCで実行):"
-echo "  scp kannolab@192.168.128.1:${RESULTS_DIR}/*.csv \\"
-echo "      kannolab@192.168.128.1:${RESULTS_DIR}/*.log \\"
-echo "      /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/frr_${SCENARIO}/"
+echo "■ 結果ファイルは all.sh が自動転送します (EXP_TAG サブディレクトリ配下に保存):"
+echo "  保存先例: results/frr/<EXP_TAG>/frr_${SCENARIO}/"
+echo "  手動転送する場合:"
+echo "    scp kannolab@192.168.128.1:${RESULTS_DIR}/*.csv \\"
+echo "        kannolab@192.168.128.1:${RESULTS_DIR}/*.log \\"
+echo "        /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/<EXP_TAG>/frr_${SCENARIO}/"
