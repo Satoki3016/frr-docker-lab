@@ -2,12 +2,18 @@
 # OSPF-SR 動的TE経路モニター
 #
 # 役割:
-#   leri-cr1/cr2/cr3 の operstate を監視し、障害/復旧に応じて
+#   leri-cr1/cr2/cr3 の障害/復旧を検知し、
 #   ポリシールーティングテーブル (41/42/43) の SR-MPLS 明示経路を更新する。
 #
-# 改良点 (旧版との差異):
+# 検知方式 (二重化):
+#   1. netlink (ip monitor link): operstate DOWN/UP イベント
+#      → ip link set down のような直接的なリンクダウンを即座に検知
+#   2. OSPF 隣接ポーリング (約2秒周期): show ip ospf neighbor で Full 状態を確認
+#      → tc netem / iptables など operstate が変化しない障害を検知
+#      → frr_measure.sh で OSPF タイマー短縮 (hello=1s/dead=3s) 時は ~5s で収束検知
+#
+# 改良点:
 #   1. SIDラベルを OSPF 問い合わせで動的取得
-#      (vtysh → カーネルルート → SRGB計算 の順で試行)
 #   2. リンク障害後に OSPF 収束 (隣接消滅/確立) を待ってからテーブルを再計算
 #   3. 定期的 (30秒ごと) にラベルを再確認し、変化があればテーブルを更新
 #
@@ -191,6 +197,33 @@ update_tables() {
     log "  table41/42/43 全クラス → ${active_name:-unreachable}"
 }
 
+# ── OSPF 隣接ポーリング ───────────────────────────────────────────────────
+# netlink が発火しない障害 (netem/iptables) を ~2秒周期で補完検知する
+_ospf_poll_last=0
+check_ospf_neighbors() {
+    local now; now=$(date +%s)
+    # 1秒未満の連呼を抑制
+    (( now - _ospf_poll_last < 1 )) && return
+    _ospf_poll_last=$now
+
+    for i in 0 1 2; do
+        local currently_full=0
+        ospf_neighbor_full "${CR_ROUTER_IDS[$i]}" && currently_full=1 || currently_full=0
+
+        if [ "${state[$i]}" -eq 0 ] && [ "$currently_full" -eq 0 ]; then
+            # 正常 → 隣接消失: netem/iptables 障害を検知
+            log "⚠  ${CR_NAMES[$i]} OSPF隣接消失検知 (ポーリング) → テーブル更新"
+            state[$i]=1
+            update_tables
+        elif [ "${state[$i]}" -eq 1 ] && [ "$currently_full" -eq 1 ]; then
+            # 障害 → Full回復: netem 解除後の自然復旧を検知
+            log "✓  ${CR_NAMES[$i]} OSPF Full回復検知 (ポーリング) → テーブル更新"
+            state[$i]=0
+            update_tables
+        fi
+    done
+}
+
 # ── リンク状態取得 ───────────────────────────────────────────────────────
 get_operstate() {
     docker exec LER_Ingress cat "/sys/class/net/$1/operstate" 2>/dev/null || echo "unknown"
@@ -236,37 +269,43 @@ _start_monitor() {
 }
 _start_monitor
 
-log "=== netlink イベント駆動ループ開始 ==="
+log "=== 監視ループ開始 (netlink + OSPF ポーリング 二重化) ==="
 label_refresh_last=$(date +%s)
 set +e   # デーモンループ: docker exec の一時的失敗でスクリプトを終了させない
 
 while true; do
-    # read -t 35: イベントがあれば即座 (<10ms) に返る、なければ35秒でタイムアウト
-    if IFS= read -r -t 35 line <&3 2>/dev/null; then
+    # read -t 2: イベントがあれば即座 (<10ms) に返る、なければ2秒でタイムアウト
+    # タイムアウトを短くすることで OSPF ポーリングの応答性を確保する
+    if IFS= read -r -t 2 line <&3 2>/dev/null; then
         # インタフェース状態変化行を処理 (例: "3: leri-cr1: <...> state DOWN ...")
         # 数字から始まる行のみ対象 (link/ether 等の属性行は無視)
-        [[ "$line" =~ ^[0-9]+:[[:space:]]([^:]+):[[:space:]].*state[[:space:]](UP|DOWN) ]] || continue
-        ifname="${BASH_REMATCH[1]%%@*}"   # "leri-cr1@if582" → "leri-cr1"
-        newstate="${BASH_REMATCH[2]}"
+        [[ "$line" =~ ^[0-9]+:[[:space:]]([^:]+):[[:space:]].*state[[:space:]](UP|DOWN) ]] || true
+        if [[ "$line" =~ ^[0-9]+:[[:space:]]([^:]+):[[:space:]].*state[[:space:]](UP|DOWN) ]]; then
+            ifname="${BASH_REMATCH[1]%%@*}"   # "leri-cr1@if582" → "leri-cr1"
+            newstate="${BASH_REMATCH[2]}"
 
-        for i in 0 1 2; do
-            [ "${CR_DEVS[$i]}" = "$ifname" ] || continue
-            new_s=$([ "$newstate" = "DOWN" ] && echo 1 || echo 0)
-            if [ "${state[$i]}" -eq "$new_s" ]; then break; fi  # 変化なし・スキップ
+            for i in 0 1 2; do
+                [ "${CR_DEVS[$i]}" = "$ifname" ] || continue
+                new_s=$([ "$newstate" = "DOWN" ] && echo 1 || echo 0)
+                if [ "${state[$i]}" -eq "$new_s" ]; then break; fi  # 変化なし・スキップ
 
-            if [ "$new_s" -eq 1 ]; then
-                log "⚠  ${CR_NAMES[$i]}(${ifname}) DOWN検知 (netlink) → OSPF収束待ち"
-                wait_ospf_converge "${CR_ROUTER_IDS[$i]}" 0
-                state[$i]=1
-            else
-                log "✓  ${CR_NAMES[$i]}(${ifname}) UP復旧 (netlink) → OSPF収束待ち"
-                wait_ospf_converge "${CR_ROUTER_IDS[$i]}" 1
-                state[$i]=0
-            fi
-            update_tables
-            break
-        done
+                if [ "$new_s" -eq 1 ]; then
+                    log "⚠  ${CR_NAMES[$i]}(${ifname}) DOWN検知 (netlink) → OSPF収束待ち"
+                    wait_ospf_converge "${CR_ROUTER_IDS[$i]}" 0
+                    state[$i]=1
+                else
+                    log "✓  ${CR_NAMES[$i]}(${ifname}) UP復旧 (netlink) → OSPF収束待ち"
+                    wait_ospf_converge "${CR_ROUTER_IDS[$i]}" 1
+                    state[$i]=0
+                fi
+                update_tables
+                break
+            done
+        fi
     fi
+
+    # OSPF 隣接ポーリング: netem/iptables 障害 (operstate 変化なし) を補完検知
+    check_ospf_neighbors
 
     # ip monitor プロセスが終了していたら再起動
     if ! kill -0 "$MONITOR_PID" 2>/dev/null; then

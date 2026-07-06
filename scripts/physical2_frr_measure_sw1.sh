@@ -152,31 +152,39 @@ normal)
     echo "  [ok] 全クラス→CR1(metric1)/CR2(metric2)/CR3(metric3)"
     ;;
 failure)
-    # unreachable metric 100 を追加することで、CR1 DOWN時に
-    # main テーブル(OSPF)へのフォールスルーを防ぎトラフィックを本当にドロップさせる
-    echo "  全クラス→CR1専用 + unreachable (OSPF main table フォールスルー防止)"
+    # tc netem loss 100% で leri-cr1 の全パケットを廃棄 (operstate は UP のまま)
+    # unreachable 注入不要: netem がデータ + OSPF hello を自然にドロップ
+    echo "  全クラス→CR1専用 (netem loss 100% で自然ブラックホール / unreachable 注入なし)"
     for tbl in 41 42 43; do
         docker exec LER_Ingress ip route flush table "$tbl" 2>/dev/null || true
         docker exec LER_Ingress ip route add table "$tbl" 10.20.0.0/16 \
             encap mpls "${LERE_LABEL}" via 10.0.1.2 dev leri-cr1 metric 1
-        docker exec LER_Ingress ip route add unreachable 10.20.0.0/16 \
-            table "$tbl" metric 100
     done
-    echo "  [ok] CR1専用 + unreachable (CR1 DOWN → unreachable hit → 真のdrop)"
+    echo "  [ok] CR1専用 (netem 100%損失 → t=20-40 全クラス通信断)"
     ;;
 failure_reroute)
-    # failure と同じ初期状態 (CR1 + unreachable のみ) から開始。
-    # te_monitor が CR1 DOWN を検知した後にのみ CR2 経路を追加する。
-    echo "  初期TE経路: CR1専用 + unreachable (te_monitorが障害時にCR2を明示追加)"
+    # OSPF タイマー短縮 + frr_te_monitor の OSPF ポーリングで netem 障害を ~5s 以内に検知
+    echo "  初期TE経路: CR1専用 (OSPF タイマー短縮 + frr_te_monitor OSPF ポーリング)"
+    echo "  OSPF タイマー短縮 (hello=1s / dead=3s) を設定中..."
+    docker exec frr-LER_Ingress vtysh -c "conf t" \
+        -c "interface leri-cr1" \
+        -c " ip ospf hello-interval 1" \
+        -c " ip ospf dead-interval 3" 2>/dev/null \
+        && echo "  [ok] LER_Ingress leri-cr1: hello=1s dead=3s" \
+        || echo "  [warn] LER_Ingress OSPF タイマー設定失敗 (継続)"
+    docker exec frr-CR1 vtysh -c "conf t" \
+        -c "interface cr1-leri" \
+        -c " ip ospf hello-interval 1" \
+        -c " ip ospf dead-interval 3" 2>/dev/null \
+        && echo "  [ok] CR1 cr1-leri: hello=1s dead=3s" \
+        || echo "  [warn] CR1 OSPF タイマー設定失敗 (継続)"
     for tbl in 41 42 43; do
         docker exec LER_Ingress ip route flush table "$tbl" 2>/dev/null || true
         docker exec LER_Ingress ip route add table "$tbl" 10.20.0.0/16 \
             encap mpls "${LERE_LABEL}" via 10.0.1.2 dev leri-cr1 metric 1
-        docker exec LER_Ingress ip route add unreachable 10.20.0.0/16 \
-            table "$tbl" metric 100
     done
-    echo "  [ok] 初期ルート設定完了 (CR1 + unreachable / CR2なし)"
-    echo "  frr_te_monitor起動 (障害検知時のみ CR2 を primary として追加)"
+    echo "  [ok] 初期ルート設定完了 (CR1専用 / unreachable なし)"
+    echo "  frr_te_monitor起動 (OSPF ポーリング + netlink 二重監視)"
     bash "${SCRIPT_DIR}/frr_te_monitor.sh" /tmp/frr_te_monitor.log > /dev/null 2>&1 &
     TE_MONITOR_PID=$!
     echo "  [ok] frr_te_monitor PID=$TE_MONITOR_PID"
@@ -193,23 +201,13 @@ if [[ "$SCENARIO" = "failure" || "$SCENARIO" = "failure_reroute" ]]; then
     (
         set +e
         sleep 20
-        echo "[t=20s] leri-cr1 DOWN → CR1障害注入" >> /tmp/failure_inject.log
-        docker exec LER_Ingress ip link set leri-cr1 down
+        echo "[t=20s] leri-cr1 netem loss 100% → リンク劣化シミュレート" >> /tmp/failure_inject.log
+        # operstate は UP のまま全パケット (データ + OSPF hello) を廃棄
+        docker exec LER_Ingress tc qdisc add dev leri-cr1 root netem loss 100%
         sleep 20
-        echo "[t=40s] leri-cr1 UP → CR1復旧" >> /tmp/failure_inject.log
-        docker exec LER_Ingress ip link set leri-cr1 up
-        if [ "$SCENARIO" = "failure" ]; then
-            sleep 1
-            docker exec LER_Ingress bash -c "
-                for tbl in 41 42 43; do
-                    ip route flush table \$tbl 2>/dev/null || true
-                    ip route add table \$tbl 10.20.0.0/16 \
-                        encap mpls ${LERE_LABEL} via 10.0.1.2 dev leri-cr1 metric 1
-                    ip route add unreachable 10.20.0.0/16 table \$tbl metric 100
-                done
-            "
-            echo "[t=41s] failure: ルート再設定完了 (CR1 + unreachable)" >> /tmp/failure_inject.log
-        fi
+        echo "[t=40s] leri-cr1 netem 解除 → 自然復旧" >> /tmp/failure_inject.log
+        # netem 解除後はルートが変わっていないため再設定不要
+        docker exec LER_Ingress tc qdisc del dev leri-cr1 root 2>/dev/null || true
     ) > /dev/null 2>&1 &
     FAILURE_PID=$!
 fi
@@ -397,7 +395,19 @@ echo "  [ok] iperf3 計測完了"
 
 # ── クリーンアップ ───────────────────────────────────────────────────────
 [ -n "$FAILURE_PID" ] && { wait "$FAILURE_PID" 2>/dev/null || true; }
-docker exec LER_Ingress ip link set leri-cr1 up 2>/dev/null || true
+# netem が残っている場合は確実に削除
+docker exec LER_Ingress tc qdisc del dev leri-cr1 root 2>/dev/null || true
+# failure_reroute: OSPF タイマーをデフォルトに戻す
+if [ "$SCENARIO" = "failure_reroute" ]; then
+    docker exec frr-LER_Ingress vtysh -c "conf t" \
+        -c "interface leri-cr1" \
+        -c " no ip ospf hello-interval" \
+        -c " no ip ospf dead-interval" 2>/dev/null || true
+    docker exec frr-CR1 vtysh -c "conf t" \
+        -c "interface cr1-leri" \
+        -c " no ip ospf hello-interval" \
+        -c " no ip ospf dead-interval" 2>/dev/null || true
+fi
 if [ -n "$TE_MONITOR_PID" ]; then
     kill "$TE_MONITOR_PID" 2>/dev/null || true
     for _i in 1 2 3 4 5; do
