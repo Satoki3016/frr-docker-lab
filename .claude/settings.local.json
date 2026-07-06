@@ -127,7 +127,14 @@
       "Bash(ls -la /tmp/te_test2.log)",
       "Bash(echo \"SW1 measurement started \\(PID=$!\\)\")",
       "Bash(ip addr *)",
-      "Bash(docker info *)"
+      "Bash(docker info *)",
+      "Bash(grep -v \"^[0-9]*,0,0,0$\" /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/20260630_30M_veth/frr_normal/throughput.csv)",
+      "Bash(python plot_frr.py --base 20260630_25G_veth --cr-mbps 25000)",
+      "Bash(sort -t, -k1 -n)",
+      "WebFetch(domain:support.edge-core.com)",
+      "WebFetch(domain:www.anthropic.com)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)"
     ]
   }
 }
