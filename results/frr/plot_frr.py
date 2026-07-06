@@ -71,13 +71,15 @@ def _parse_bw(s: str) -> float:
     return float(s)
 
 def _lab_cr_mbps() -> float | None:
-    lab = _SCRIPT_DIR.parent.parent / "scripts" / "lab_config.sh"
-    if not lab.exists():
-        return None
-    for ln in lab.read_text().splitlines():
-        m = re.match(r'CR1_BW="\$\{CR1_BW:-([^}]+)\}"', ln)
-        if m:
-            return _parse_bw(m.group(1))
+    # TX レート (_lab_tx_mbps) と同じ優先順で参照し、TX/CR の設定ファイル不整合を防ぐ
+    for cfg_name in ("lab_config_veth.sh", "lab_config_physical.sh", "lab_config.sh"):
+        lab = _SCRIPT_DIR.parent.parent / "scripts" / cfg_name
+        if not lab.exists():
+            continue
+        for ln in lab.read_text().splitlines():
+            m = re.match(r'CR1_BW="\$\{CR1_BW:-([^}]+)\}"', ln)
+            if m:
+                return _parse_bw(m.group(1))
     return None
 
 def _lab_tx_mbps() -> tuple[float, float, float] | None:
@@ -131,17 +133,28 @@ def _resolve_base(tag: str | None) -> Path:
 BASE         = _resolve_base(_args.base)
 FIGURES_DIR  = BASE / "figures"
 FAILURE_START, FAILURE_END = 20, 40
-PLOT_END     = 65
+PLOT_END     = 60
+DATA_END     = 59.5   # 計測終端の端数サンプル（部分区間）を除外
 
 _WRR          = (4, 2, 1)
 _CR_LINK_MBPS = _args.cr_mbps if _args.cr_mbps is not None else (_lab_cr_mbps() or 25000.0)
-_wrr_alloc    = [_CR_LINK_MBPS * w / sum(_WRR) for w in _WRR]
 _tx_totals    = _lab_tx_mbps()
-# 送信レート < WRR割当 の場合は送信レートを上限とする
-WRR_TARGETS   = [
-    min(alloc, tx) if _tx_totals else alloc
-    for alloc, tx in zip(_wrr_alloc, _tx_totals or _wrr_alloc)
-]
+# SP+WRR 理論値:
+#   AF41 = min(送信量, リンク容量)          — prio0(SP) が借用プールを最優先で獲得
+#   残余 = リンク容量 - AF41
+#   AF42 = min(送信量, 残余×2/3), AF43 = min(送信量, 残余×1/3)
+#   (HTB保証rateは全クラス1/10縮小かつ重み比と同じ2:1のため、残余のWRR比分配と一致)
+if _tx_totals:
+    _af41_t   = min(_tx_totals[0], _CR_LINK_MBPS)
+    _residual = max(_CR_LINK_MBPS - _af41_t, 0.0)
+    _w2, _w3  = _WRR[1], _WRR[2]
+    THEORY_TARGETS = [
+        _af41_t,
+        min(_tx_totals[1], _residual * _w2 / (_w2 + _w3)),
+        min(_tx_totals[2], _residual * _w3 / (_w2 + _w3)),
+    ]
+else:
+    THEORY_TARGETS = [_CR_LINK_MBPS * w / sum(_WRR) for w in _WRR]
 
 THRU_UNIT  = "Gbps" if _CR_LINK_MBPS >= 1000 else "Mbps"
 THRU_SCALE = 1e-3   if _CR_LINK_MBPS >= 1000 else 1.0
@@ -175,8 +188,19 @@ def _scenario_style(name: str) -> dict:
         return _SC_STYLES["failure"]
     return {"color": "gray", "ls": "-", "lw": 1.4, "label": name}
 
+def _scenario_order(name: str) -> int:
+    """表示順: normal → failure → failure_reroute"""
+    if "normal" in name and "failure" not in name:
+        return 0
+    if "reroute" in name:
+        return 2
+    if "failure" in name:
+        return 1
+    return 3
+
 def _discover_scenarios():
-    dirs = sorted(d for d in BASE.iterdir() if d.is_dir() and d.name != "__pycache__")
+    dirs = sorted((d for d in BASE.iterdir() if d.is_dir() and d.name != "__pycache__"),
+                  key=lambda d: (_scenario_order(d.name), d.name))
     result = []
     for d in dirs:
         st = _scenario_style(d.name)
@@ -244,7 +268,7 @@ def _compute_baselines(active: list) -> list:
                 return [sum(float(r[k]) for r in rows) / len(rows) * 8 / 1e6
                         for k in _RX_KEYS]
             break
-    return list(WRR_TARGETS)
+    return list(THEORY_TARGETS)
 
 def _load_throughput(csv_path, col):
     rows = []
@@ -255,7 +279,10 @@ def _load_throughput(csv_path, col):
         if len(parts) <= col:
             continue
         try:
-            rows.append((float(parts[0]), int(parts[col]) * 8 / 1e6))
+            t = float(parts[0])
+            if t > DATA_END:
+                continue
+            rows.append((t, int(parts[col]) * 8 / 1e6))
         except ValueError:
             continue
     rows.sort(key=lambda x: x[0])
@@ -285,6 +312,8 @@ def _load_owd(path: Path):
         if m:
             t = float(m.group(1))
             if t0 is None: t0 = t
+            if t - t0 > DATA_END:
+                continue
             ts.append(t - t0); vals.append(float(m.group(2)))
     return _insert_gap_nans(ts, vals)
 
@@ -295,6 +324,8 @@ def _load_ping_rtt(path: Path):
         if m:
             t = float(m.group(1))
             if t0 is None: t0 = t
+            if t - t0 > DATA_END:
+                continue
             ts.append(t - t0); vals.append(float(m.group(2)))
     return _insert_gap_nans(ts, vals)
 
@@ -322,10 +353,9 @@ def _mark_failure(ax, annotate: bool = False):
     ax.axvline(FAILURE_END,   color="#2471A3", ls=":", lw=0.9, zorder=1)
     ax.grid(True, axis="y", zorder=0)
     if annotate:
-        yhi = ax.get_ylim()[1]
         mid = (FAILURE_START + FAILURE_END) / 2
-        ax.text(mid, yhi * 0.97, "障害区間",
-                ha="center", va="top", fontsize=7, color="#888888")
+        ax.text(mid, 1.01, "障害区間", transform=ax.get_xaxis_transform(),
+                ha="center", va="bottom", fontsize=7, color="#888888")
 
 # ── (a)(b)(c) パネルラベル ────────────────────────────────────────────
 def _panel_label(ax, idx: int):
@@ -338,14 +368,14 @@ def compare_throughput(active):
     fig.suptitle("スループット比較", fontsize=10, fontweight="bold")
 
     for i, (ax, (pri_label, pri_color, col, _), wrr_tgt) in \
-            enumerate(zip(axes, PRIORITIES, WRR_TARGETS)):
+            enumerate(zip(axes, PRIORITIES, THEORY_TARGETS)):
         for d, n, c, ls, _, lw in active:
             t, mb = _load_per_class_throughput(BASE / d, col)
             if t:
                 ax.plot(t, [v * THRU_SCALE for v in mb],
                         label=n, color=c, linestyle=ls, linewidth=lw)
         ax.axhline(wrr_tgt * THRU_SCALE, color=pri_color, ls=":", lw=1.0, alpha=0.7,
-                   label=f"WRR 目標 ({wrr_tgt * THRU_SCALE:.1f} {THRU_UNIT})")
+                   label=f"理論値 ({wrr_tgt * THRU_SCALE:.2f} {THRU_UNIT})")
         ax.set_xlim(0, PLOT_END)
         ax.set_ylim(bottom=0)
         ax.set_ylabel(f"スループット ({THRU_UNIT})")
@@ -361,10 +391,11 @@ def compare_throughput(active):
 # ── compare_rtt ────────────────────────────────────────────────────────
 def compare_rtt(active):
     fig, axes = plt.subplots(3, 1, figsize=(7, 7), sharex=True, layout="constrained")
-    fig.suptitle("パケット遅延比較", fontsize=10, fontweight="bold")
+    fig.suptitle("片方向遅延 (OWD) 比較", fontsize=10, fontweight="bold")
 
     for i, (ax, (pri_label, pri_color, col, tx)) in enumerate(zip(axes, PRIORITIES)):
         all_vals = []
+        peak = None   # (t, val, color) — パネル内グローバル最大のみ注記
         for d, n, c, ls, _, lw in active:
             owd_p  = _find_owd(BASE / d, col)
             ping_p = BASE / d / f"{tx}_ping.log"
@@ -377,20 +408,24 @@ def compare_rtt(active):
             if t:
                 ax.plot(t, vals, label=n, color=c, linestyle=ls, linewidth=lw, alpha=0.9)
                 all_vals.extend(vals)
-                # 最大値アノテーション
                 peak_idx = int(np.nanargmax(vals))
                 peak_val = float(vals[peak_idx])
-                peak_t   = float(t[peak_idx])
-                ax.annotate(f"{peak_val:.1f} ms",
-                            xy=(peak_t, peak_val),
-                            xytext=(4, 4), textcoords="offset points",
-                            fontsize=6.5, color=c,
-                            arrowprops=dict(arrowstyle="-", color=c, lw=0.5))
+                if peak is None or peak_val > peak[1]:
+                    peak = (float(t[peak_idx]), peak_val, c)
+        if peak is not None:
+            right_edge = peak[0] > PLOT_END * 0.8
+            ax.annotate(f"最大 {peak[1]:.1f} ms",
+                        xy=(peak[0], peak[1]),
+                        xytext=(-4 if right_edge else 4, 4),
+                        textcoords="offset points",
+                        ha="right" if right_edge else "left",
+                        fontsize=6.5, color=peak[2],
+                        arrowprops=dict(arrowstyle="-", color=peak[2], lw=0.5))
         if all_vals:
             global_max = float(np.nanmax(all_vals))
             ax.set_ylim(bottom=0, top=global_max * 1.20)
         ax.set_xlim(0, PLOT_END)
-        ax.set_ylabel("遅延時間 (ms)")
+        ax.set_ylabel("片方向遅延 (ms)")
         ax.set_title(pri_label, color=pri_color, fontweight="bold", loc="left", pad=2)
         ax.legend(loc="upper right")
         _mark_failure(ax, annotate=(i == 0))
@@ -466,9 +501,12 @@ def compare_loss_timeseries(active):
             t_start, t_end = float(m.group(1)), float(m.group(2))
             if t_end - t_start > 1.5:   # 最終サマリ行はスキップ
                 continue
+            if t_start >= DATA_END:
+                continue
             lost  = int(m.group(3))
             total = int(m.group(4))
-            loss_pct = lost / total * 100.0 if total > 0 else 0.0
+            # total=0 は当該1秒間に1個も受信できなかった区間（完全断）= 100% 損失
+            loss_pct = 100.0 if total == 0 else lost / total * 100.0
             ts.append(t_start + 0.5)    # 区間中央を時刻に
             losses.append(loss_pct)
         return ts, losses
@@ -530,6 +568,8 @@ def compare_drop_location(active):
                 continue
             try:
                 t = float(r["time"])
+                if t > DATA_END:
+                    continue
                 td[t] = td.get(t, 0.0) + float(r["drops_per_sec"])
             except (ValueError, KeyError):
                 pass
@@ -601,6 +641,10 @@ def compare_drop_location(active):
         _panel_label(ax, pi)
 
     axes[-1].set_xlabel("経過時間 (s)")
+    fig.text(0.0, -0.015,
+             "注: ドロップ数は tc (HTB) キューでの破棄カウンタ。GSO 集約された skb 単位のため、"
+             "UDP データグラム数換算より小さい値となる。",
+             ha="left", va="top", fontsize=6.5, color="#666666")
     _save(fig, "compare_drop_location")
     plt.close(fig)
 
@@ -629,9 +673,9 @@ if __name__ == "__main__":
     print(f"結果ディレクトリ : {BASE.name}")
     print(f"CRリンク帯域     : {_CR_LINK_MBPS:.0f} Mbps")
     print(f"検出シナリオ     : {[n for _, n, *_ in active]}")
-    print(f"WRR 目標         : AF41={WRR_TARGETS[0]*THRU_SCALE:.1f} / "
-          f"AF42={WRR_TARGETS[1]*THRU_SCALE:.1f} / "
-          f"AF43={WRR_TARGETS[2]*THRU_SCALE:.1f} {THRU_UNIT}")
+    print(f"理論値 (SP+WRR)  : AF41={THEORY_TARGETS[0]*THRU_SCALE:.1f} / "
+          f"AF42={THEORY_TARGETS[1]*THRU_SCALE:.1f} / "
+          f"AF43={THEORY_TARGETS[2]*THRU_SCALE:.1f} {THRU_UNIT}")
     print()
 
     compare_throughput(active)
