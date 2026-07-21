@@ -46,8 +46,13 @@ if ! [[ "$SCENARIO" =~ ^(normal|failure|failure_reroute)$ ]]; then
     exit 1
 fi
 
+# PRIO_HI=1 (SP無効化・prio統一ablation) 時は自動でフォルダ名を分け、
+# SP有効時の結果を上書きする事故を防ぐ (2026-07-16: 一度上書きした反省による対策)
+PRIO_TAG=""
+[ "${PRIO_HI:-0}" = "1" ] && PRIO_TAG="_priouniform"
+
 FRR_BASE="$LAB_DIR/results/frr/$EXPERIMENT_NAME"
-RESULTS_DIR="$FRR_BASE/frr_${SCENARIO}"
+RESULTS_DIR="$FRR_BASE/frr_${SCENARIO}${PRIO_TAG}"
 mkdir -p "$RESULTS_DIR"
 
 PLOT_SCRIPT="$LAB_DIR/results/frr/plot_frr.py"
@@ -56,6 +61,7 @@ echo "████████████████████████�
 echo "  FRR OSPF-SR 計測  [${SCENARIO}]"
 echo "████████████████████████████████████████"
 echo "  計測時間 : ${DURATION}s"
+echo "  PRIOモード: $([ -n "$PRIO_TAG" ] && echo "統一(SP無効化, PRIO_HI=1)" || echo "SP有効(デフォルト)")"
 echo "  結果保存 : $RESULTS_DIR"
 echo ""
 

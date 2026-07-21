@@ -1,0 +1,342 @@
+{
+    "COPP_GROUP": {
+        "default": {
+            "trap_action":"trap",
+            "queue": "0",
+            "meter_type":"packets",
+            "mode":"sr_tcm",
+            "cir":"600",
+            "cbs":"600",
+            "red_action":"drop"
+        },
+        "ip2me":{
+            "trap_action":"trap",
+            "trap_priority":"1",
+            "queue": "1",
+            "meter_type":"packets",
+            "mode":"sr_tcm",
+            "cir":"6000",
+            "cbs":"6000",
+            "red_action":"drop"
+        },
+        "neighbor_miss":{
+            "trap_action":"trap",
+            "trap_priority":"2",
+            "queue": "2",
+            "meter_type":"packets",
+            "mode":"sr_tcm",
+            "cir":"200",
+            "cbs":"200",
+            "red_action":"drop"
+        },
+        "ssh":{
+            "trap_action":"trap",
+            "trap_priority":"3",
+            "queue": "3",
+            "meter_type":"packets",
+            "mode":"sr_tcm",
+            "cir":"6000",
+            "cbs":"6000",
+            "red_action":"drop"
+        },
+        "mgmt-framework":{
+            "trap_action":"trap",
+            "trap_priority":"4",
+            "queue": "4",
+            "meter_type":"packets",
+            "mode":"sr_tcm",
+            "cir":"6000",
+            "cbs":"6000",
+            "red_action":"drop"
+        },
+        "gnmi":{
+            "trap_action":"trap",
+            "trap_priority":"5",
+            "queue": "5",
+            "meter_type":"packets",
+            "mode":"sr_tcm",
+            "cir":"6000",
+            "cbs":"6000",
+            "red_action":"drop"
+        },
+        "snmp":{
+            "trap_action":"trap",
+            "trap_priority":"6",
+            "queue": "6",
+            "meter_type":"packets",
+            "mode":"sr_tcm",
+            "cir":"6000",
+            "cbs":"6000",
+            "red_action":"drop"
+        },
+        "nat":{
+            "trap_action":"trap",
+            "trap_priority":"7",
+            "queue": "7",
+            "meter_type":"packets",
+            "mode":"sr_tcm",
+            "cir":"600",
+            "cbs":"600",
+            "red_action":"drop"
+        },
+        "sflow":{
+            "cbs": "1000",
+            "cir": "1000",
+            "genetlink_mcgrp_name": "packets",
+            "genetlink_name": "psample",
+            "meter_type": "packets",
+            "mode": "sr_tcm",
+            "queue": "8",
+            "red_action": "drop",
+            "trap_action": "trap",
+            "trap_priority": "8"
+        },
+        "bgp":{
+            "trap_action":"trap",
+            "trap_priority":"9",
+            "queue": "9",
+            "meter_type":"packets",
+            "mode":"sr_tcm",
+            "cir":"6000",
+            "cbs":"6000",
+            "red_action":"drop"
+        },
+        "lacp":{
+            "trap_action":"trap",
+            "trap_priority":"10",
+            "queue": "10",
+            "meter_type":"packets",
+            "mode":"sr_tcm",
+            "cir":"6000",
+            "cbs":"6000",
+            "red_action":"drop"
+        },
+        "mclag":{
+            "trap_action":"trap",
+            "trap_priority":"11",
+            "queue": "11",
+            "meter_type":"packets",
+            "mode":"sr_tcm",
+            "cir":"6000",
+            "cbs":"6000",
+            "red_action":"drop"
+        },
+        "arp":{
+            "trap_action":"copy",
+            "trap_priority":"12",
+            "queue": "12",
+            "meter_type":"packets",
+            "mode":"sr_tcm",
+            "cir":"600",
+            "cbs":"600",
+            "red_action":"drop"
+        },
+        "udld":{
+            "trap_action":"trap",
+            "trap_priority":"13",
+            "queue": "13",
+            "meter_type":"packets",
+            "mode":"sr_tcm",
+            "cir":"300",
+            "cbs":"300",
+            "red_action":"drop"
+        },
+        "lldp":{
+            "trap_action":"trap",
+            "trap_priority":"14",
+            "queue": "14",
+            "meter_type":"packets",
+            "mode":"sr_tcm",
+            "cir":"300",
+            "cbs":"300",
+            "red_action":"drop"
+        },
+        "dhcp_relay":{
+            "trap_action":"trap",
+            "trap_priority":"15",
+            "queue": "15",
+            "meter_type":"packets",
+            "mode":"sr_tcm",
+            "cir":"300",
+            "cbs":"300",
+            "red_action":"drop"
+        },
+        "ospf":{
+            "trap_action":"trap",
+            "trap_priority":"16",
+            "queue": "16",
+            "meter_type":"packets",
+            "mode":"sr_tcm",
+            "cir":"1000",
+            "cbs":"1000",
+            "red_action":"drop"
+        },
+        "vrrp":{
+            "trap_action":"trap",
+            "trap_priority":"17",
+            "queue": "17",
+            "meter_type":"packets",
+            "mode":"sr_tcm",
+            "cir":"1000",
+            "cbs":"1000",
+            "red_action":"drop"
+        },
+        "isis":{
+            "trap_action":"trap",
+            "trap_priority":"18",
+            "queue": "18",
+            "meter_type":"packets",
+            "mode":"sr_tcm",
+            "cir":"1000",
+            "cbs":"1000",
+            "red_action":"drop"
+        },
+        "dai":{
+            "trap_action":"trap",
+            "trap_priority":"19",
+            "queue": "19",
+            "meter_type":"packets",
+            "mode":"sr_tcm",
+            "cir":"600",
+            "cbs":"600",
+            "red_action":"drop"
+        },
+        "evpn_neigh_suppression":{
+            "trap_action":"trap",
+            "trap_priority":"20",
+            "queue": "20",
+            "meter_type":"packets",
+            "mode":"sr_tcm",
+            "cir":"600",
+            "cbs":"600",
+            "red_action":"drop"
+        },        "vxlan_arp":{
+            "trap_action":"copy",
+            "trap_priority":"21",
+            "queue": "21",
+            "meter_type":"packets",
+            "mode":"sr_tcm",
+            "cir":"600",
+            "cbs":"600",
+            "red_action":"drop"
+        },        "bfd": {
+            "trap_action":"trap",
+            "trap_priority":"22",
+            "queue":"22",
+            "meter_type":"packets",
+            "mode":"sr_tcm",
+            "cir":"1000",
+            "cbs":"1000",
+            "red_action":"drop"
+        },
+        "dot1x": {
+            "trap_action":"trap",
+            "trap_priority":"23",
+            "queue":"23",
+            "meter_type":"packets",
+            "mode":"sr_tcm",
+            "cir":"600",
+            "cbs":"600",
+            "red_action":"drop"
+        }
+    },
+    "COPP_TRAP": {
+        "bgp": {
+            "trap_ids": "bgp,bgpv6",
+            "trap_group": "bgp"
+        },
+        "lacp": {
+            "trap_ids": "lacp",
+            "trap_group": "lacp"
+        },
+        "arp": {
+            "trap_ids": "arp_req,arp_resp,neigh_discovery",
+            "trap_group": "arp",
+            "always_enabled": "true"
+        },
+        "lldp": {
+            "trap_ids": "lldp",
+            "trap_group": "lldp"
+        },
+        "mclag": {
+            "trap_ids": "mclag",
+            "trap_group": "mclag"
+        },
+        "dhcp_relay": {
+            "trap_ids": "dhcp,dhcpv6",
+            "trap_group": "dhcp_relay"
+        },
+        "udld": {
+            "trap_ids": "udld",
+            "trap_group": "udld"
+        },
+        "ssh": {
+            "trap_ids": "ssh",
+            "trap_group": "ssh",
+            "always_enabled": "true"
+        },
+        "mgmt-framework": {
+            "trap_ids": "httpserver",
+            "trap_group": "mgmt-framework",
+            "always_enabled": "true"
+        },
+        "gnmi": {
+            "trap_ids": "gnmi",
+            "trap_group": "gnmi",
+            "always_enabled": "true"
+        },
+        "snmp": {
+            "trap_ids": "snmp",
+            "trap_group": "snmp",
+            "always_enabled": "true"
+        },
+        "ip2me": {
+            "trap_ids": "ip2me",
+            "trap_group": "ip2me",
+            "always_enabled": "true"
+        },
+        "neighbor_miss": {
+            "trap_ids": "neighbor_miss",
+            "trap_group": "neighbor_miss",
+            "always_enabled": "true"
+        },
+        "nat": {
+            "trap_ids": "src_nat_miss,dest_nat_miss",
+            "trap_group": "nat"
+        },
+        "sflow": {
+            "trap_group": "sflow",
+            "trap_ids": "sample_packet"
+        },
+        "ospf": {
+            "trap_ids": "ospf,ospfv6",
+            "trap_group": "ospf"
+        },
+        "vrrp": {
+            "trap_ids": "vrrp,vrrpv6",
+            "trap_group": "vrrp"
+        },
+        "isis": {
+            "trap_ids": "isis",
+            "trap_group": "isis"
+        },
+        "dai": {
+            "trap_ids": "dai",
+            "trap_group": "dai"
+        },
+        "evpn_neigh_suppression": {
+            "trap_ids": "arp_suppression,nd_suppression",
+            "trap_group": "evpn_neigh_suppression"
+        },        "vxlan_arp": {
+            "trap_ids": "vxlan_arp",
+            "trap_group": "vxlan_arp"
+        },        "bfd": {
+            "trap_ids": "bfd",
+            "trap_group": "bfd"
+        },
+        "dot1x": {
+            "trap_ids": "eapol",
+            "trap_group": "dot1x"
+        }
+    }
+}

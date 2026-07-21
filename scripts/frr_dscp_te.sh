@@ -190,13 +190,19 @@ add_htb_wrr() {
     local r_me=$(( total_kbps * WRR_ME / sum / 10 ))
     local r_lo=$(( total_kbps * WRR_LO / sum / 10 ))
 
+    # PRIO_HI=0(デフォルト): AF41はStrict Priority(prio0)、他と別格。
+    # PRIO_HI=1: AF41もprio1に落とし、3クラスが同一prioでquantum比4:2:1のWRRのみで
+    # 競合する(SP無効化)。SPの効果を対比するablation実験用トグル。
+    local prio_hi="${PRIO_HI:-0}"
+
     dc "$cname" tc qdisc del dev "$dev" root    2>/dev/null || true
     dc "$cname" tc qdisc add dev "$dev" root handle 1: htb default 13
     dc "$cname" tc class add dev "$dev" parent 1:  classid 1:0 htb rate "$tc_rate" ceil "$tc_rate" \
         burst "$(_b $total_kbps)b" cburst "$(_b $total_kbps)b"
-    # AF41: prio 0 (Strict Priority) — 輻輳時に最優先でサービス → 自然に低遅延
+    # AF41: prio既定0 (Strict Priority) — 輻輳時に最優先でサービス → 自然に低遅延
+    # PRIO_HI=1指定時はprio1に統一され、SPが無効化されquantum比のみのWRRになる
     dc "$cname" tc class add dev "$dev" parent 1:0 classid 1:1 htb \
-        rate "${r_hi}kbit" ceil "$tc_rate" burst "$(_b $r_hi)b" cburst "$(_b $total_kbps)b" prio 0 quantum $(( WRR_HI * 9000 ))
+        rate "${r_hi}kbit" ceil "$tc_rate" burst "$(_b $r_hi)b" cburst "$(_b $total_kbps)b" prio "$prio_hi" quantum $(( WRR_HI * 9000 ))
     # AF42/AF43: prio 1 (WRR) — AF41 充足後に重み比率でサービス → 自然に高遅延
     dc "$cname" tc class add dev "$dev" parent 1:0 classid 1:2 htb \
         rate "${r_me}kbit" ceil "$tc_rate" burst "$(_b $r_me)b" cburst "$(_b $total_kbps)b" prio 1 quantum $(( WRR_ME * 9000 ))

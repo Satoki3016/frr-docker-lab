@@ -112,6 +112,74 @@ wire() {
     echo "  [ok] $c1($if1 $ip1) <-> $c2($if2 $ip2)"
 }
 
+# C1物理ファブリック配線 (C1_FABRIC=1 のとき使用)
+# コアリンクを 10G NIC → SW1 ASIC → クロスケーブル → SW2 ASIC → 10G NIC 経由にする。
+# VLAN 101/102/103 で3リンクを論理分離 (両SWにタグ付きトランク設定済み)。
+# 検証: 2026-07-16 c1_fabric_test.sh で 38GB 無損失を確認。
+C1_NIC_SW1="${C1_NIC_SW1:-enp5s0f1}"   # SW1:Ethernet17 に結線
+C1_NIC_SW2="${C1_NIC_SW2:-enp5s0f0}"   # SW2:Ethernet10 に結線
+
+wire_fabric() {
+    local c1=$1 if1=$2 ip1=$3 c2=$4 if2=$5 ip2=$6 vlan=$7
+    # 既存サブIF・同名IFのクリーンアップ (冪等化)
+    ip netns exec "$c1" ip link del "$if1" 2>/dev/null || true
+    ip netns exec "$c2" ip link del "$if2" 2>/dev/null || true
+    ip link del "tmpv1-${vlan}" 2>/dev/null || true
+    ip link del "tmpv2-${vlan}" 2>/dev/null || true
+    # VLANサブIF作成 → 各コンテナNSへ移動・リネーム
+    ip link add link "$C1_NIC_SW1" name "tmpv1-${vlan}" address "02:c1:00:01:00:$(printf '%02x' "$vlan")" type vlan id "$vlan"
+    ip link add link "$C1_NIC_SW2" name "tmpv2-${vlan}" address "02:c1:00:02:00:$(printf '%02x' "$vlan")" type vlan id "$vlan"
+    ip link set "tmpv1-${vlan}" netns "$c1"
+    ip link set "tmpv2-${vlan}" netns "$c2"
+    ip netns exec "$c1" ip link set "tmpv1-${vlan}" name "$if1"
+    ip netns exec "$c2" ip link set "tmpv2-${vlan}" name "$if2"
+    ip netns exec "$c1" ip link set "$if1" txqueuelen 10000 mtu 9000
+    ip netns exec "$c2" ip link set "$if2" txqueuelen 10000 mtu 9000
+    ip netns exec "$c1" ip addr add "$ip1" dev "$if1"
+    ip netns exec "$c1" ip link set "$if1" up
+    ip netns exec "$c2" ip addr add "$ip2" dev "$if2"
+    ip netns exec "$c2" ip link set "$if2" up
+    echo "  [ok] $c1($if1 $ip1) <=VLAN${vlan}/物理ファブリック=> $c2($if2 $ip2)"
+}
+
+# C2完全独立3経路配線 (LAB_MODE=c2 のとき使用)
+# 各コアリンクに専用の物理NICペアを割り当てる(VLANタグ不要)。
+# 検証: 2026-07-21 flapテストで9本全て確認済み。config_db.jsonにVLAN201/202/203設定済み(SW1/SW2)。
+# 参照: memory project_c2_independent_paths.md の最終配線表
+declare -A C2_NIC_SW1=( [1]="enp5s0f1"     [2]="enp23s0f0np0"  [3]="enp179s0f0np0" )
+declare -A C2_NIC_SW2=( [1]="enp5s0f0"     [2]="enp23s0f1np1"  [3]="enp179s0f1np1" )
+
+# NICが現在どのnetnsにいても確実にrootへ戻す(netns churnでの迷子対策)
+_ensure_nic_in_root() {
+    local nic=$1
+    ip link show "$nic" >/dev/null 2>&1 && return 0   # 既にroot
+    for ns in $(ip netns list | awk '{print $1}'); do
+        if ip netns exec "$ns" ip link show "$nic" >/dev/null 2>&1; then
+            ip netns exec "$ns" ip link set "$nic" netns 1
+            return 0
+        fi
+    done
+}
+
+wire_fabric_c2() {
+    local c1=$1 if1=$2 ip1=$3 nic1=$4 c2=$5 if2=$6 ip2=$7 nic2=$8
+    ip netns exec "$c1" ip link del "$if1" 2>/dev/null || true
+    ip netns exec "$c2" ip link del "$if2" 2>/dev/null || true
+    _ensure_nic_in_root "$nic1"
+    _ensure_nic_in_root "$nic2"
+    ip link set "$nic1" netns "$c1"
+    ip link set "$nic2" netns "$c2"
+    ip netns exec "$c1" ip link set "$nic1" name "$if1"
+    ip netns exec "$c2" ip link set "$nic2" name "$if2"
+    ip netns exec "$c1" ip link set "$if1" txqueuelen 10000 mtu 9100
+    ip netns exec "$c2" ip link set "$if2" txqueuelen 10000 mtu 9100
+    ip netns exec "$c1" ip addr add "$ip1" dev "$if1"
+    ip netns exec "$c1" ip link set "$if1" up
+    ip netns exec "$c2" ip addr add "$ip2" dev "$if2"
+    ip netns exec "$c2" ip link set "$if2" up
+    echo "  [ok] $c1($if1 $ip1) <=専用物理リンク($nic1<->$nic2)=> $c2($if2 $ip2)"
+}
+
 # Tx ↔ LER_Ingress
 wire Tx1 tx1-leri 10.10.1.1/30  LER_Ingress leri-tx1 10.10.1.2/30
 wire Tx2 tx2-leri 10.10.2.1/30  LER_Ingress leri-tx2 10.10.2.2/30
@@ -121,9 +189,30 @@ wire LER_Ingress leri-cr1 10.0.1.1/30  CR1 cr1-leri 10.0.1.2/30
 wire LER_Ingress leri-cr2 10.0.3.1/30  CR2 cr2-leri 10.0.3.2/30
 wire LER_Ingress leri-cr3 10.0.5.1/30  CR3 cr3-leri 10.0.5.2/30
 # CoreRouters ↔ LER_Egress
-wire CR1 cr1-lere 10.0.2.1/30  LER_Egress lere-cr1 10.0.2.2/30
-wire CR2 cr2-lere 10.0.4.1/30  LER_Egress lere-cr2 10.0.4.2/30
-wire CR3 cr3-lere 10.0.6.1/30  LER_Egress lere-cr3 10.0.6.2/30
+if [ "${LAB_MODE:-}" = "c2" ]; then
+    echo "  -- C2完全独立3経路モード --"
+    # 開通試験のnetns残骸をクリーンアップ (物理NICの迷子防止)
+    for n in fabA fabB c2a1 c2b1 c2a2 c2b2 c2a3 c2b3; do
+        ip netns del "$n" 2>/dev/null || true
+    done
+    wire_fabric_c2 CR1 cr1-lere 10.0.2.1/30 "${C2_NIC_SW1[1]}"  LER_Egress lere-cr1 10.0.2.2/30 "${C2_NIC_SW2[1]}"
+    wire_fabric_c2 CR2 cr2-lere 10.0.4.1/30 "${C2_NIC_SW1[2]}"  LER_Egress lere-cr2 10.0.4.2/30 "${C2_NIC_SW2[2]}"
+    wire_fabric_c2 CR3 cr3-lere 10.0.6.1/30 "${C2_NIC_SW1[3]}"  LER_Egress lere-cr3 10.0.6.2/30 "${C2_NIC_SW2[3]}"
+elif [ "${C1_FABRIC:-0}" = "1" ] || [ "${LAB_MODE:-}" = "c1" ]; then
+    echo "  -- C1物理ファブリックモード (${C1_NIC_SW1}/${C1_NIC_SW2}) --"
+    # 開通試験のnetns残骸をクリーンアップ (VLAN 101が衝突するため)
+    ip netns del fabA 2>/dev/null || true
+    ip netns del fabB 2>/dev/null || true
+    ip link set "$C1_NIC_SW1" up mtu 9100
+    ip link set "$C1_NIC_SW2" up mtu 9100
+    wire_fabric CR1 cr1-lere 10.0.2.1/30  LER_Egress lere-cr1 10.0.2.2/30  101
+    wire_fabric CR2 cr2-lere 10.0.4.1/30  LER_Egress lere-cr2 10.0.4.2/30  102
+    wire_fabric CR3 cr3-lere 10.0.6.1/30  LER_Egress lere-cr3 10.0.6.2/30  103
+else
+    wire CR1 cr1-lere 10.0.2.1/30  LER_Egress lere-cr1 10.0.2.2/30
+    wire CR2 cr2-lere 10.0.4.1/30  LER_Egress lere-cr2 10.0.4.2/30
+    wire CR3 cr3-lere 10.0.6.1/30  LER_Egress lere-cr3 10.0.6.2/30
+fi
 # LER_Egress ↔ Rx
 wire LER_Egress lere-rx1 10.20.1.2/30  Rx1 rx1-lere 10.20.1.1/30
 wire LER_Egress lere-rx2 10.20.2.2/30  Rx2 rx2-lere 10.20.2.1/30

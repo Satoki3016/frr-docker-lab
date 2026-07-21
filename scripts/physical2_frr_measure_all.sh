@@ -131,13 +131,6 @@ for e in errors:
 PYSYNC
 echo ""
 
-# SW1でfrr_dscp_te.shを実行 (SP fix + AF43 TCP fix + cburst を毎回適用)
-echo "=== TC/HTB QoS 適用 (SW1: frr_dscp_te.sh) ==="
-$SSH "$SW1" "sudo LAB_MODE=physical bash /home/kannolab/scripts/frr_dscp_te.sh" \
-    && echo "  [ok] TC/HTB/iptables 再設定完了" \
-    || echo "  [warn] frr_dscp_te.sh 失敗 — 継続しますが設定が古い可能性あり"
-echo ""
-
 run_scenario() {
     local scenario=$1
     local results_dir="${EXP_DIR}/frr_${scenario}"
@@ -146,6 +139,12 @@ run_scenario() {
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo "  シナリオ開始: ${scenario}"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+    # シナリオごとに TC/HTB を再適用 (前シナリオのクリーンアップで HTB が削除されるため)
+    echo "  [SW1] TC/HTB QoS 再適用 (frr_dscp_te.sh)..."
+    $SSH "$SW1" "sudo LAB_MODE=physical bash /home/kannolab/scripts/frr_dscp_te.sh" \
+        && echo "  [ok] TC/HTB/iptables 再設定完了" \
+        || echo "  [warn] frr_dscp_te.sh 失敗"
 
     # SW2でサーバー起動 (バックグラウンド)
     echo "  [SW2] サーバー起動..."

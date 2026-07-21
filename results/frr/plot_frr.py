@@ -71,8 +71,10 @@ def _parse_bw(s: str) -> float:
     return float(s)
 
 def _lab_cr_mbps() -> float | None:
-    # TX レート (_lab_tx_mbps) と同じ優先順で参照し、TX/CR の設定ファイル不整合を防ぐ
-    for cfg_name in ("lab_config_veth.sh", "lab_config_physical.sh", "lab_config.sh"):
+    # この関数は --cr-mbps 未指定時のみ呼ばれるため、_lab_tx_mbps() の
+    # else分岐(veth優先)と同じ優先順にする。c1/c2を先に置くと--cr-mbps省略時に
+    # vethの理論値がC1/C2の値(9000Mbps)で誤表示されるバグがあった(2026-07-21発見)。
+    for cfg_name in ("lab_config_veth.sh", "lab_config_c2.sh", "lab_config_c1.sh", "lab_config_physical.sh", "lab_config.sh"):
         lab = _SCRIPT_DIR.parent.parent / "scripts" / cfg_name
         if not lab.exists():
             continue
@@ -84,7 +86,12 @@ def _lab_cr_mbps() -> float | None:
 
 def _lab_tx_mbps() -> tuple[float, float, float] | None:
     """TX1/TX2/TX3 レートを Mbps で返す。ストリーム数(4)を乗じた総送信量。"""
-    for cfg_name in ("lab_config_veth.sh", "lab_config_physical.sh", "lab_config.sh"):
+    # --cr-mbps が指定された場合 (物理/C1環境) は c1 → physical の順で優先
+    if _args.cr_mbps is not None:
+        cfg_order = ("lab_config_c2.sh", "lab_config_c1.sh", "lab_config_physical.sh", "lab_config_veth.sh", "lab_config.sh")
+    else:
+        cfg_order = ("lab_config_veth.sh", "lab_config_c2.sh", "lab_config_c1.sh", "lab_config_physical.sh", "lab_config.sh")
+    for cfg_name in cfg_order:
         lab = _SCRIPT_DIR.parent.parent / "scripts" / cfg_name
         if not lab.exists():
             continue
@@ -343,8 +350,16 @@ def _load_per_class_throughput(dirpath: Path, col: int):
         d1, d2 = dict(zip(t1, mb1)), dict(zip(t2, mb2))
         all_t = sorted(set(t1) | set(t2))
         if all_t:
-            return all_t, [d1.get(t, 0.0) + d2.get(t, 0.0) for t in all_t]
-    return _load_throughput(dirpath / "throughput.csv", col)
+            combined = [d1.get(t, 0.0) + d2.get(t, 0.0) for t in all_t]
+            # HTB qdisc が前シナリオのクリーンアップで削除されていると全ゼロになる。
+            # 非ゼロ割合が50%未満の場合は受信側 throughput.csv へフォールバック。
+            nonzero = sum(1 for v in combined if v > 0.01)
+            if nonzero >= len(combined) * 0.5:
+                return all_t, combined
+    # フォールバック: 受信側データ (物理リンク容量超過のスパイクはクリップ)
+    clip = _CR_LINK_MBPS * 1.1
+    ts, mb = _load_throughput(dirpath / "throughput.csv", col)
+    return ts, [min(v, clip) for v in mb]
 
 # ── failure ゾーン描画 ─────────────────────────────────────────────────
 def _mark_failure(ax, annotate: bool = False):
