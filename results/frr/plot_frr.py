@@ -18,13 +18,20 @@ _parser.add_argument("--cr-mbps", type=float, default=None,
                      help="CRリンク帯域 Mbps (省略時: lab_config.sh を自動参照)")
 _parser.add_argument("--list",    action="store_true",
                      help="利用可能なタグ一覧を表示して終了")
+_parser.add_argument("--lang",    type=str, default="ja", choices=("ja", "en"),
+                     help="図のラベル言語 (ja=日本語[既定], en=英語)")
 _args = _parser.parse_args()
 
+LANG = _args.lang
+
 # ── フォント ──────────────────────────────────────────────────────────
-for _f in ["Noto Sans CJK JP", "TakaoPGothic", "IPAPGothic", "VL PGothic"]:
-    if any(_f.lower() in p.name.lower() for p in fm.fontManager.ttflist):
-        matplotlib.rcParams["font.family"] = _f
-        break
+if LANG == "en":
+    matplotlib.rcParams["font.family"] = "DejaVu Sans"
+else:
+    for _f in ["Noto Sans CJK JP", "TakaoPGothic", "IPAPGothic", "VL PGothic"]:
+        if any(_f.lower() in p.name.lower() for p in fm.fontManager.ttflist):
+            matplotlib.rcParams["font.family"] = _f
+            break
 
 matplotlib.rcParams.update({
     "figure.facecolor":    "white",
@@ -166,13 +173,72 @@ else:
 THRU_UNIT  = "Gbps" if _CR_LINK_MBPS >= 1000 else "Mbps"
 THRU_SCALE = 1e-3   if _CR_LINK_MBPS >= 1000 else 1.0
 
+# ── 多言語ラベル ──────────────────────────────────────────────────────
+_TXT = {
+    "ja": {
+        "cls": ["AF41（高優先）", "AF42（中優先）", "AF43（低優先）"],
+        "cls_multiline": ["AF41\n（高優先）", "AF42\n（中優先）", "AF43\n（低優先）"],
+        "sc_normal": "正常時",
+        "sc_failure": "障害（迂回なし）",
+        "sc_reroute": "障害（自動迂回）",
+        "elapsed": "経過時間 (s)",
+        "failure_span": "障害区間",
+        "theory": "理論値 ({v:.2f} {u})",
+        "thru_title": "スループット比較",
+        "thru_ylabel": "スループット ({u})",
+        "rtt_title": "片方向遅延 (OWD) 比較",
+        "rtt_ylabel": "片方向遅延 (ms)",
+        "rtt_max": "最大 {v:.1f} ms",
+        "loss_title": "UDP パケットロス率  (iperf3 実測, 60 s 平均)",
+        "loss_ylabel": "パケットロス率 (%)",
+        "losst_title": "パケット損失率  (E2E, iperf3 毎秒計測)",
+        "losst_ylabel": "損失率 (%)",
+        "losst_nodata": "データなし\n（frr_measure.sh -i 1 で再計測が必要）",
+        "drop_title": "パケットドロップ発生箇所  (LER_Ingress 出口)",
+        "drop_ylabel": "ドロップ数 ({u})",
+        "drop_nodata": "データなし（再計測で収集）",
+        "drop_iface1": "HTB ドロップ  —  leri-cr1 (→ CR1)",
+        "drop_iface2": "HTB ドロップ  —  leri-cr2 (→ CR2)",
+        "drop_note": ("注: ドロップ数は tc (HTB) キューでの破棄カウンタ。GSO 集約された skb 単位のため、"
+                      "UDP データグラム数換算より小さい値となる。"),
+    },
+    "en": {
+        "cls": ["AF41 (high)", "AF42 (medium)", "AF43 (low)"],
+        "cls_multiline": ["AF41\n(high)", "AF42\n(medium)", "AF43\n(low)"],
+        "sc_normal": "Normal",
+        "sc_failure": "Failure (no reroute)",
+        "sc_reroute": "Failure (auto-reroute)",
+        "elapsed": "Elapsed time (s)",
+        "failure_span": "Failure window",
+        "theory": "Theory ({v:.2f} {u})",
+        "thru_title": "Throughput comparison",
+        "thru_ylabel": "Throughput ({u})",
+        "rtt_title": "One-way delay (OWD) comparison",
+        "rtt_ylabel": "One-way delay (ms)",
+        "rtt_max": "max {v:.1f} ms",
+        "loss_title": "UDP packet loss rate  (iperf3 measured, 60 s average)",
+        "loss_ylabel": "Packet loss rate (%)",
+        "losst_title": "Packet loss rate  (E2E, iperf3 per-second)",
+        "losst_ylabel": "Loss rate (%)",
+        "losst_nodata": "No data\n(re-measure with frr_measure.sh -i 1)",
+        "drop_title": "Packet drop location  (LER_Ingress egress)",
+        "drop_ylabel": "Drops ({u})",
+        "drop_nodata": "No data (collect by re-measuring)",
+        "drop_iface1": "HTB drops  —  leri-cr1 (-> CR1)",
+        "drop_iface2": "HTB drops  —  leri-cr2 (-> CR2)",
+        "drop_note": ("Note: drop counts are tc (HTB) queue discard counters. As they are per GSO-aggregated "
+                      "skb, the value is smaller than the UDP datagram count."),
+    },
+}[LANG]
+
 # トラフィッククラス — Wong (2011) colorblind-safe
+_CLS_COLORS = ["#0072B2", "#E69F00", "#009E73"]
 PRIORITIES = [
-    ("AF41（高優先）", "#0072B2", 1, "Tx1"),
-    ("AF42（中優先）", "#E69F00", 2, "Tx2"),
-    ("AF43（低優先）", "#009E73", 3, "Tx3"),
+    (_TXT["cls"][0], _CLS_COLORS[0], 1, "Tx1"),
+    (_TXT["cls"][1], _CLS_COLORS[1], 2, "Tx2"),
+    (_TXT["cls"][2], _CLS_COLORS[2], 3, "Tx3"),
 ]
-CLS_LABELS = ["AF41\n（高優先）", "AF42\n（中優先）", "AF43\n（低優先）"]
+CLS_LABELS = _TXT["cls_multiline"]
 
 _OWD_NAMES   = {1: "owd_af41.log", 2: "owd_af42.log", 3: "owd_af43.log"}
 _IPERF_NAMES = {1: "iperf3_af41.log", 2: "iperf3_af42.log", 3: "iperf3_af43.log"}
@@ -180,9 +246,9 @@ _IPERF_LOSS_RE = re.compile(r'\[SUM\].*\s+(\d+)/(\d+)\s+\([0-9.]+%\)\s+receiver'
 
 # シナリオスタイル — 色 + 線種の組み合わせでグレースケール印刷でも判別可能
 _SC_STYLES = {
-    "normal":  {"color": "#4CAE4C", "ls": "-",  "lw": 1.6, "label": "正常時"},
-    "failure": {"color": "#DC4748", "ls": "--", "lw": 1.6, "label": "障害（迂回なし）"},
-    "reroute": {"color": "#418BBF", "ls": "-.", "lw": 1.6, "label": "障害（自動迂回）"},
+    "normal":  {"color": "#4CAE4C", "ls": "-",  "lw": 1.6, "label": _TXT["sc_normal"]},
+    "failure": {"color": "#DC4748", "ls": "--", "lw": 1.6, "label": _TXT["sc_failure"]},
+    "reroute": {"color": "#418BBF", "ls": "-.", "lw": 1.6, "label": _TXT["sc_reroute"]},
 }
 
 # ── シナリオ検出 ──────────────────────────────────────────────────────
@@ -242,11 +308,12 @@ def active_scenarios():
 
 # ── 保存 (PNG + PDF) ──────────────────────────────────────────────────
 def _save(fig, stem: str):
-    FIGURES_DIR.mkdir(exist_ok=True)
+    # 言語ごとに ja/ ・ en/ サブフォルダへ分離して保存（ファイル名は共通）
+    out_dir = BASE / ("en" if LANG == "en" else "ja")
+    out_dir.mkdir(exist_ok=True)
     for ext in ("png", "pdf"):
-        fig.savefig(FIGURES_DIR / f"{stem}.{ext}")
-    fig.savefig(BASE / f"{stem}.png")
-    print(f"[*] {stem}.png / .pdf")
+        fig.savefig(out_dir / f"{stem}.{ext}")
+    print(f"[*] {('en' if LANG == 'en' else 'ja')}/{stem}.png / .pdf")
 
 # ── データ読み込み ────────────────────────────────────────────────────
 _RX_KEYS = ["rx1_bytes_per_sec", "rx2_bytes_per_sec", "rx3_bytes_per_sec"]
@@ -369,7 +436,7 @@ def _mark_failure(ax, annotate: bool = False):
     ax.grid(True, axis="y", zorder=0)
     if annotate:
         mid = (FAILURE_START + FAILURE_END) / 2
-        ax.text(mid, 1.01, "障害区間", transform=ax.get_xaxis_transform(),
+        ax.text(mid, 1.01, _TXT["failure_span"], transform=ax.get_xaxis_transform(),
                 ha="center", va="bottom", fontsize=7, color="#888888")
 
 # ── (a)(b)(c) パネルラベル ────────────────────────────────────────────
@@ -380,7 +447,7 @@ def _panel_label(ax, idx: int):
 # ── compare_throughput ────────────────────────────────────────────────
 def compare_throughput(active):
     fig, axes = plt.subplots(3, 1, figsize=(7, 7), sharex=True, layout="constrained")
-    fig.suptitle("スループット比較", fontsize=10, fontweight="bold")
+    fig.suptitle(_TXT["thru_title"], fontsize=10, fontweight="bold")
 
     for i, (ax, (pri_label, pri_color, col, _), wrr_tgt) in \
             enumerate(zip(axes, PRIORITIES, THEORY_TARGETS)):
@@ -390,23 +457,23 @@ def compare_throughput(active):
                 ax.plot(t, [v * THRU_SCALE for v in mb],
                         label=n, color=c, linestyle=ls, linewidth=lw)
         ax.axhline(wrr_tgt * THRU_SCALE, color=pri_color, ls=":", lw=1.0, alpha=0.7,
-                   label=f"理論値 ({wrr_tgt * THRU_SCALE:.2f} {THRU_UNIT})")
+                   label=_TXT["theory"].format(v=wrr_tgt * THRU_SCALE, u=THRU_UNIT))
         ax.set_xlim(0, PLOT_END)
         ax.set_ylim(bottom=0)
-        ax.set_ylabel(f"スループット ({THRU_UNIT})")
+        ax.set_ylabel(_TXT["thru_ylabel"].format(u=THRU_UNIT))
         ax.set_title(pri_label, color=pri_color, fontweight="bold", loc="left", pad=2)
         ax.legend(loc="lower right")
         _mark_failure(ax, annotate=(i == 0))
         _panel_label(ax, i)
 
-    axes[-1].set_xlabel("経過時間 (s)")
+    axes[-1].set_xlabel(_TXT["elapsed"])
     _save(fig, "compare_throughput")
     plt.close(fig)
 
 # ── compare_rtt ────────────────────────────────────────────────────────
 def compare_rtt(active):
     fig, axes = plt.subplots(3, 1, figsize=(7, 7), sharex=True, layout="constrained")
-    fig.suptitle("片方向遅延 (OWD) 比較", fontsize=10, fontweight="bold")
+    fig.suptitle(_TXT["rtt_title"], fontsize=10, fontweight="bold")
 
     for i, (ax, (pri_label, pri_color, col, tx)) in enumerate(zip(axes, PRIORITIES)):
         all_vals = []
@@ -429,7 +496,7 @@ def compare_rtt(active):
                     peak = (float(t[peak_idx]), peak_val, c)
         if peak is not None:
             right_edge = peak[0] > PLOT_END * 0.8
-            ax.annotate(f"最大 {peak[1]:.1f} ms",
+            ax.annotate(_TXT["rtt_max"].format(v=peak[1]),
                         xy=(peak[0], peak[1]),
                         xytext=(-4 if right_edge else 4, 4),
                         textcoords="offset points",
@@ -440,13 +507,13 @@ def compare_rtt(active):
             global_max = float(np.nanmax(all_vals))
             ax.set_ylim(bottom=0, top=global_max * 1.20)
         ax.set_xlim(0, PLOT_END)
-        ax.set_ylabel("片方向遅延 (ms)")
+        ax.set_ylabel(_TXT["rtt_ylabel"])
         ax.set_title(pri_label, color=pri_color, fontweight="bold", loc="left", pad=2)
         ax.legend(loc="upper right")
         _mark_failure(ax, annotate=(i == 0))
         _panel_label(ax, i)
 
-    axes[-1].set_xlabel("経過時間 (s)")
+    axes[-1].set_xlabel(_TXT["elapsed"])
     _save(fig, "compare_rtt")
     plt.close(fig)
 
@@ -466,8 +533,7 @@ def compare_packetloss(active):
     width = 0.6 / max(n_sc, 1)
 
     fig, ax = plt.subplots(figsize=(6, 4), layout="constrained")
-    fig.suptitle("UDP パケットロス率  (iperf3 実測, 60 s 平均)",
-                 fontsize=10, fontweight="bold")
+    fig.suptitle(_TXT["loss_title"], fontsize=10, fontweight="bold")
 
     for i, (_, n, c, *_) in enumerate(active):
         vals   = loss_data.get(n, [float("nan")] * 3)
@@ -483,7 +549,7 @@ def compare_packetloss(active):
 
     ax.set_xticks(x)
     ax.set_xticklabels(CLS_LABELS)
-    ax.set_ylabel("パケットロス率 (%)")
+    ax.set_ylabel(_TXT["loss_ylabel"])
     ax.set_ylim(0, 110)
     ax.yaxis.set_major_locator(ticker.MultipleLocator(20))
     ax.grid(axis="y")
@@ -534,8 +600,7 @@ def compare_loss_timeseries(active):
         return len(ts) > 0
 
     fig, axes = plt.subplots(3, 1, figsize=(7, 7), sharex=True, layout="constrained")
-    fig.suptitle("パケット損失率  (E2E, iperf3 毎秒計測)",
-                 fontsize=10, fontweight="bold")
+    fig.suptitle(_TXT["losst_title"], fontsize=10, fontweight="bold")
 
     for i, (ax, (pri_label, pri_color, _, _)) in enumerate(zip(axes, PRIORITIES)):
         suf = _SUFFIXES[i]
@@ -549,19 +614,19 @@ def compare_loss_timeseries(active):
 
         if not any_data:
             ax.text(0.5, 0.5,
-                    "データなし\n（frr_measure.sh -i 1 で再計測が必要）",
+                    _TXT["losst_nodata"],
                     transform=ax.transAxes, ha="center", va="center",
                     fontsize=9, color="gray")
 
         _mark_failure(ax, annotate=(i == 0))
-        ax.set_ylabel("損失率 (%)")
+        ax.set_ylabel(_TXT["losst_ylabel"])
         ax.set_ylim(-2, 105)
         ax.yaxis.set_major_locator(ticker.MultipleLocator(25))
         ax.set_title(pri_label, color=pri_color, fontweight="bold", loc="left", pad=2)
         ax.legend(loc="upper right")
         _panel_label(ax, i)
 
-    axes[-1].set_xlabel("経過時間 (s)")
+    axes[-1].set_xlabel(_TXT["elapsed"])
     axes[-1].set_xlim(0, PLOT_END)
     _save(fig, "compare_loss_timeseries")
     plt.close(fig)
@@ -602,8 +667,8 @@ def compare_drop_location(active):
         return ts, smoothed.tolist()
 
     IFACES = [
-        ("leri-cr1", "HTB ドロップ  —  leri-cr1 (→ CR1)"),
-        ("leri-cr2", "HTB ドロップ  —  leri-cr2 (→ CR2)"),
+        ("leri-cr1", _TXT["drop_iface1"]),
+        ("leri-cr2", _TXT["drop_iface2"]),
     ]
 
     # Y軸スケールを全シナリオ・全インタフェースの最大値から決定
@@ -624,8 +689,7 @@ def compare_drop_location(active):
 
     fig, axes = plt.subplots(2, 1, figsize=(7, 5.5),
                              sharex=True, sharey=True, layout="constrained")
-    fig.suptitle("パケットドロップ発生箇所  (LER_Ingress 出口)",
-                 fontsize=10, fontweight="bold")
+    fig.suptitle(_TXT["drop_title"], fontsize=10, fontweight="bold")
 
     for pi, (ax, (iface, title)) in enumerate(zip(axes, IFACES)):
         plotted = False
@@ -639,7 +703,7 @@ def compare_drop_location(active):
             plotted = True
 
         if not plotted:
-            ax.text(0.5, 0.5, "データなし（再計測で収集）",
+            ax.text(0.5, 0.5, _TXT["drop_nodata"],
                     transform=ax.transAxes, ha="center", va="center",
                     fontsize=9, color="gray")
 
@@ -649,16 +713,14 @@ def compare_drop_location(active):
             ax.grid(True, axis="y")
 
         ax.set_title(title, fontweight="bold", loc="left", pad=2)
-        ax.set_ylabel(f"ドロップ数 ({unit})")
+        ax.set_ylabel(_TXT["drop_ylabel"].format(u=unit))
         ax.set_xlim(0, PLOT_END)
         ax.set_ylim(bottom=0)
         ax.legend(loc="lower right")
         _panel_label(ax, pi)
 
-    axes[-1].set_xlabel("経過時間 (s)")
-    fig.text(0.0, -0.015,
-             "注: ドロップ数は tc (HTB) キューでの破棄カウンタ。GSO 集約された skb 単位のため、"
-             "UDP データグラム数換算より小さい値となる。",
+    axes[-1].set_xlabel(_TXT["elapsed"])
+    fig.text(0.0, -0.015, _TXT["drop_note"],
              ha="left", va="top", fontsize=6.5, color="#666666")
     _save(fig, "compare_drop_location")
     plt.close(fig)
