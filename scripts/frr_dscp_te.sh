@@ -133,20 +133,50 @@ dc LER_Ingress ip route flush table 43 2>/dev/null || true
 # 経路選択は next-hop (dev leri-crX) で行う。CRのSIDは不要
 # (2ラベルスタックでは CR が自SIDをpopした後、内側ラベルをIP扱いして失敗する)
 
-# 全クラス CR1 主経路 (1リンク3クラス: leri-cr1 上でHTB WRR 4:2:1 が競合)
-# フォールバック順: CR2(metric 2) → CR3(metric 3)
-_add_sr_route 41 10.20.0.0/16 "${LERE_LABEL}" 10.0.1.2 leri-cr1 1
-_add_sr_route 41 10.20.0.0/16 "${LERE_LABEL}" 10.0.3.2 leri-cr2 2
-echo "  table41 AF41: CR1(primary) / CR2(fallback) → label=${LERE_LABEL}"
+# マルチパス用: L3+L4 ハッシュを有効化する。
+# 既定の 0 は送信元/宛先IPだけでハッシュするため、同一クラスの全フローが
+# 同じ経路に行ってしまい、マルチパスが全く機能しない (ポート番号を見ない)。
+dc LER_Ingress sysctl -qw net.ipv4.fib_multipath_hash_policy=1 2>/dev/null || true
 
-_add_sr_route 42 10.20.0.0/16 "${LERE_LABEL}" 10.0.1.2 leri-cr1 1
-_add_sr_route 42 10.20.0.0/16 "${LERE_LABEL}" 10.0.3.2 leri-cr2 2
-echo "  table42 AF42: CR1(primary) / CR2(fallback) → label=${LERE_LABEL}"
+# 3経路に等重み/重み付きで分配するマルチパス経路を張る。
+# 優先度(クラス)による経路の差はつけない。優先制御は各リンクのHTBだけで行う。
+_add_sr_multipath() {
+    local table=$1 dst=$2 label=$3 w1=$4 w2=$5 w3=$6
+    dc LER_Ingress ip route replace table "$table" "$dst" \
+        nexthop encap mpls "$label" via 10.0.1.2 dev leri-cr1 weight "$w1" \
+        nexthop encap mpls "$label" via 10.0.3.2 dev leri-cr2 weight "$w2" \
+        nexthop encap mpls "$label" via 10.0.5.2 dev leri-cr3 weight "$w3"
+}
 
-_add_sr_route 43 10.20.0.0/16 "${LERE_LABEL}" 10.0.1.2 leri-cr1 1
-_add_sr_route 43 10.20.0.0/16 "${LERE_LABEL}" 10.0.3.2 leri-cr2 2
-_add_sr_route 43 10.20.0.0/16 "${LERE_LABEL}" 10.0.5.2 leri-cr3 3
-echo "  table43 AF43: CR1(primary) / CR2,CR3(fallback) → label=${LERE_LABEL}"
+case "${ROUTE_MODE:-primary}" in
+  ecmp|wcmp)
+    if [ "${ROUTE_MODE}" = "ecmp" ]; then
+        _W1=1; _W2=1; _W3=1
+    else
+        _W1="${WCMP_W1:-1}"; _W2="${WCMP_W2:-10}"; _W3="${WCMP_W3:-10}"
+    fi
+    for _t in 41 42 43; do
+        _add_sr_multipath "$_t" 10.20.0.0/16 "${LERE_LABEL}" "$_W1" "$_W2" "$_W3"
+    done
+    echo "  モード: ${ROUTE_MODE} — 3経路マルチパス 重み CR1:CR2:CR3 = ${_W1}:${_W2}:${_W3}"
+    echo "  table41/42/43 とも同一の重み (経路選択に優先度は使わない) → label=${LERE_LABEL}"
+    ;;
+  *)
+    # 従来方式: 全クラス CR1 主経路 + フォールバック
+    _add_sr_route 41 10.20.0.0/16 "${LERE_LABEL}" 10.0.1.2 leri-cr1 1
+    _add_sr_route 41 10.20.0.0/16 "${LERE_LABEL}" 10.0.3.2 leri-cr2 2
+    echo "  table41 AF41: CR1(primary) / CR2(fallback) → label=${LERE_LABEL}"
+
+    _add_sr_route 42 10.20.0.0/16 "${LERE_LABEL}" 10.0.1.2 leri-cr1 1
+    _add_sr_route 42 10.20.0.0/16 "${LERE_LABEL}" 10.0.3.2 leri-cr2 2
+    echo "  table42 AF42: CR1(primary) / CR2(fallback) → label=${LERE_LABEL}"
+
+    _add_sr_route 43 10.20.0.0/16 "${LERE_LABEL}" 10.0.1.2 leri-cr1 1
+    _add_sr_route 43 10.20.0.0/16 "${LERE_LABEL}" 10.0.3.2 leri-cr2 2
+    _add_sr_route 43 10.20.0.0/16 "${LERE_LABEL}" 10.0.5.2 leri-cr3 3
+    echo "  table43 AF43: CR1(primary) / CR2,CR3(fallback) → label=${LERE_LABEL}"
+    ;;
+esac
 
 # ── LER_Egress の MPLS pop + ローカル配送 ────────────────────────────
 echo ""
@@ -161,12 +191,17 @@ dc LER_Egress bash -c "sysctl -qw net.mpls.conf.lere-cr1.input=1; sysctl -qw net
 echo ""
 echo "=== [6] TC/HTB WRR (LER_Ingress → CoreRouters) ==="
 
+# 小数表記 (例: 2.1G) にも対応する。旧実装は ${r//[^0-9]/} で非数字を全除去して
+# いたため "2.1G" が 21G と誤解釈され、total_kbps が 10 倍になって HTB の保証
+# 帯域 (r_hi/r_me/r_lo) が壊れていた。整数表記の挙動は従来と同一。
 rate_to_kbps() {
     local r; r=$(echo "$1" | tr '[:upper:]' '[:lower:]')
+    local num; num=$(printf '%s' "$r" | grep -oE '^[0-9]+(\.[0-9]+)?')
+    [ -z "$num" ] && { echo 0; return; }
     case "$r" in
-        *mbit|*mbps|*m) echo $(( ${r//[^0-9]/} * 1000 )) ;;
-        *kbit|*kbps|*k) echo "${r//[^0-9]/}" ;;
-        *gbit|*gbps|*g) echo $(( ${r//[^0-9]/} * 1000000 )) ;;
+        *mbit|*mbps|*m) awk -v n="$num" 'BEGIN{printf "%.0f", n*1000}' ;;
+        *kbit|*kbps|*k) awk -v n="$num" 'BEGIN{printf "%.0f", n}' ;;
+        *gbit|*gbps|*g) awk -v n="$num" 'BEGIN{printf "%.0f", n*1000000}' ;;
         *) echo 0 ;;
     esac
 }
@@ -218,8 +253,12 @@ add_htb_wrr() {
         dc "$cname" tc filter add dev "$dev" parent 1: protocol all prio 1 handle 42 fw flowid 1:2
         dc "$cname" tc filter add dev "$dev" parent 1: protocol all prio 1 handle 43 fw flowid 1:3
     else
-        # MPLSのTraffic Class(TC)ビット (EXPフィールド) でキュー選択
-        # DSCP AF41=34(0x22)→EXP4, AF42=36(0x24)→EXP2, AF43=38(0x26)→EXP1
+        # 内側IPヘッダの DSCP でキュー選択する。
+        # 単一ラベル方式なので MPLSシムは4バイト。u32 の "at 4" はその直後、
+        # つまり内側IPv4ヘッダの先頭4バイトを読む。第2バイトがTOS(DSCP<<2|ECN)で、
+        # マスク 0x00FC0000 がその上位6ビット=DSCPを取り出す。
+        #   0x88>>2=34(AF41) / 0x90>>2=36(AF42) / 0x98>>2=38(AF43)
+        # MPLSのTC(EXP)は `encap mpls <label>` では設定されず0のままなので使わない。
         dc "$cname" tc filter add dev "$dev" parent 1: protocol 0x8847 prio 1 \
             u32 match u32 0x00880000 0x00FC0000 at 4 flowid 1:1
         dc "$cname" tc filter add dev "$dev" parent 1: protocol 0x8847 prio 1 \
@@ -243,6 +282,24 @@ add_htb_wrr CR3 cr3-lere "$CR3_BW"
 # Ingress policing (leri-tx1/2/3: Tx→LER_Ingress入力)
 echo ""
 echo "=== [7] Ingress policing (leri-tx1/2/3) ==="
+
+# ポリサーの有効/無効を決める。マルチパス時は既定で無効
+# (ポリサーが 4:2:1 を先に作ってしまい経路分配の効果が測れないため)。
+_police_on=1
+case "${INGRESS_POLICE:-auto}" in
+    off) _police_on=0 ;;
+    on)  _police_on=1 ;;
+    *)   [ "${ROUTE_MODE:-primary}" != "primary" ] && _police_on=0 ;;
+esac
+
+if [ "$_police_on" = "0" ]; then
+    for dev in leri-tx1 leri-tx2 leri-tx3; do
+        dc LER_Ingress tc qdisc del dev "$dev" ingress 2>/dev/null || true
+    done
+    echo "  [skip] 入口ポリサー無効 (ROUTE_MODE=${ROUTE_MODE:-primary} / INGRESS_POLICE=${INGRESS_POLICE:-auto})"
+    echo "         クラス間の差は各リンクの HTB だけで決まる"
+else
+
 total_kbps=$(( $(rate_to_kbps "$CR1_BW") + $(rate_to_kbps "$CR2_BW") + $(rate_to_kbps "$CR3_BW") ))
 sum=$(( WRR_HI + WRR_ME + WRR_LO ))
 pb_hi=$(( total_kbps * WRR_HI / sum ))
@@ -259,6 +316,7 @@ for dev_rate in "leri-tx1 $pb_hi" "leri-tx2 $pb_me" "leri-tx3 $pb_lo"; do
         police rate "${rate}kbit" burst "$(_pb $rate)b" mtu 9000 drop flowid :1
     echo "  [ok] $dev: police ${rate}kbit"
 done
+fi
 
 echo ""
 echo "=== DiffServ-TE 設定完了 ==="

@@ -1,0 +1,69 @@
+[21:04:02] === OSPF-SR TE Monitor 起動 (netlink イベント駆動 / OSPF収束ベース動的ラベル版) ===
+[21:04:02]   検知方式: ip monitor link (netlink) / OSPF障害待ち: 6s / OSPF復旧待ち: 15s
+[21:04:02]   ログ: /tmp/frr_te_monitor.log
+[21:04:02]   [SID] OSPF動的取得: LER_Egress=16005
+[21:04:02] 経路更新 [wcmp]: CR1(w=6) CR2(w=25) CR3(w=25)
+[21:04:02]   TE更新: SID=16005 / 主経路=CR1 / 有効CR: CR1 CR2 CR3
+[21:04:02]   table41/42/43 全クラス → CR1
+[21:04:02] 初期TE経路設定完了
+[21:04:02]   [netlink] nsenter ip monitor link 起動 PID=35128 (NS pid=29462)
+[21:04:02] === 監視ループ開始 (netlink + OSPF ポーリング 二重化) ===
+[21:04:33]   [SID] OSPF動的取得: LER_Egress=16005
+[21:04:37] ⚡ ip monitor link プロセス終了 → 再起動
+[21:04:37]   [netlink] nsenter ip monitor link 起動 PID=40689 (NS pid=29462)
+[21:05:03]   [SID] OSPF動的取得: LER_Egress=16005
+[21:05:34]   [SID] OSPF動的取得: LER_Egress=16005
+[21:06:04]   [SID] OSPF動的取得: LER_Egress=16005
+[21:06:35]   [SID] OSPF動的取得: LER_Egress=16005
+[17:07:55] === OSPF-SR TE Monitor 起動 (netlink イベント駆動 / OSPF収束ベース動的ラベル版) ===
+[17:07:55]   検知方式: ip monitor link (netlink) / OSPF障害待ち: 6s / OSPF復旧待ち: 15s
+[17:07:55]   ログ: /tmp/frr_te_monitor.log
+[17:07:55]   [SID] OSPF動的取得: LER_Egress=16005
+[17:07:55]   [重み] 動的制御なし → 静的値 6:25:25 を使用
+[17:07:55] 経路更新 [wcmp]: CR1(w=6) CR2(w=25) CR3(w=25)
+[17:07:55]   TE更新: SID=16005 / 主経路=CR1 / 有効CR: CR1 CR2 CR3
+[17:07:55]   table41/42/43 全クラス → CR1
+[17:07:55] 初期TE経路設定完了
+[17:07:55]   [netlink] nsenter ip monitor link 起動 PID=957136 (NS pid=29462)
+[17:07:55] === 監視ループ開始 (netlink + OSPF ポーリング 二重化) ===
+[17:08:25]   [SID] OSPF動的取得: LER_Egress=16005
+[17:08:44]   [重み] 動的制御の重みを採用: 16:100:100
+[17:08:44] ⚖  重みの変化を検知 (6:25:25 → 16:100:100, dynamic) → 経路更新
+[17:08:44]   [SID] OSPF動的取得: LER_Egress=16005
+[17:08:44] 経路更新 [wcmp]: CR1(w=16) CR2(w=100) CR3(w=100)
+[17:08:44]   TE更新: SID=16005 / 主経路=CR1 / 有効CR: CR1 CR2 CR3
+[17:08:44]   table41/42/43 全クラス → CR1
+[17:08:56]   [SID] OSPF動的取得: LER_Egress=16005
+[17:09:10] ⚖  重みの変化を検知 (16:100:100 → 13:100:100, dynamic) → 経路更新
+[17:09:10]   [SID] OSPF動的取得: LER_Egress=16005
+[17:09:10] 経路更新 [wcmp]: CR1(w=13) CR2(w=100) CR3(w=100)
+[17:09:10]   TE更新: SID=16005 / 主経路=CR1 / 有効CR: CR1 CR2 CR3
+[17:09:10]   table41/42/43 全クラス → CR1
+[17:09:27]   [SID] OSPF動的取得: LER_Egress=16005
+[17:09:48] ⚖  重みの変化を検知 (13:100:100 → 10:100:100, dynamic) → 経路更新
+[17:09:48]   [SID] OSPF動的取得: LER_Egress=16005
+[17:09:48] 経路更新 [wcmp]: CR1(w=10) CR2(w=100) CR3(w=100)
+[17:09:48]   TE更新: SID=16005 / 主経路=CR1 / 有効CR: CR1 CR2 CR3
+[17:09:48]   table41/42/43 全クラス → CR1
+[17:09:58]   [SID] OSPF動的取得: LER_Egress=16005
+[17:10:28]   [SID] OSPF動的取得: LER_Egress=16005
+[17:10:56] ⚖  重みの変化を検知 (10:100:100 → 8:100:100, dynamic) → 経路更新
+[17:10:56]   [SID] OSPF動的取得: LER_Egress=16005
+[17:10:57] 経路更新 [wcmp]: CR1(w=8) CR2(w=100) CR3(w=100)
+[17:10:57]   TE更新: SID=16005 / 主経路=CR1 / 有効CR: CR1 CR2 CR3
+[17:10:57]   table41/42/43 全クラス → CR1
+[17:10:59]   [SID] OSPF動的取得: LER_Egress=16005
+[17:11:04] ⚖  重みの変化を検知 (8:100:100 → 12:100:100, dynamic) → 経路更新
+[17:11:04]   [SID] OSPF動的取得: LER_Egress=16005
+[17:11:04] 経路更新 [wcmp]: CR1(w=12) CR2(w=100) CR3(w=100)
+[17:11:04]   TE更新: SID=16005 / 主経路=CR1 / 有効CR: CR1 CR2 CR3
+[17:11:04]   table41/42/43 全クラス → CR1
+[17:11:30]   [SID] OSPF動的取得: LER_Egress=16005
+[17:12:00]   [SID] OSPF動的取得: LER_Egress=16005
+[17:12:21]   [重み] 動的制御なし → 静的値 6:25:25 を使用
+[17:12:21] ⚖  重みの変化を検知 (12:100:100 → 6:25:25, static) → 経路更新
+[17:12:21]   [SID] OSPF動的取得: LER_Egress=16005
+[17:12:21] 経路更新 [wcmp]: CR1(w=6) CR2(w=25) CR3(w=25)
+[17:12:21]   TE更新: SID=16005 / 主経路=CR1 / 有効CR: CR1 CR2 CR3
+[17:12:21]   table41/42/43 全クラス → CR1
+[17:12:31]   [SID] OSPF動的取得: LER_Egress=16005

@@ -161,8 +161,11 @@ _ensure_nic_in_root() {
     done
 }
 
+# 第9引数で MTU を指定できる (既定 9100)。CR1 は 60GHz 無線経由で通過MTUが
+# 7899 のため 7800 を渡す。OSPF は DBD で MTU を照合するがリンク単位なので、
+# 同一リンクの両端さえ一致していれば他リンクは 9100 のままでよい。
 wire_fabric_c2() {
-    local c1=$1 if1=$2 ip1=$3 nic1=$4 c2=$5 if2=$6 ip2=$7 nic2=$8
+    local c1=$1 if1=$2 ip1=$3 nic1=$4 c2=$5 if2=$6 ip2=$7 nic2=$8 mtu=${9:-9100}
     ip netns exec "$c1" ip link del "$if1" 2>/dev/null || true
     ip netns exec "$c2" ip link del "$if2" 2>/dev/null || true
     _ensure_nic_in_root "$nic1"
@@ -171,13 +174,13 @@ wire_fabric_c2() {
     ip link set "$nic2" netns "$c2"
     ip netns exec "$c1" ip link set "$nic1" name "$if1"
     ip netns exec "$c2" ip link set "$nic2" name "$if2"
-    ip netns exec "$c1" ip link set "$if1" txqueuelen 10000 mtu 9100
-    ip netns exec "$c2" ip link set "$if2" txqueuelen 10000 mtu 9100
+    ip netns exec "$c1" ip link set "$if1" txqueuelen 10000 mtu "$mtu"
+    ip netns exec "$c2" ip link set "$if2" txqueuelen 10000 mtu "$mtu"
     ip netns exec "$c1" ip addr add "$ip1" dev "$if1"
     ip netns exec "$c1" ip link set "$if1" up
     ip netns exec "$c2" ip addr add "$ip2" dev "$if2"
     ip netns exec "$c2" ip link set "$if2" up
-    echo "  [ok] $c1($if1 $ip1) <=専用物理リンク($nic1<->$nic2)=> $c2($if2 $ip2)"
+    echo "  [ok] $c1($if1 $ip1) <=専用物理リンク($nic1<->$nic2, MTU $mtu)=> $c2($if2 $ip2)"
 }
 
 # Tx ↔ LER_Ingress
@@ -192,10 +195,32 @@ wire LER_Ingress leri-cr3 10.0.5.1/30  CR3 cr3-leri 10.0.5.2/30
 if [ "${LAB_MODE:-}" = "c2" ]; then
     echo "  -- C2完全独立3経路モード --"
     # 開通試験のnetns残骸をクリーンアップ (物理NICの迷子防止)
+    # netns 内に iperf3 等が残っていると名前空間の参照が残り、ip netns del しても
+    # 物理NICが root に戻らない (名前だけ消えて迷子になる)。先にプロセスを落とす。
+    for n in fabA fabB c2a1 c2b1 c2a2 c2b2 c2a3 c2b3; do
+        ip netns exec "$n" pkill -f iperf3 2>/dev/null || true
+    done
+    pkill -f 'iperf3 -s' 2>/dev/null || true   # 名前が既に消えた netns の残骸も回収
+    sleep 1
     for n in fabA fabB c2a1 c2b1 c2a2 c2b2 c2a3 c2b3; do
         ip netns del "$n" 2>/dev/null || true
     done
-    wire_fabric_c2 CR1 cr1-lere 10.0.2.1/30 "${C2_NIC_SW1[1]}"  LER_Egress lere-cr1 10.0.2.2/30 "${C2_NIC_SW2[1]}"
+    # 物理NICが root netns に戻るまで待つ (netns の解放は非同期)
+    for _try in 1 2 3 4 5 6 7 8 9 10; do
+        _miss=""
+        for _n in "${C2_NIC_SW1[@]}" "${C2_NIC_SW2[@]}"; do
+            ip link show "$_n" >/dev/null 2>&1 || _miss="$_miss $_n"
+        done
+        [ -z "$_miss" ] && break
+        sleep 1
+    done
+    [ -n "$_miss" ] && echo "  [警告] root netns に戻っていないNIC:$_miss (この後の配線で失敗する可能性)"
+    # 経路1のみ 60GHz 無線2ホップ経由 (RADWIN TerraNet V90 x4)。
+    #   CR1(enp5s0f1) -> SW1:Eth18 -> SW1:Eth24 -> KeepLINK-A -> ODU-A
+    #     )))無線1 ch1((( ODU-B -中継- ODU-C )))無線2 ch4((( ODU-D
+    #   -> KeepLINK-C -> SW2:Eth18 -> SW2:Eth11 -> LER_Egress(enp5s0f0)
+    # 2026-09-08 実測: 通過MTU 7899 のため 7800 を指定。経路2/3 は有線のまま 9100。
+    wire_fabric_c2 CR1 cr1-lere 10.0.2.1/30 "${C2_NIC_SW1[1]}"  LER_Egress lere-cr1 10.0.2.2/30 "${C2_NIC_SW2[1]}" 7800
     wire_fabric_c2 CR2 cr2-lere 10.0.4.1/30 "${C2_NIC_SW1[2]}"  LER_Egress lere-cr2 10.0.4.2/30 "${C2_NIC_SW2[2]}"
     wire_fabric_c2 CR3 cr3-lere 10.0.6.1/30 "${C2_NIC_SW1[3]}"  LER_Egress lere-cr3 10.0.6.2/30 "${C2_NIC_SW2[3]}"
 elif [ "${C1_FABRIC:-0}" = "1" ] || [ "${LAB_MODE:-}" = "c1" ]; then
@@ -296,22 +321,15 @@ HEADER
             echo " ip ospf network point-to-point"
             echo " ip ospf hello-interval 1"
             echo " ip ospf dead-interval 3"
+            # BFD は FRR の既定値 (送受信 300ms × 検出倍数 3 = 約 0.9 秒で断を検知) で動く。
+            # 60GHz 無線ではビーム調整や MCS 切替で短時間止まることがあるため、
+            # 50ms などに縮めると劣化しただけの無線を断と誤検知しうる (2026-09-25 実測で誤検知 0)。
             echo " ip ospf bfd"
             if [ "$main" = "LER_Ingress" ] && [ "$iface" != "leri-cr1" ]; then
                 echo " ip ospf cost 1000"
             fi
             echo "!"
         done
-        # BFDプロファイル
-        cat << BFD
-bfd
- profile fast
-  receive-interval 50
-  transmit-interval 50
-  detect-multiplier 3
- !
-!
-BFD
         # OSPF + Segment Routing
         # leri-cr2/cr3にcost 1000を設定済みのため、全経路がCR1経由に集約される
         cat << OSPF

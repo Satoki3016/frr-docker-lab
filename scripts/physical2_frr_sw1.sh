@@ -70,7 +70,7 @@ DAEMONS
         for iface in $bfd_ifaces; do
             printf "interface %s\n ip ospf bfd\n ip ospf hello-interval 1\n ip ospf dead-interval 3\n ip ospf network point-to-point\n!\n" "$iface"
         done
-        printf "bfd\n profile fast\n  receive-interval 50\n  transmit-interval 50\n  detect-multiplier 3\n !\n!\n"
+        # BFD はプロファイルを指定せず FRR 既定値 (300ms×3) で動く
         printf "router ospf\n ospf router-id %s\n" "$router_id"
         for net in "${ospf_nets[@]}"; do
             printf " network %s area 0\n" "$net"

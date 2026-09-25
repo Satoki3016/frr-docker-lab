@@ -1,0 +1,2 @@
+bash /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/scripts/frr_dscp_te.sh 
+env RADWIN_CONTROLLER_CSV=/home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/20260918_smoke_run/controller.csv RADWIN_CONTROLLER_INTERVAL=2 bash /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/scripts/frr_measure.sh 60 normal 20260918_smoke_run 

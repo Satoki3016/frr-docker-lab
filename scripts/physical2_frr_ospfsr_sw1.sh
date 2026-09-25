@@ -225,15 +225,7 @@ interface ${iface}
 !
 IFACE
         done
-        cat << BFD
-bfd
- profile fast
-  receive-interval 50
-  transmit-interval 50
-  detect-multiplier 3
- !
-!
-BFD
+        # BFD はプロファイルを指定せず FRR 既定値 (300ms×3) で動く
         cat << OSPF
 router ospf
  ospf router-id ${router_id}

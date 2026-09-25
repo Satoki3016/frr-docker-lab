@@ -222,13 +222,6 @@ interface lere-cr3
  ip ospf dead-interval 3
  ip ospf bfd
 !
-bfd
- profile fast
-  receive-interval 50
-  transmit-interval 50
-  detect-multiplier 3
- !
-!
 router ospf
  ospf router-id 192.168.0.5
  network 10.0.0.0/8 area 0

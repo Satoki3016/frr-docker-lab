@@ -2,7 +2,9 @@
 # FRR OSPF-SR + DiffServ-TE ラボ 計測スクリプト (System B: Docker コンテナ)
 #
 # 使い方:
-#   sudo bash scripts/frr_measure.sh [duration] [normal|failure|failure_reroute]
+#   sudo bash scripts/frr_measure.sh [duration] [normal|failure|failure_reroute|manual]
+#   manual         : 自動の障害注入なし・frr_te_monitor あり。障害は人が起こす
+#                    (無線 ODU のケーブル抜去など)。3シナリオ比較には含めない。
 #
 # シナリオ:
 #   normal         : 障害なし。OSPF-SR + DiffServ-TE + WRR が正常動作
@@ -21,9 +23,9 @@
 #   sudo bash scripts/frr_dscp_te.sh が実行済みであること (iptables/TC/HTB/MPLS 設定)
 #
 # 結果保存先:
-#   results/frr/frr_normal/
-#   results/frr/frr_failure/
-#   results/frr/frr_failure_reroute/
+#   results/frr/incoming/<タグ>/frr_normal/
+#   results/frr/incoming/<タグ>/frr_failure/
+#   results/frr/incoming/<タグ>/frr_failure_reroute/
 
 set -e
 
@@ -40,10 +42,23 @@ if ! [[ "$DURATION" =~ ^[0-9]+$ ]]; then
     echo "使い方: sudo bash $0 [duration] [normal|failure|failure_reroute] [experiment_name]"
     exit 1
 fi
-if ! [[ "$SCENARIO" =~ ^(normal|failure|failure_reroute)$ ]]; then
-    echo "[ERROR] 第2引数は normal / failure / failure_reroute のいずれかを指定してください"
-    echo "使い方: sudo bash $0 [duration] [normal|failure|failure_reroute] [experiment_name]"
+if ! [[ "$SCENARIO" =~ ^(normal|failure|failure_reroute|manual)$ ]]; then
+    echo "[ERROR] 第2引数は normal / failure / failure_reroute / manual のいずれかを指定してください"
+    echo "使い方: sudo bash $0 [duration] [normal|failure|failure_reroute|manual] [experiment_name]"
     exit 1
+fi
+
+# radwin_experiment.sh run からの明示指定時だけ動的制御を併用する。
+# 既存の直接呼び出しと3シナリオ計測は従来どおり。
+if [ -n "${RADWIN_CONTROLLER_CSV:-}" ]; then
+    # failure は「迂回なし」の比較用。動的制御を重ねると比較の前提が崩れるので除く。
+    # failure_reroute では te_monitor が経路表を書き、制御は重みと HTB だけを決める
+    # (te_monitor の pidfile で自動判定)。
+    if ! [[ "$SCENARIO" =~ ^(normal|failure_reroute|manual)$ ]] || [ "${ROUTE_MODE:-primary}" != "wcmp" ] || [ "${LAB_MODE:-veth}" != "c2" ]; then
+        echo "[ERROR] 動的制御の同時計測は LAB_MODE=c2 / ROUTE_MODE=wcmp / normal・failure_reroute・manual 専用です"
+        exit 1
+    fi
+    command -v setsid >/dev/null || { echo "[ERROR] setsid が必要です"; exit 1; }
 fi
 
 # PRIO_HI=1 (SP無効化・prio統一ablation) 時は自動でフォルダ名を分け、
@@ -51,7 +66,7 @@ fi
 PRIO_TAG=""
 [ "${PRIO_HI:-0}" = "1" ] && PRIO_TAG="_priouniform"
 
-FRR_BASE="$LAB_DIR/results/frr/$EXPERIMENT_NAME"
+FRR_BASE="${FRR_RESULTS_ROOT:-$LAB_DIR/results/frr/incoming}/$EXPERIMENT_NAME"
 RESULTS_DIR="$FRR_BASE/frr_${SCENARIO}${PRIO_TAG}"
 mkdir -p "$RESULTS_DIR"
 
@@ -99,30 +114,79 @@ echo "  LER_Egress SID: ${LERE_LABEL}"
 echo ""
 echo "=== [2] シナリオ別セットアップ ==="
 
+# ── ROUTE_MODE=ecmp/wcmp 用: 3経路マルチパスを張る ────────────────────
+# 2026-09-17: 従来このスクリプトはシナリオごとに CR1 固定経路をハードコード
+#   しており、frr_dscp_te.sh の設定を上書きしていた (マルチパスが効かなかった原因)。
+#   ROUTE_MODE が primary 以外なら、ここでもマルチパスを張るようにする。
+_mp_weights() {
+    if [ "${ROUTE_MODE:-primary}" = "ecmp" ]; then
+        echo "1 1 1"
+    else
+        echo "${WCMP_W1:-1} ${WCMP_W2:-10} ${WCMP_W3:-10}"
+    fi
+}
+
+# マルチパスはフロー単位(5-tupleハッシュ)で振り分ける。既定の hash_policy=0 は
+# 送信元/宛先IPだけを見るため、同一クラスの全フローが同じ経路に行ってしまう。
+# docker exec 経由の sysctl はコンテナ権限次第で失敗するので、ホスト側から
+# 名前付き netns に入って設定し、必ず値を検証する。
+_enable_mp_hash() {
+    ip netns exec LER_Ingress sysctl -qw net.ipv4.fib_multipath_hash_policy=1 2>/dev/null \
+        || docker exec LER_Ingress sysctl -qw net.ipv4.fib_multipath_hash_policy=1 2>/dev/null || true
+    local v
+    v=$(ip netns exec LER_Ingress sysctl -n net.ipv4.fib_multipath_hash_policy 2>/dev/null \
+        || docker exec LER_Ingress sysctl -n net.ipv4.fib_multipath_hash_policy 2>/dev/null || echo "?")
+    if [ "$v" = "1" ]; then
+        echo "  [ok] fib_multipath_hash_policy=1 (L3+L4ハッシュ)"
+    else
+        echo "  [NG] fib_multipath_hash_policy=$v — フローが分散せずクラス単位でしか散らない"
+    fi
+}
+
+_install_multipath() {
+    local w1 w2 w3
+    read -r w1 w2 w3 <<< "$(_mp_weights)"
+    _enable_mp_hash
+    for tbl in 41 42 43; do
+        docker exec LER_Ingress ip route flush table "$tbl" 2>/dev/null || true
+        docker exec LER_Ingress ip route add table "$tbl" 10.20.0.0/16 \
+            nexthop encap mpls "${LERE_LABEL}" via 10.0.1.2 dev leri-cr1 weight "$w1" \
+            nexthop encap mpls "${LERE_LABEL}" via 10.0.3.2 dev leri-cr2 weight "$w2" \
+            nexthop encap mpls "${LERE_LABEL}" via 10.0.5.2 dev leri-cr3 weight "$w3"
+    done
+    echo "  [ok] table41/42/43: 3経路マルチパス 重み CR1:CR2:CR3 = ${w1}:${w2}:${w3} (${ROUTE_MODE})"
+    echo "       経路選択に優先度は使わない。優先制御は各リンクのHTBのみ。"
+}
+
 case "$SCENARIO" in
 # ─────────────────────────────────────────────
 # normal: 全クラス CR1 主経路 (1リンク3クラス WRR競合)
 # ─────────────────────────────────────────────
 normal)
-    echo "  モード: 正常系 (1リンク3クラス / OSPF-SR + DiffServ-TE + HTB WRR 4:2:1)"
-    echo "  全クラスを CR1 主経路に集約 → leri-cr1 上でWRR 4:2:1 が競合"
-    for tbl in 41 42 43; do
-        docker exec LER_Ingress ip route flush table "$tbl" 2>/dev/null || true
-    done
-    # AF41/AF42/AF43 いずれも CR1 主経路、CR2→CR3 フォールバック
-    for tbl in 41 42; do
-        docker exec LER_Ingress ip route add table "$tbl" 10.20.0.0/16 \
+    if [ "${ROUTE_MODE:-primary}" != "primary" ]; then
+        echo "  モード: 正常系 / 3経路マルチパス (${ROUTE_MODE})"
+        _install_multipath
+    else
+        echo "  モード: 正常系 (1リンク3クラス / OSPF-SR + DiffServ-TE + HTB WRR 4:2:1)"
+        echo "  全クラスを CR1 主経路に集約 → leri-cr1 上でWRR 4:2:1 が競合"
+        for tbl in 41 42 43; do
+            docker exec LER_Ingress ip route flush table "$tbl" 2>/dev/null || true
+        done
+        # AF41/AF42/AF43 いずれも CR1 主経路、CR2→CR3 フォールバック
+        for tbl in 41 42; do
+            docker exec LER_Ingress ip route add table "$tbl" 10.20.0.0/16 \
+                encap mpls "${LERE_LABEL}" via 10.0.1.2 dev leri-cr1 metric 1
+            docker exec LER_Ingress ip route add table "$tbl" 10.20.0.0/16 \
+                encap mpls "${LERE_LABEL}" via 10.0.3.2 dev leri-cr2 metric 2
+        done
+        docker exec LER_Ingress ip route add table 43 10.20.0.0/16 \
             encap mpls "${LERE_LABEL}" via 10.0.1.2 dev leri-cr1 metric 1
-        docker exec LER_Ingress ip route add table "$tbl" 10.20.0.0/16 \
+        docker exec LER_Ingress ip route add table 43 10.20.0.0/16 \
             encap mpls "${LERE_LABEL}" via 10.0.3.2 dev leri-cr2 metric 2
-    done
-    docker exec LER_Ingress ip route add table 43 10.20.0.0/16 \
-        encap mpls "${LERE_LABEL}" via 10.0.1.2 dev leri-cr1 metric 1
-    docker exec LER_Ingress ip route add table 43 10.20.0.0/16 \
-        encap mpls "${LERE_LABEL}" via 10.0.3.2 dev leri-cr2 metric 2
-    docker exec LER_Ingress ip route add table 43 10.20.0.0/16 \
-        encap mpls "${LERE_LABEL}" via 10.0.5.2 dev leri-cr3 metric 3
-    echo "  [ok] table41/42/43: 全クラス→CR1(pri)/CR2(fb)[/CR3(fb)]"
+        docker exec LER_Ingress ip route add table 43 10.20.0.0/16 \
+            encap mpls "${LERE_LABEL}" via 10.0.5.2 dev leri-cr3 metric 3
+        echo "  [ok] table41/42/43: 全クラス→CR1(pri)/CR2(fb)[/CR3(fb)]"
+    fi
     echo "  [ok] frr_te_monitor 停止済み (障害なしシナリオ)"
     ;;
 
@@ -132,14 +196,20 @@ normal)
 #   frr_te_monitor なし → 自動迂回なし → t=20-40 の 20秒間 通信断。
 # ─────────────────────────────────────────────
 failure)
-    echo "  モード: 障害あり / 迂回なし (tc netem loss 100% でリンク劣化シミュレート)"
-    echo "  全クラス CR1 専用 → netem が全パケットを廃棄 (unreachable 注入なし)"
-    for tbl in 41 42 43; do
-        docker exec LER_Ingress ip route flush table "$tbl" 2>/dev/null || true
-        docker exec LER_Ingress ip route add table "$tbl" 10.20.0.0/16 \
-            encap mpls "${LERE_LABEL}" via 10.0.1.2 dev leri-cr1 metric 1
-    done
-    echo "  [ok] table41/42/43: CR1(metric 1) のみ"
+    if [ "${ROUTE_MODE:-primary}" != "primary" ]; then
+        echo "  モード: 障害あり / 迂回なし / 3経路マルチパス (${ROUTE_MODE})"
+        echo "  CR1 に netem loss 100% を入れるが、経路表は更新しない (迂回なし)"
+        _install_multipath
+    else
+        echo "  モード: 障害あり / 迂回なし (tc netem loss 100% でリンク劣化シミュレート)"
+        echo "  全クラス CR1 専用 → netem が全パケットを廃棄 (unreachable 注入なし)"
+        for tbl in 41 42 43; do
+            docker exec LER_Ingress ip route flush table "$tbl" 2>/dev/null || true
+            docker exec LER_Ingress ip route add table "$tbl" 10.20.0.0/16 \
+                encap mpls "${LERE_LABEL}" via 10.0.1.2 dev leri-cr1 metric 1
+        done
+        echo "  [ok] table41/42/43: CR1(metric 1) のみ"
+    fi
     echo "  [ok] frr_te_monitor 停止済み (自動迂回なし)"
     echo "  [ok] t=20s: netem loss 100% → OSPF hello も落ちる → dead-interval 後に自然収束"
     ;;
@@ -165,11 +235,15 @@ failure_reroute)
         -c " ip ospf dead-interval 3" 2>/dev/null \
         && echo "  [ok] CR1 cr1-leri: hello=1s dead=3s" \
         || echo "  [warn] CR1 OSPF タイマー設定失敗 (継続)"
-    for tbl in 41 42 43; do
-        docker exec LER_Ingress ip route flush table "$tbl" 2>/dev/null || true
-        docker exec LER_Ingress ip route add table "$tbl" 10.20.0.0/16 \
-            encap mpls "${LERE_LABEL}" via 10.0.1.2 dev leri-cr1 metric 1
-    done
+    if [ "${ROUTE_MODE:-primary}" != "primary" ]; then
+        _install_multipath
+    else
+        for tbl in 41 42 43; do
+            docker exec LER_Ingress ip route flush table "$tbl" 2>/dev/null || true
+            docker exec LER_Ingress ip route add table "$tbl" 10.20.0.0/16 \
+                encap mpls "${LERE_LABEL}" via 10.0.1.2 dev leri-cr1 metric 1
+        done
+    fi
     echo "  frr_te_monitor 起動 (OSPF ポーリング + netlink 二重監視)"
     bash "$SCRIPT_DIR/frr_te_monitor.sh" /tmp/frr_te_monitor.log &
     TE_MONITOR_PID=$!
@@ -182,6 +256,33 @@ failure_reroute)
     echo "      → frr_te_monitor OSPF ポーリング検知 (~5s) → table41/42/43 全クラスを CR2 へ"
     echo "    t=40s: netem 解除 → OSPF hello 再開 → Full 確立 → CR1 へ復元"
     ;;
+
+# ─────────────────────────────────────────────
+# manual: 自動の障害注入なし・frr_te_monitor あり
+#   障害は人が起こす (例: 無線 ODU .32 のケーブル抜去)。
+#   te_monitor は入口側・出口側の OSPF 隣接 (BFD 300ms×3) を監視し、
+#   断を検知した経路を外す。OSPF タイマーは基本設定 (1s/3s) のまま変更しない。
+# ─────────────────────────────────────────────
+manual)
+    echo "  モード: 自動注入なし / 障害は手動 / OSPF 隣接消失検知 + 動的迂回あり"
+    if [ "${ROUTE_MODE:-primary}" != "primary" ]; then
+        _install_multipath
+    else
+        for tbl in 41 42 43; do
+            docker exec LER_Ingress ip route flush table "$tbl" 2>/dev/null || true
+            docker exec LER_Ingress ip route add table "$tbl" 10.20.0.0/16 \
+                encap mpls "${LERE_LABEL}" via 10.0.1.2 dev leri-cr1 metric 1
+        done
+    fi
+    echo "  frr_te_monitor 起動 (OSPF ポーリング + netlink 二重監視)"
+    bash "$SCRIPT_DIR/frr_te_monitor.sh" /tmp/frr_te_monitor.log &
+    TE_MONITOR_PID=$!
+    echo "  [ok] frr_te_monitor PID=$TE_MONITOR_PID"
+    sleep 3
+    echo "  [ok] 初期テーブル構築完了 (SID=${LERE_LABEL}, WRR ${WRR_HI}:${WRR_ME}:${WRR_LO})"
+    echo ""
+    echo "  障害は手動で起こす。操作した時刻を date +%T で控えること"
+    ;;
 esac
 
 echo ""
@@ -189,6 +290,42 @@ echo "=== [3] 現在のルーティングテーブル ==="
 docker exec LER_Ingress ip route show table 41 2>/dev/null | sed 's/^/  table41: /'
 docker exec LER_Ingress ip route show table 42 2>/dev/null | sed 's/^/  table42: /'
 docker exec LER_Ingress ip route show table 43 2>/dev/null | sed 's/^/  table43: /'
+
+# 経路の初期化完了後に起動する。先に起動すると上のシナリオ設定が動的重みを上書きする。
+RADWIN_CONTROLLER_PID=""
+_stop_radwin_controller() {
+    if [ -n "$RADWIN_CONTROLLER_PID" ]; then
+        # setsid で分けた、この計測専用のプロセス群 (SSHを含む) だけを終了する。
+        kill -TERM -- "-$RADWIN_CONTROLLER_PID" 2>/dev/null || true
+        wait "$RADWIN_CONTROLLER_PID" 2>/dev/null || true
+        RADWIN_CONTROLLER_PID=""
+    fi
+}
+_radwin_measure_exit() {
+    local rc=$1 job
+    _stop_radwin_controller
+    if [ "$rc" -ne 0 ]; then
+        # 同時計測の中断時だけ、その計測が起動した監視・送受信を片付ける。
+        for job in $(jobs -pr); do kill -TERM "$job" 2>/dev/null || true; done
+        for tx in Tx1 Tx2 Tx3; do
+            docker exec "$tx" pkill -f 'iperf3|owd_sender.py' 2>/dev/null || true
+        done
+        for rx in Rx1 Rx2 Rx3; do
+            docker exec "$rx" pkill -f 'iperf3|owd_receiver.py' 2>/dev/null || true
+        done
+    fi
+}
+if [ -n "${RADWIN_CONTROLLER_CSV:-}" ]; then
+    python3 "$SCRIPT_DIR/radwin_wcmp_controller.py" --check
+    trap '_radwin_measure_exit $?' EXIT
+    trap 'exit 130' INT
+    trap 'exit 143' TERM
+    setsid python3 -u "$SCRIPT_DIR/radwin_wcmp_controller.py" \
+        --interval "${RADWIN_CONTROLLER_INTERVAL:-2}" \
+        --log-csv "$RADWIN_CONTROLLER_CSV" > "${RADWIN_CONTROLLER_CSV%.csv}.log" 2>&1 &
+    RADWIN_CONTROLLER_PID=$!
+    echo "  [ok] 動的制御 PID=$RADWIN_CONTROLLER_PID / CSV: $RADWIN_CONTROLLER_CSV"
+fi
 
 # ── iperf3 サーバー起動 ────────────────────────────────────────────────
 echo ""
@@ -234,6 +371,10 @@ echo "  [ok] LER_Egress PID=${LER_EGRESS_PID} → ${NETDEV_FILE} 直読みモー
     set +e
     t_start_ms=$(date +%s%3N)
     t_prev_ms=$t_start_ms
+    # throughput.csv は相対秒しか持たないため、t=0 の絶対時刻を残す。
+    # これがないと controller.csv (絶対時刻) と重ね合わせられない。
+    printf 'throughput_t0_epoch_ms=%s\nthroughput_t0_iso=%s\n' \
+        "$t_start_ms" "$(date -Is)" > "$RESULTS_DIR/timebase.txt"
     # /proc/<pid>/net/dev の TX bytes = 各行の第10フィールド
     # プロセス生成ゼロ・Docker デーモン経由ゼロ
     get_bytes() {
@@ -276,6 +417,36 @@ LER_INGRESS_PID=$(docker inspect --format '{{.State.Pid}}' LER_Ingress)
 NETDEV_LERI="/proc/${LER_INGRESS_PID}/net/dev"
 SNMP_LERI="/proc/${LER_INGRESS_PID}/net/snmp"
 echo "  [ok] LER_Ingress PID=${LER_INGRESS_PID}"
+
+# ── 経路別の送信量モニター ──────────────────────────────────────────
+# 2026-09-17 追加。マルチパスが実際にどの割合で分配したかを記録する。
+# /proc/<pid>/net/dev の TX bytes (第10フィールド) をホストから直読みする。
+PATH_CSV="$RESULTS_DIR/path_stats.csv"
+echo "time,cr1_tx_bytes_per_sec,cr2_tx_bytes_per_sec,cr3_tx_bytes_per_sec" > "$PATH_CSV"
+(
+    set +e
+    _t0=$(date +%s%3N); _tp=$_t0
+    _get() {
+        awk '$1=="leri-cr1:"{a=$10} $1=="leri-cr2:"{b=$10} $1=="leri-cr3:"{c=$10}
+             END{printf "%.0f\n%.0f\n%.0f\n", a+0, b+0, c+0}' "$NETDEV_LERI" 2>/dev/null
+    }
+    { read -r p1; read -r p2; read -r p3; } < <(_get)
+    p1=${p1:-0}; p2=${p2:-0}; p3=${p3:-0}
+    while true; do
+        sleep 1
+        { read -r c1; read -r c2; read -r c3; } < <(_get)
+        [[ "$c1" =~ ^[0-9]+$ && "$c2" =~ ^[0-9]+$ && "$c3" =~ ^[0-9]+$ ]] || continue
+        _n=$(date +%s%3N); _t=$(( (_n - _t0) / 1000 )); _dt=$(( _n - _tp ))
+        [ "$_dt" -le 0 ] && _dt=1000
+        _d1=$(( (c1 - p1) * 1000 / _dt )); [ "$_d1" -lt 0 ] && _d1=0
+        _d2=$(( (c2 - p2) * 1000 / _dt )); [ "$_d2" -lt 0 ] && _d2=0
+        _d3=$(( (c3 - p3) * 1000 / _dt )); [ "$_d3" -lt 0 ] && _d3=0
+        echo "$_t,$_d1,$_d2,$_d3" >> "$PATH_CSV"
+        p1=$c1; p2=$c2; p3=$c3; _tp=$_n
+    done
+) &
+PATH_MONITOR_PID=$!
+echo "  [ok] 経路別モニター PID=$PATH_MONITOR_PID → $PATH_CSV"
 
 (
     set +e
@@ -364,12 +535,30 @@ if [[ "$SCENARIO" = "failure" || "$SCENARIO" = "failure_reroute" ]]; then
         set +e
         sleep 20
         echo "[t=20s] leri-cr1 netem loss 100% → リンク劣化シミュレート"
-        # operstate は UP のまま全パケット (データ + OSPF hello) を廃棄
-        docker exec LER_Ingress tc qdisc add dev leri-cr1 root netem loss 100%
+        # operstate は UP のまま全パケット (データ + OSPF hello) を廃棄。
+        #
+        # netem は HTB の *葉* に付ける。root に付けると HTB を置き換えてしまい、
+        # 解除時に HTB ごと消えてシェーピングが失われる (復旧後 t>=43 で CR1 が
+        # CR1_BW を超過する現象の原因だった)。
+        # 1:3 は HTB の default クラスでもあるため、fwmark の付かない
+        # OSPF hello もここに落ちる → 隣接断が再現される。
+        # 葉には既に pfifo (handle 11:/12:/13:) が居るため add では "File exists"
+        # で失敗する。replace で同じハンドルを奪い、解除時に pfifo へ戻す。
+        for _c in 1 2 3; do
+            docker exec LER_Ingress tc qdisc replace dev leri-cr1 \
+                parent "1:${_c}" handle "1${_c}:" netem loss 100% \
+                || echo "  [NG] netem 注入に失敗: parent 1:${_c}"
+        done
         sleep 20
-        echo "[t=40s] leri-cr1 netem 解除 → 自然復旧"
-        # netem 解除後はルートが変わっていないため再設定不要
-        docker exec LER_Ingress tc qdisc del dev leri-cr1 root 2>/dev/null || true
+        echo "[t=40s] leri-cr1 netem 解除 → 自然復旧 (HTB は保持)"
+        # netem を消すだけだと葉が無くなり、既定 qdisc に置き換わってしまう。
+        # 元の pfifo を limit ごと復元する。
+        docker exec LER_Ingress tc qdisc replace dev leri-cr1 \
+            parent 1:1 handle 11: pfifo limit "${PFIFO_LIMIT_HI:-1000}" || true
+        docker exec LER_Ingress tc qdisc replace dev leri-cr1 \
+            parent 1:2 handle 12: pfifo limit "${PFIFO_LIMIT_ME:-2000}" || true
+        docker exec LER_Ingress tc qdisc replace dev leri-cr1 \
+            parent 1:3 handle 13: pfifo limit "${PFIFO_LIMIT_LO:-4000}" || true
     ) &
     FAILURE_PID=$!
     if [ "$SCENARIO" = "failure" ]; then
@@ -403,13 +592,22 @@ docker exec -d Tx3 python3 /tmp/owd_sender.py \
 # iperf3 UDP — 出力をキャプチャしてパケットロス統計を保存
 # -i 1: 毎秒サーバ側の受信統計を記録 → E2E損失率の時系列取得に使用
 # --get-server-output: サーバ側の受信統計もクライアント出力に含める
-docker exec Tx1 iperf3 -c 10.20.1.1 -p 1000 -u -b "$TX1_RATE" -l 8950 -P 4 -t "$DURATION" \
+# 3クラスの起動を少しずらす。3クラス同時に -P 本ずつ接続すると
+# サーバ側の accept キューが溢れ、"unable to read from stream socket" で
+# クラスが丸ごと欠測する (2026-09-17/18 に -P 128 と -P 64 の両方で発生)。
+# ずらしても計測窓には影響しない: 障害注入は壁時計のタイマーで行われるため、
+# 送信開始が数百ms ずれても各クラスが障害を受ける瞬間は同じ。
+IPERF_STAGGER="${IPERF_STAGGER:-0.7}"
+
+docker exec Tx1 iperf3 -c 10.20.1.1 -p 1000 -u -b "$TX1_RATE" -l "${IPERF_DGRAM:-8950}" -P "${IPERF_STREAMS:-4}" -t "$DURATION" \
     -i 1 --get-server-output > "$RESULTS_DIR/iperf3_af41.log" 2>&1 &
 PIDS="$!"
-docker exec Tx2 iperf3 -c 10.20.2.1 -p 2000 -u -b "$TX2_RATE" -l 8950 -P 4 -t "$DURATION" \
+sleep "$IPERF_STAGGER"
+docker exec Tx2 iperf3 -c 10.20.2.1 -p 2000 -u -b "$TX2_RATE" -l "${IPERF_DGRAM:-8950}" -P "${IPERF_STREAMS:-4}" -t "$DURATION" \
     -i 1 --get-server-output > "$RESULTS_DIR/iperf3_af42.log" 2>&1 &
 PIDS="$PIDS $!"
-docker exec Tx3 iperf3 -c 10.20.3.1 -p 3000 -u -b "$TX3_RATE" -l 8950 -P 4 -t "$DURATION" \
+sleep "$IPERF_STAGGER"
+docker exec Tx3 iperf3 -c 10.20.3.1 -p 3000 -u -b "$TX3_RATE" -l "${IPERF_DGRAM:-8950}" -P "${IPERF_STREAMS:-4}" -t "$DURATION" \
     -i 1 --get-server-output > "$RESULTS_DIR/iperf3_af43.log" 2>&1 &
 PIDS="$PIDS $!"
 
@@ -417,6 +615,14 @@ echo "  計測中... ${DURATION}秒待機"
 # shellcheck disable=SC2086
 wait $PIDS || true
 echo "  計測完了"
+if [ -n "$RADWIN_CONTROLLER_PID" ]; then
+    if ! kill -0 "$RADWIN_CONTROLLER_PID" 2>/dev/null; then
+        echo "[WARN] 動的コントローラが計測終了前に停止しました。controller.log を確認してください"
+        # 呼び出し元が正常完了と誤認しないよう保存する。既存のログ回収は続行する。
+        touch "${RADWIN_CONTROLLER_CSV%.csv}.failed"
+    fi
+    _stop_radwin_controller
+fi
 
 # OWD ログ回収 (受信プロセスが終了するまで最大7秒待機)
 sleep 3
@@ -427,22 +633,37 @@ echo "  [ok] OWD ログ回収完了"
 
 # ── 後処理 ────────────────────────────────────────────────────────────
 [ -n "$FAILURE_PID" ] && { wait "$FAILURE_PID" 2>/dev/null || true; }
-# netem が残っている場合は確実に削除して復旧
-docker exec LER_Ingress tc qdisc del dev leri-cr1 root 2>/dev/null || true
-# failure_reroute: OSPF タイマーをデフォルトに戻す
+# netem が残っている場合は確実に削除して復旧。
+# 葉に付けた netem を外す。HTB (root) は消さない。
+docker exec LER_Ingress tc qdisc replace dev leri-cr1 \
+    parent 1:1 handle 11: pfifo limit "${PFIFO_LIMIT_HI:-1000}" 2>/dev/null || true
+docker exec LER_Ingress tc qdisc replace dev leri-cr1 \
+    parent 1:2 handle 12: pfifo limit "${PFIFO_LIMIT_ME:-2000}" 2>/dev/null || true
+docker exec LER_Ingress tc qdisc replace dev leri-cr1 \
+    parent 1:3 handle 13: pfifo limit "${PFIFO_LIMIT_LO:-4000}" 2>/dev/null || true
+# 旧方式 (root netem) の残骸があれば、それだけは root ごと外す
+if docker exec LER_Ingress tc qdisc show dev leri-cr1 2>/dev/null \
+     | grep -q "qdisc netem .* root"; then
+    echo "  [warn] root netem の残骸を検出 → 削除。HTB の再適用が必要"
+    docker exec LER_Ingress tc qdisc del dev leri-cr1 root 2>/dev/null || true
+fi
+# failure_reroute: OSPF タイマーを基本設定 (frr_setup.sh: hello 1s / dead 3s) に戻す。
+# 以前は "no ip ospf hello-interval" で FRR の既定値 (10s/40s) に戻しており、
+# 一度 failure_reroute を実行すると leri-cr1 だけが基本設定と食い違っていた。
 if [ "$SCENARIO" = "failure_reroute" ]; then
     docker exec frr-LER_Ingress vtysh -c "conf t" \
         -c "interface leri-cr1" \
-        -c " no ip ospf hello-interval" \
-        -c " no ip ospf dead-interval" 2>/dev/null || true
+        -c " ip ospf hello-interval 1" \
+        -c " ip ospf dead-interval 3" 2>/dev/null || true
     docker exec frr-CR1 vtysh -c "conf t" \
         -c "interface cr1-leri" \
-        -c " no ip ospf hello-interval" \
-        -c " no ip ospf dead-interval" 2>/dev/null || true
+        -c " ip ospf hello-interval 1" \
+        -c " ip ospf dead-interval 3" 2>/dev/null || true
 fi
 
 kill "$THR_MONITOR_PID"       2>/dev/null || true
 kill "${DROP_MONITOR_PID:-}" 2>/dev/null || true
+kill "${PATH_MONITOR_PID:-}" 2>/dev/null || true
 
 # failure_reroute の場合はモニターも停止
 if [ -n "${TE_MONITOR_PID:-}" ]; then
@@ -503,6 +724,9 @@ echo ""
 echo "■ 結果確認:"
 echo "  head $RESULTS_DIR/throughput.csv"
 echo "  ls   $RESULTS_DIR/"
-if [ "$SCENARIO" = "failure_reroute" ]; then
-    echo "  cat /tmp/frr_te_monitor.log   # 迂回ログ"
+if [[ "$SCENARIO" = "failure_reroute" || "$SCENARIO" = "manual" ]]; then
+    # te_monitor のログを結果フォルダにも残す (/tmp は次の実行で上書きされる)
+    cp /tmp/frr_te_monitor.log "$FRR_BASE/te_monitor.log" 2>/dev/null \
+        && echo "  $FRR_BASE/te_monitor.log   # 迂回ログ (保存済み)" \
+        || echo "  cat /tmp/frr_te_monitor.log   # 迂回ログ"
 fi

@@ -18,7 +18,8 @@ source "$SCRIPT_DIR/lab_config.sh"
 
 DURATION="${1:-60}"
 TAG="${2:-$(date +%Y%m%d)_25G_veth}"
-RESULTS_BASE="$(cd "$SCRIPT_DIR/.." && pwd)/results/frr/$TAG"
+export FRR_RESULTS_ROOT="${FRR_RESULTS_ROOT:-$(cd "$SCRIPT_DIR/.." && pwd)/results/frr/incoming}"
+RESULTS_BASE="$FRR_RESULTS_ROOT/$TAG"
 
 echo "████████████████████████████████████████████"
 echo "  一括実験"

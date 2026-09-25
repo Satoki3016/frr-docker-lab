@@ -37,6 +37,56 @@ CR_ROUTER_IDS=("192.168.0.2" "192.168.0.3" "192.168.0.4")
 
 log() { echo "[$(date '+%H:%M:%S')] $*" >> "$LOG_FILE"; }
 
+# ── 動的制御 (radwin_wcmp_controller.py) との重みの共有 ─────────────────
+# 経路表を書くのはこのスクリプトだけにする。重みは制御が公開するファイルから読む。
+# 以前は静的な WCMP_W1..3 で経路を作り直していたため、リンク復旧のたびに
+# 制御が劣化に合わせて下げた重みが巻き戻り、細った無線へ過剰に流していた。
+# ファイルが無い・古い (制御が止まった)・壊れている場合は従来の静的値を使う。
+# root で読むため source はせず、KEY=数字 の行だけを解釈する。
+# W1=0 は「無線断のため CR1 を経路から外す」の意味 (制御が断を2回連続で確認したとき)。
+# Linux は weight 0 を受け付けないので、update_tables で nexthop から除く。
+WEIGHTS_FILE="${RADWIN_WEIGHTS_FILE:-/run/radwin/weights.env}"
+# これより古い TS は採用しない [s]。制御の1周の最長 (ODU 2台の SSH 時間切れ 6s×2 +
+# 間隔 2s ≈ 15s) より長くすること。短いと、無線断で SSH が詰まっている間に
+# 静的値へ戻り、外したはずの CR1 を経路に戻してしまう (2026-09-25 実機で発生)。
+WEIGHTS_MAX_AGE="${RADWIN_WEIGHTS_MAX_AGE:-30}"
+_dw1=""; _dw2=""; _dw3=""; _dw_src=""; _applied_sig=""
+
+_load_weights() {
+    local src="static" w1="${WCMP_W1:-1}" w2="${WCMP_W2:-10}" w3="${WCMP_W3:-10}"
+    local TS="" W1="" W2="" W3="" line age
+    if [ -r "$WEIGHTS_FILE" ]; then
+        src="stale"
+        while IFS= read -r line || [ -n "$line" ]; do
+            [[ "$line" =~ ^(TS|W1|W2|W3)=([0-9]+)$ ]] || continue
+            case "${BASH_REMATCH[1]}" in
+                TS) TS="${BASH_REMATCH[2]}" ;;
+                W1) W1="${BASH_REMATCH[2]}" ;;
+                W2) W2="${BASH_REMATCH[2]}" ;;
+                W3) W3="${BASH_REMATCH[2]}" ;;
+            esac
+        done < "$WEIGHTS_FILE"
+        if [ -n "$TS" ] && [ -n "$W1" ] && [ -n "$W2" ] && [ -n "$W3" ]; then
+            age=$(( $(date +%s) - 10#$TS ))
+            if (( age < WEIGHTS_MAX_AGE )) \
+               && (( 10#$W1 >= 0 && 10#$W1 <= 255 )) \
+               && (( 10#$W2 >= 1 && 10#$W2 <= 255 )) \
+               && (( 10#$W3 >= 1 && 10#$W3 <= 255 )); then
+                src="dynamic"; w1=$((10#$W1)); w2=$((10#$W2)); w3=$((10#$W3))
+            fi
+        fi
+    fi
+    if [ "$src" != "$_dw_src" ]; then
+        case "$src" in
+            dynamic) log "  [重み] 動的制御の重みを採用: ${w1}:${w2}:${w3}" ;;
+            stale)   log "  [重み] 重みファイルが古いか不正 → 静的値 ${w1}:${w2}:${w3} を使用" ;;
+            static)  log "  [重み] 動的制御なし → 静的値 ${w1}:${w2}:${w3} を使用" ;;
+        esac
+    fi
+    _dw1=$w1; _dw2=$w2; _dw3=$w3; _dw_src=$src
+    return 0
+}
+
 # ── SIDラベル動的取得 ────────────────────────────────────────────────────
 # 以下の優先順で LER_Egress の Node SID を取得する:
 #   1. vtysh show ip ospf segment-routing  (FRR 8.4+ で利用可能)
@@ -75,12 +125,45 @@ refresh_labels() {
 }
 
 # ── OSPF neighbor 状態確認 ───────────────────────────────────────────────
+# 経路 CRn が使えるのは、入口側 (LER_Ingress─CRn) と出口側 (CRn─LER_Egress) の
+# 両方の隣接が Full のときだけ。以前は入口側しか見ておらず、無線 (CR1─LER_Egress)
+# が切れても CR1 を外さなかった (CR1 が LER_Ingress へ折り返して送り直していた)。
+# 隣接は BFD (300ms×3) で約 0.9 秒で落ちるので、ここで見れば 1〜3 秒で外せる。
+_nbr_in=""; _nbr_out=""; _egress_ok=1; _egress_warned=0
+_fetch_neighbors() {
+    _nbr_in=$(docker exec frr-LER_Ingress vtysh -c "show ip ospf neighbor" 2>/dev/null)
+    _nbr_out=$(docker exec frr-LER_Egress vtysh -c "show ip ospf neighbor" 2>/dev/null)
+    # 出口側が読めない (コンテナが無い・vtysh 失敗) ときは入口側だけで判断する。
+    # 読めないことを「全隣接消失」と取り違えると、全経路を外してしまうため。
+    if grep -q "Neighbor ID" <<<"$_nbr_out"; then
+        _egress_ok=1
+    else
+        _egress_ok=0
+        if [ "$_egress_warned" -eq 0 ]; then
+            log "  [warn] frr-LER_Egress の OSPF 隣接を読めない → 入口側の隣接だけで判断する"
+            _egress_warned=1
+        fi
+    fi
+}
+# 直前に _fetch_neighbors で読んだ結果から判定する。0=使える
+#   _path_side に落ちている側 (入口 / 出口 / 両方) を入れる
+_path_side=""
+_path_full_cached() {
+    local rid=$1 in_ok=0 out_ok=1
+    grep -q "^${rid}.*Full/" <<<"$_nbr_in" && in_ok=1
+    if [ "$_egress_ok" -eq 1 ]; then
+        grep -q "^${rid}.*Full/" <<<"$_nbr_out" && out_ok=1 || out_ok=0
+    fi
+    if [ "$in_ok" -eq 1 ] && [ "$out_ok" -eq 1 ]; then _path_side=""; return 0; fi
+    if [ "$in_ok" -eq 0 ] && [ "$out_ok" -eq 0 ]; then _path_side="入口側と出口側"
+    elif [ "$in_ok" -eq 0 ]; then _path_side="入口側 (LER_Ingress─CR)"
+    else _path_side="出口側 (CR─LER_Egress)"; fi
+    return 1
+}
 ospf_neighbor_full() {
-    # router_id が Full/* 状態にあれば 0 (true) を返す
-    local router_id=$1
-    docker exec frr-LER_Ingress vtysh \
-        -c "show ip ospf neighbor" 2>/dev/null \
-        | grep -q "^${router_id}.*Full/" || return 1
+    # router_id の経路が入口側・出口側とも Full なら 0 (true) を返す
+    _fetch_neighbors
+    _path_full_cached "$1"
 }
 
 # OSPF 収束を待つ
@@ -167,7 +250,45 @@ update_tables() {
     # 主経路のみ管理: 副経路は事前に設定せず、障害検知時に主経路を切り替える
     # (frr_failure との比較のため、preemptive fallback を持たせない設計)
     local lbl="${LERE_LABEL}"
-    if [ -n "$pri_via" ]; then
+
+    # ── マルチパスモード (ecmp / wcmp) ────────────────────────────────
+    # UP している経路だけを重み付きで並べ直す。障害時は down した経路が
+    # 自動的に外れ、残りの経路がその負荷を引き受ける。
+    # これが「無線が劣化/断したら有線側へ流す」機構の本体。
+    local _mode="${ROUTE_MODE:-primary}"
+    if [ "$_mode" = "ecmp" ] || [ "$_mode" = "wcmp" ]; then
+        local _w1=1 _w2=1 _w3=1
+        if [ "$_mode" = "wcmp" ]; then
+            _load_weights
+            _w1=$_dw1; _w2=$_dw2; _w3=$_dw3
+            _applied_sig="${_w1}:${_w2}:${_w3}"
+        fi
+        local _ws=("$_w1" "$_w2" "$_w3")
+        local _nh="" _up=""
+        for i in 0 1 2; do
+            [ "${state[$i]}" -eq 0 ] || continue
+            [ "${_ws[$i]}" -gt 0 ] || { _up="${_up} ${cr_names[$i]}(w=0:除外)"; continue; }
+            local _vd="${cr_vias[$i]}"
+            _nh="${_nh} nexthop encap mpls ${lbl} via ${_vd% *} dev ${_vd#* } weight ${_ws[$i]}"
+            _up="${_up} ${cr_names[$i]}(w=${_ws[$i]})"
+        done
+        if [ -n "$_nh" ]; then
+            docker exec LER_Ingress bash -c "
+                for tbl in 41 42 43; do
+                    ip route replace table \$tbl 10.20.0.0/16${_nh} 2>/dev/null || true
+                done
+            " 2>/dev/null || true
+            log "経路更新 [${_mode}]:${_up}"
+        else
+            docker exec LER_Ingress bash -c "
+                for tbl in 41 42 43; do
+                    ip route flush table \$tbl 2>/dev/null || true
+                    ip route add table \$tbl unreachable 10.20.0.0/16 metric 1 2>/dev/null || true
+                done
+            " 2>/dev/null || true
+            log "経路更新 [${_mode}]: 全CR down → unreachable"
+        fi
+    elif [ -n "$pri_via" ]; then
         # 主経路を atomic に更新 (replace = 既存あれば置換 / なければ add と等価)
         docker exec LER_Ingress bash -c "
             for tbl in 41 42 43; do
@@ -193,8 +314,14 @@ update_tables() {
     [ "${state[0]}" -eq 0 ] && up_list="${up_list} CR1"
     [ "${state[1]}" -eq 0 ] && up_list="${up_list} CR2"
     [ "${state[2]}" -eq 0 ] && up_list="${up_list} CR3"
-    log "  TE更新: SID=${LERE_LABEL} / 主経路=${active_name:-NONE} / 有効CR:${up_list}"
-    log "  table41/42/43 全クラス → ${active_name:-unreachable}"
+    if [ "$_mode" = "ecmp" ] || [ "$_mode" = "wcmp" ]; then
+        # マルチパスでは「主経路」は無い。実際の振り分けは直前の「経路更新」行を見る。
+        # OSPF 隣接が生きていても重み 0 で外した経路は、ここでは有効として数える。
+        log "  TE更新: SID=${LERE_LABEL} / OSPF隣接あり:${up_list} (振り分けは上の経路更新行)"
+    else
+        log "  TE更新: SID=${LERE_LABEL} / 主経路=${active_name:-NONE} / 有効CR:${up_list}"
+        log "  table41/42/43 全クラス → ${active_name:-unreachable}"
+    fi
 }
 
 # ── OSPF 隣接ポーリング ───────────────────────────────────────────────────
@@ -206,13 +333,14 @@ check_ospf_neighbors() {
     (( now - _ospf_poll_last < 1 )) && return
     _ospf_poll_last=$now
 
+    _fetch_neighbors       # 3経路分をまとめて1回だけ読む
     for i in 0 1 2; do
         local currently_full=0
-        ospf_neighbor_full "${CR_ROUTER_IDS[$i]}" && currently_full=1 || currently_full=0
+        _path_full_cached "${CR_ROUTER_IDS[$i]}" && currently_full=1 || currently_full=0
 
         if [ "${state[$i]}" -eq 0 ] && [ "$currently_full" -eq 0 ]; then
-            # 正常 → 隣接消失: netem/iptables 障害を検知
-            log "⚠  ${CR_NAMES[$i]} OSPF隣接消失検知 (ポーリング) → テーブル更新"
+            # 正常 → 隣接消失: netem/iptables 障害、または無線などの出口側の断を検知
+            log "⚠  ${CR_NAMES[$i]} OSPF隣接消失検知: ${_path_side} (ポーリング) → テーブル更新"
             state[$i]=1
             update_tables
         elif [ "${state[$i]}" -eq 1 ] && [ "$currently_full" -eq 1 ]; then
@@ -257,8 +385,23 @@ mkfifo "$MONITOR_FIFO"
 # FIFO を O_RDWR で開く → writer が終了しても EOF にならない
 exec 3<>"$MONITOR_FIFO"
 
-_cleanup() { rm -f "$MONITOR_FIFO"; kill "$MONITOR_PID" 2>/dev/null || true; }
-trap _cleanup EXIT INT TERM
+# 稼働中であることを動的制御 (radwin_wcmp_controller.py) に知らせる pidfile。
+# 制御はこれを見て「経路表は te_monitor が書く」と判断する。
+TE_PID_FILE="${RADWIN_TE_PID_FILE:-/run/radwin/te_monitor.pid}"
+mkdir -p "$(dirname "$TE_PID_FILE")" 2>/dev/null && echo $$ > "$TE_PID_FILE" 2>/dev/null \
+    || log "  [warn] pidfile を書けない: $TE_PID_FILE (動的制御は経路を自分で書く)"
+
+_cleanup() {
+    rm -f "$MONITOR_FIFO"; kill "$MONITOR_PID" 2>/dev/null || true
+    # 後から起動した別の te_monitor の pidfile は消さない
+    [ "$(cat "$TE_PID_FILE" 2>/dev/null)" = "$$" ] && rm -f "$TE_PID_FILE"
+    return 0
+}
+# INT/TERM では必ず終了させる。以前は trap _cleanup INT TERM としていたため
+# ハンドラの後もループが続き、pkill で止めたはずの te_monitor が
+# ip monitor を再起動して経路を書き続けていた。
+trap _cleanup EXIT
+trap 'exit 0' INT TERM
 
 _start_monitor() {
     # docker exec はブロックバッファされるため nsenter で直接 NS に入る
@@ -306,6 +449,17 @@ while true; do
 
     # OSPF 隣接ポーリング: netem/iptables 障害 (operstate 変化なし) を補完検知
     check_ospf_neighbors
+
+    # 動的制御の重みの変化を反映する (約2秒周期)。
+    # 比べるのは実際に使う重みだけ。TS は毎回進むので、ファイル全体を
+    # 比べると2秒ごとに経路を作り直してしまう。
+    if [ "${ROUTE_MODE:-primary}" = "wcmp" ]; then
+        _load_weights
+        if [ "${_dw1}:${_dw2}:${_dw3}" != "$_applied_sig" ]; then
+            log "⚖  重みの変化を検知 (${_applied_sig:-未設定} → ${_dw1}:${_dw2}:${_dw3}, ${_dw_src}) → 経路更新"
+            update_tables
+        fi
+    fi
 
     # ip monitor プロセスが終了していたら再起動
     if ! kill -0 "$MONITOR_PID" 2>/dev/null; then

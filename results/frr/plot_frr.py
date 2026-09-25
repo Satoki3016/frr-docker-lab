@@ -92,7 +92,7 @@ def _lab_cr_mbps() -> float | None:
     return None
 
 def _lab_tx_mbps() -> tuple[float, float, float] | None:
-    """TX1/TX2/TX3 レートを Mbps で返す。ストリーム数(4)を乗じた総送信量。"""
+    """TX1/TX2/TX3 レートを Mbps で返す。ストリーム数を乗じた総送信量。"""
     # --cr-mbps が指定された場合 (物理/C1環境) は c1 → physical の順で優先
     if _args.cr_mbps is not None:
         cfg_order = ("lab_config_c2.sh", "lab_config_c1.sh", "lab_config_physical.sh", "lab_config_veth.sh", "lab_config.sh")
@@ -109,8 +109,11 @@ def _lab_tx_mbps() -> tuple[float, float, float] | None:
             if m:
                 rates[key] = _parse_bw(m.group(1))
         if len(rates) == 3:
-            # veth は 4ストリーム、physical は 1ストリーム
-            streams = 1 if "physical" in cfg_name else 4
+            # ストリーム数は設定ファイルの IPERF_STREAMS を優先して読む。
+            # 未定義なら従来の既定 (physical は 1、その他は 4)。
+            # 2026-09-17: c2 で 128 に増やしたためハードコードを廃止した。
+            ms = re.search(r'IPERF_STREAMS="\$\{IPERF_STREAMS:-([0-9]+)\}"', txt)
+            streams = int(ms.group(1)) if ms else (1 if "physical" in cfg_name else 4)
             return (rates["TX1_RATE"] * streams,
                     rates["TX2_RATE"] * streams,
                     rates["TX3_RATE"] * streams)
@@ -124,22 +127,38 @@ def _has_scenario_data(d: Path) -> bool:
         for f in ("throughput.csv", "htb_class_stats.csv")
     )
 
+def _result_dirs() -> list[Path]:
+    # 分類フォルダの深さに依存せず、シナリオを持つ実験フォルダだけを列挙する。
+    candidates = {
+        p.parent.parent
+        for filename in ("throughput.csv", "htb_class_stats.csv")
+        for p in _SCRIPT_DIR.rglob(filename)
+        if p.parent.parent != _SCRIPT_DIR and _has_scenario_data(p.parent.parent)
+    }
+    return sorted(candidates, key=lambda p: p.name, reverse=True)
+
+
 def _list_tags() -> list[str]:
-    return sorted(
-        (d.name for d in _SCRIPT_DIR.iterdir()
-         if d.is_dir() and d.name not in ("__pycache__", "figures")
-         and _has_scenario_data(d)),
-        reverse=True,
-    )
+    return [str(d.relative_to(_SCRIPT_DIR)) for d in _result_dirs()]
 
 def _resolve_base(tag: str | None) -> Path:
     if tag:
         p = Path(tag)
-        return p if p.is_absolute() else _SCRIPT_DIR / tag
+        direct = p if p.is_absolute() else _SCRIPT_DIR / p
+        if direct.is_dir():
+            return direct
+        if p.is_dir():
+            return p.resolve()
+        # 従来のタグ単体と移動前の results/frr/<タグ> 絶対パスも解決する。
+        if len(p.parts) == 1 or (p.is_absolute() and p.parent == _SCRIPT_DIR):
+            matches = [d for d in _result_dirs() if d.name == p.name]
+            if len(matches) == 1:
+                return matches[0]
+            if len(matches) > 1:
+                _parser.error(f"同名のタグが複数あります。分類からの相対パスを指定してください: {matches}")
+        _parser.error(f"実験フォルダが見つかりません: {tag} (--list で一覧表示)")
     candidates = sorted(
-        (d for d in _SCRIPT_DIR.iterdir()
-         if d.is_dir() and d.name not in ("__pycache__", "figures")
-         and _has_scenario_data(d)),
+        _result_dirs(),
         key=lambda d: d.stat().st_mtime, reverse=True,
     )
     return candidates[0] if candidates else _SCRIPT_DIR
@@ -181,6 +200,7 @@ _TXT = {
         "sc_normal": "正常時",
         "sc_failure": "障害（迂回なし）",
         "sc_reroute": "障害（自動迂回）",
+        "sc_manual": "手動障害（ケーブル抜去・自動迂回）",
         "elapsed": "経過時間 (s)",
         "failure_span": "障害区間",
         "theory": "理論値 ({v:.2f} {u})",
@@ -197,8 +217,8 @@ _TXT = {
         "drop_title": "パケットドロップ発生箇所  (LER_Ingress 出口)",
         "drop_ylabel": "ドロップ数 ({u})",
         "drop_nodata": "データなし（再計測で収集）",
-        "drop_iface1": "HTB ドロップ  —  leri-cr1 (→ CR1)",
-        "drop_iface2": "HTB ドロップ  —  leri-cr2 (→ CR2)",
+        "drop_iface1": "HTB ドロップ  —  LER_Ingress → Router1",
+        "drop_iface2": "HTB ドロップ  —  LER_Ingress → Router2",
         "drop_note": ("注: ドロップ数は tc (HTB) キューでの破棄カウンタ。GSO 集約された skb 単位のため、"
                       "UDP データグラム数換算より小さい値となる。"),
     },
@@ -208,6 +228,7 @@ _TXT = {
         "sc_normal": "Normal",
         "sc_failure": "Failure (no reroute)",
         "sc_reroute": "Failure (auto-reroute)",
+        "sc_manual": "Manual failure (cable pull, auto-reroute)",
         "elapsed": "Elapsed time (s)",
         "failure_span": "Failure window",
         "theory": "Theory ({v:.2f} {u})",
@@ -224,8 +245,8 @@ _TXT = {
         "drop_title": "Packet drop location  (LER_Ingress egress)",
         "drop_ylabel": "Drops ({u})",
         "drop_nodata": "No data (collect by re-measuring)",
-        "drop_iface1": "HTB drops  —  leri-cr1 (-> CR1)",
-        "drop_iface2": "HTB drops  —  leri-cr2 (-> CR2)",
+        "drop_iface1": "HTB drops  —  LER_Ingress → Router1",
+        "drop_iface2": "HTB drops  —  LER_Ingress → Router2",
         "drop_note": ("Note: drop counts are tc (HTB) queue discard counters. As they are per GSO-aggregated "
                       "skb, the value is smaller than the UDP datagram count."),
     },
@@ -242,13 +263,16 @@ CLS_LABELS = _TXT["cls_multiline"]
 
 _OWD_NAMES   = {1: "owd_af41.log", 2: "owd_af42.log", 3: "owd_af43.log"}
 _IPERF_NAMES = {1: "iperf3_af41.log", 2: "iperf3_af42.log", 3: "iperf3_af43.log"}
-_IPERF_LOSS_RE = re.compile(r'\[SUM\].*\s+(\d+)/(\d+)\s+\([0-9.]+%\)\s+receiver')
+# 括弧内の損失率表記は iperf3 が 100% を "1e+02%" 等の科学記法で出すため
+# 表記に依存しない [^)]* で受ける。損失率は lost/total から再計算する。
+_IPERF_LOSS_RE = re.compile(r'\[SUM\].*\s+(\d+)/(\d+)\s+\([^)]*%\)\s+receiver')
 
 # シナリオスタイル — 色 + 線種の組み合わせでグレースケール印刷でも判別可能
 _SC_STYLES = {
     "normal":  {"color": "#4CAE4C", "ls": "-",  "lw": 1.6, "label": _TXT["sc_normal"]},
     "failure": {"color": "#DC4748", "ls": "--", "lw": 1.6, "label": _TXT["sc_failure"]},
     "reroute": {"color": "#418BBF", "ls": "-.", "lw": 1.6, "label": _TXT["sc_reroute"]},
+    "manual":  {"color": "#8E44AD", "ls": "-",  "lw": 1.6, "label": _TXT["sc_manual"]},
 }
 
 # ── シナリオ検出 ──────────────────────────────────────────────────────
@@ -259,6 +283,8 @@ def _scenario_style(name: str) -> dict:
         return _SC_STYLES["reroute"]
     if "failure" in name:
         return _SC_STYLES["failure"]
+    if "manual" in name:
+        return _SC_STYLES["manual"]
     return {"color": "gray", "ls": "-", "lw": 1.4, "label": name}
 
 def _scenario_order(name: str) -> int:
@@ -430,6 +456,11 @@ def _load_per_class_throughput(dirpath: Path, col: int):
 
 # ── failure ゾーン描画 ─────────────────────────────────────────────────
 def _mark_failure(ax, annotate: bool = False):
+    # t=20-40 の網掛けは自動注入 (failure / failure_reroute) の区間。
+    # manual (ケーブル抜去) だけの図では注入が無いので描かない。
+    if not any(f for *_, f, _ in active_scenarios()):
+        ax.grid(True, axis="y", zorder=0)
+        return
     ax.axvspan(FAILURE_START, FAILURE_END, alpha=0.06, color="#C0392B", zorder=0)
     ax.axvline(FAILURE_START, color="#C0392B", ls=":", lw=0.9, zorder=1)
     ax.axvline(FAILURE_END,   color="#2471A3", ls=":", lw=0.9, zorder=1)
@@ -566,7 +597,7 @@ def compare_loss_timeseries(active):
     # iperf3 server-output [SUM] 毎秒行: lost/total → 損失率(%)
     _SUM_RE = re.compile(
         r'\[SUM\]\s+(\d+\.\d+)-(\d+\.\d+)\s+sec'   # 区間
-        r'.*?(\d+)/(\d+)\s+\([0-9.]+%\)'            # lost/total
+        r'.*?(\d+)/(\d+)\s+\([^)]*%\)'              # lost/total（表記非依存）
     )
 
     def _load_e2e_loss(dirpath, suffix):
@@ -588,8 +619,17 @@ def compare_loss_timeseries(active):
             total = int(m.group(4))
             # total=0 は当該1秒間に1個も受信できなかった区間（完全断）= 100% 損失
             loss_pct = 100.0 if total == 0 else lost / total * 100.0
-            ts.append(t_start + 0.5)    # 区間中央を時刻に
+            # 毎秒損失率は「区間集計値」であり瞬時値ではない。区間開始時刻を持たせ
+            # steps-post で描くことで、その1秒間は一定値・遷移は区間境界で起きる
+            # という事実どおりの表現になる（中央値＋直線補間は区間内の連続変化を
+            # 誤って示唆し、遷移が区間境界より前に始まって見える）
+            ts.append(t_start)
             losses.append(loss_pct)
+            last_end = t_end
+        # steps-post は最終点から次の点までを描かないため、終端を1点補う
+        if ts:
+            ts.append(last_end)
+            losses.append(losses[-1])
         return ts, losses
 
     _SUFFIXES = ["af41", "af42", "af43"]
@@ -609,7 +649,8 @@ def compare_loss_timeseries(active):
             ts, vals = _load_e2e_loss(BASE / d, suf)
             if not ts:
                 continue
-            ax.plot(ts, vals, color=c, ls=ls, linewidth=lw, label=n, alpha=0.9)
+            ax.plot(ts, vals, color=c, ls=ls, linewidth=lw, label=n, alpha=0.9,
+                    drawstyle="steps-post")
             any_data = True
 
         if not any_data:
@@ -679,9 +720,9 @@ def compare_drop_location(active):
             if vs:
                 global_max = max(global_max, max(vs))
     if global_max >= 1e6:
-        scale, unit = 1e-6, "Mpkt/s"
+        scale, unit = 1e-6, r"$\times10^{6}$ pkt/s"
     elif global_max >= 1e3:
-        scale, unit = 1e-3, "kpkt/s"
+        scale, unit = 1e-3, r"$\times10^{3}$ pkt/s"
     else:
         scale, unit = 1.0, "pkt/s"
 

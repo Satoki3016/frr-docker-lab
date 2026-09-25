@@ -55,7 +55,7 @@ else
     SCENARIOS=("$TARGET")
 fi
 
-EXP_DIR="${LAB_DIR}/results/frr/${EXP_TAG}"
+EXP_DIR="${FRR_RESULTS_ROOT:-${LAB_DIR}/results/frr/incoming}/${EXP_TAG}"
 mkdir -p "$EXP_DIR"
 
 echo "████████████████████████████████████████"
