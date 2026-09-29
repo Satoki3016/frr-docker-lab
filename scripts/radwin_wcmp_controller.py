@@ -245,7 +245,168 @@ def preflight() -> bool:
     return ok
 
 
-def main() -> int:
+CSV_HEADER = ["time",
+              "hop1_phy", "hop1_mcs", "hop1_dbm",
+              "hop2_phy", "hop2_mcs", "hop2_dbm",
+              "est_mbps", "target_mbps", "applied_mbps", "w1", "action"]
+
+
+def _now() -> str:
+    return time.strftime("%H:%M:%S")
+
+
+class Controller:
+    """制御の状態を持ち、1回の観測ごとに判断・適用・記録する。
+
+    状態は3つ。観測のたびに step() がどれか1つを実行する。
+      通常       : 容量の変化に追従する (下げは即座、上げは UP_CONFIRM 回連続で確認)
+      無線断     : 未接続が DOWN_CONFIRM 回続いたら CR1 を外す (重み 0)
+      復帰確認中 : 無線断のあと、UP_CONFIRM 回続けて接続を確認してから戻す
+    te_monitor が動いているとき (manual / failure_reroute) は、OSPF 隣接の消失による
+    検知もあわせて働く。制御の検知は「接続中だがデータが通らない」壊れ方を
+    見分けられないため、OSPF 側を置き換えるものではない。
+    normal では te_monitor が止まっているので、無線断を外すのは制御だけになる。
+    """
+
+    def __init__(self, args, label: str, writer):
+        self.args = args
+        self.label = label
+        self.writer = writer
+        self.current = args.initial      # 適用中の CR1_BW [Mbps]。None は未初期化
+        self.up_streak = 0               # 上げの連続確認回数
+        self.link_down = False           # CR1 を外している (重み 0 を公開中)
+        self.down_streak = 0             # 連続した「未接続」の回数
+        self.recover_streak = 0          # 無線断のあとの連続した「接続」の回数
+
+    # ── 1回の観測 ────────────────────────────────────────────────────
+    def step(self, d: dict) -> None:
+        hops = d["hops"]
+        h1 = hops[0] if hops[0].get("connected") else {}
+        h2 = hops[1] if len(hops) > 1 and hops[1].get("connected") else {}
+        if not d["ok"]:
+            row = self._on_unreachable()
+        elif self.link_down:
+            row = self._on_recovering(d["chain_mbps"])
+        else:
+            row = self._on_normal(d["chain_mbps"], h1, h2)
+        self._write(h1, h2, *row)
+        self._publish()
+
+    # ── 状態ごとの判断 ─────────────────────────────────────────────
+    def _on_unreachable(self) -> tuple:
+        """無線の状態を読めない。DOWN_CONFIRM 回続いたら CR1 を外す。"""
+        self.down_streak += 1
+        self.recover_streak = 0
+        if self.link_down:
+            action = "link_down"
+        elif self.down_streak < DOWN_CONFIRM:
+            action = f"link_lost({self.down_streak}/{DOWN_CONFIRM})"
+            print(f"\n[{_now()}] {action} 無線の状態を読めない (もう1回続けば CR1 を外す)")
+        else:
+            ok, owner = self._remove_cr1()
+            action = "link_down" if ok else "link_down_FAIL"
+            if ok:
+                self.link_down = True
+            print(f"\n[{_now()}] {action} 無線断を{DOWN_CONFIRM}回連続で確認 "
+                  f"→ CR1 を経路から外す (重み 0:100:100, 経路={owner})")
+        w1 = 0 if self.link_down else (weights_for(self.current)[0] if self.current else 0)
+        return 0, 0, self.current or 0, w1, action
+
+    def _on_recovering(self, est: float) -> tuple:
+        """無線断のあと。UP_CONFIRM 回続けて接続したら CR1 を戻す。それまでは外したまま。"""
+        self.down_streak = 0
+        self.recover_streak += 1
+        target = max(MIN_MBPS, int(est * SAFETY))
+        action = f"link_up_wait({self.recover_streak}/{UP_CONFIRM})"
+        if self.recover_streak >= UP_CONFIRM:
+            _, ok, owner = self._apply_capacity(target)
+            action = "link_up" if ok else "link_up_FAIL"
+            if ok:
+                self.link_down = False
+                self.current = target
+                self.recover_streak = 0
+            print(f"\n[{_now()}] {action} 無線の復帰を{UP_CONFIRM}回連続で確認 "
+                  f"→ CR1_BW {target}M 重み {':'.join(map(str, weights_for(target)))} (経路={owner})")
+        w1 = 0 if self.link_down else weights_for(self.current)[0]
+        return est, target, self.current or 0, w1, action
+
+    def _on_normal(self, est: float, h1: dict, h2: dict) -> tuple:
+        """容量の変化に追従する。閾値内の変化は無視する (フラッピング防止)。"""
+        self.down_streak = 0
+        target = max(MIN_MBPS, int(est * SAFETY))
+        action = "keep"
+        if self.current is None:
+            action = "init"
+        elif target < self.current * (1 - self.args.threshold):
+            action = "down"          # 低下は即座に反映
+            self.up_streak = 0
+        elif target > self.current * (1 + self.args.threshold):
+            self.up_streak += 1
+            action = "up" if self.up_streak >= UP_CONFIRM else f"up_wait({self.up_streak}/{UP_CONFIRM})"
+        else:
+            self.up_streak = 0
+
+        applied = self.current
+        phy = f"PHY {h1.get('tx_phy_mbps', 0):.0f}/{h2.get('tx_phy_mbps', 0):.0f}"
+        if action in ("init", "down", "up"):
+            ww, ok, owner = self._apply_capacity(target)
+            if ok:
+                applied = self.current = target
+            else:
+                action += "_FAIL"    # current を進めない。次のポーリングで再試行される
+            self.up_streak = 0
+            print(f"[{_now()}] {action:5s} {phy} (MCS {h1.get('tx_mcs')}/{h2.get('tx_mcs')}) "
+                  f"→ 推定 {est:.0f} Mbps → CR1_BW {target}M "
+                  f"重み {ww[0]}:{ww[1]}:{ww[2]} (経路={owner})")
+        else:
+            print(f"[{_now()}] {action:5s} {phy} "
+                  f"(MCS {h1.get('tx_mcs')}/{h2.get('tx_mcs')} "
+                  f"{h1.get('signal_dbm')}/{h2.get('signal_dbm')}dBm) "
+                  f"推定 {est:.0f} / 現在 {self.current}M   ", end="\r")
+        return est, target, applied or 0, weights_for(applied)[0] if applied else 0, action
+
+    # ── 適用 ────────────────────────────────────────────────────────
+    def _apply_capacity(self, target: int) -> tuple[tuple[int, int, int], bool, str]:
+        """HTB を target に張り替え、重みを決める。(重み, 成否, 経路を書いた主体) を返す。
+
+        te_monitor が動いていれば経路表は te_monitor が書く (重みは _publish で渡る)。
+        """
+        if self.args.dry_run:
+            return weights_for(target), True, "-"
+        ok_h = apply_htb(target)
+        if te_monitor_owns_routes():
+            return weights_for(target), ok_h, "te_monitor"
+        ww, ok_r = apply_route(target, self.label)
+        return ww, ok_h and ok_r, "self"
+
+    def _remove_cr1(self) -> tuple[bool, str]:
+        """CR1 を経路から外す。(成否, 経路を書いた主体) を返す。"""
+        if self.args.dry_run:
+            return True, "-"
+        if te_monitor_owns_routes():
+            return True, "te_monitor"          # _publish で重み 0 が伝わる
+        _, ok = apply_weights(LINK_DOWN_WEIGHTS, self.label)
+        return ok, "self"
+
+    def _publish(self) -> None:
+        """適用中の重みを毎回公開する。値が変わらなくても TS を進め、
+        制御が生きていることを te_monitor に伝える (無線断中も継続)。"""
+        if self.args.dry_run:
+            return
+        if self.link_down:
+            publish_weights(LINK_DOWN_WEIGHTS, 0)
+        elif self.current is not None:
+            publish_weights(weights_for(self.current), self.current)
+
+    # ── 記録 ────────────────────────────────────────────────────────
+    def _write(self, h1: dict, h2: dict, est, target, applied, w1, action) -> None:
+        self.writer.writerow([time.time(),
+                              h1.get("tx_phy_mbps", 0), h1.get("tx_mcs", 0), h1.get("signal_dbm", ""),
+                              h2.get("tx_phy_mbps", 0), h2.get("tx_mcs", 0), h2.get("signal_dbm", ""),
+                              est, target, applied, w1, action])
+
+
+def parse_args(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--once", action="store_true", help="1回だけ評価して終了")
     ap.add_argument("--dry-run", action="store_true", help="変更せず判断だけ表示")
@@ -256,42 +417,34 @@ def main() -> int:
     ap.add_argument("--threshold", type=float, default=THRESHOLD)
     ap.add_argument("--initial", type=int, default=None,
                     help="現在の CR1_BW [Mbps]。省略時は最初の観測値を採用")
-    args = ap.parse_args()
+    return ap.parse_args(argv)
 
+
+def main() -> int:
+    args = parse_args()
     if args.check:
         return 0 if preflight() else 1
 
     if not preflight():
-        if args.dry_run:
-            print("!! 前提条件が未達。dry-run なので続行するが、"
-                  "本番前に必ず解消すること\n")
-        else:
+        if not args.dry_run:
             print("!! 前提条件が未達のため中止した。"
                   "上の [NG] を解消してから再実行すること")
             return 1
+        print("!! 前提条件が未達。dry-run なので続行するが、"
+              "本番前に必ず解消すること\n")
 
     # frr_measure.sh は SIGTERM で止める。既定の SIGTERM は finally を通らずに
     # 終了し、重みファイルが残る。SystemExit に変えて後始末を確実に行う。
     signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
 
-    current = args.initial
-    up_streak = 0
-    # 無線断の扱い: DOWN_CONFIRM 回続けて未接続なら重み 0 (CR1 を経路から外す) を公開する。
-    # OSPF の隣接消失 (既定 dead=40s) を待たずに外すため。OSPF 側の検知も残す
-    # (「接続中だがデータが通らない」壊れ方は OSPF にしか分からない)。
-    # 復帰は上げと同じく UP_CONFIRM 回の連続確認を待つ。
-    link_down = False
-    down_streak = recover_streak = 0
     label = get_label()
     print(f"MPLS ラベル: {label}")
 
     log = open(args.log_csv, "a", newline="")
-    w = csv.writer(log)
+    writer = csv.writer(log)
     if log.tell() == 0:
-        w.writerow(["time",
-                    "hop1_phy", "hop1_mcs", "hop1_dbm",
-                    "hop2_phy", "hop2_mcs", "hop2_dbm",
-                    "est_mbps", "target_mbps", "applied_mbps", "w1", "action"])
+        writer.writerow(CSV_HEADER)
+    ctl = Controller(args, label, writer)
 
     print(f"制御ループ開始 (間隔 {args.interval}s / 閾値 ±{args.threshold:.0%} / "
           f"上げは {UP_CONFIRM} 回連続確認){' [dry-run]' if args.dry_run else ''}")
@@ -301,138 +454,8 @@ def main() -> int:
     try:
         while True:
             t0 = time.time()
-            d = collect()
-            hops = d["hops"]
-            h1 = hops[0] if hops[0].get("connected") else {}
-            h2 = hops[1] if len(hops) > 1 and hops[1].get("connected") else {}
-
-            if not d["ok"]:
-                down_streak += 1
-                recover_streak = 0
-                if link_down:
-                    action = "link_down"
-                elif down_streak < DOWN_CONFIRM:
-                    action = f"link_lost({down_streak}/{DOWN_CONFIRM})"
-                    print(f"\n[{time.strftime('%H:%M:%S')}] {action} 無線の状態を読めない "
-                          f"(もう1回続けば CR1 を外す)")
-                else:
-                    action = "link_down"
-                    owner = "-"
-                    if not args.dry_run:
-                        if te_monitor_owns_routes():
-                            owner = "te_monitor"     # 下の publish で重み 0 が伝わる
-                        else:
-                            _, ok_r = apply_weights(LINK_DOWN_WEIGHTS, label)
-                            owner = "self"
-                            if not ok_r:
-                                action += "_FAIL"
-                    if not action.endswith("_FAIL"):
-                        link_down = True
-                    print(f"\n[{time.strftime('%H:%M:%S')}] {action} 無線断を{DOWN_CONFIRM}回連続で確認 "
-                          f"→ CR1 を経路から外す (重み 0:100:100, 経路={owner})")
-                w.writerow([time.time(),
-                            h1.get("tx_phy_mbps", 0), h1.get("tx_mcs", 0), h1.get("signal_dbm", ""),
-                            h2.get("tx_phy_mbps", 0), h2.get("tx_mcs", 0), h2.get("signal_dbm", ""),
-                            0, 0, current or 0, 0 if link_down else weights_for(current)[0] if current else 0,
-                            action])
-                log.flush()
-            elif link_down:
-                # 復帰の確認中。CR1 は外したまま (重み 0 を公開し続ける)。
-                down_streak = 0
-                recover_streak += 1
-                est = d["chain_mbps"]
-                target = max(MIN_MBPS, int(est * SAFETY))
-                action = f"link_up_wait({recover_streak}/{UP_CONFIRM})"
-                if recover_streak >= UP_CONFIRM:
-                    action = "link_up"
-                    owner = "-"
-                    ok_h = ok_r = True
-                    if not args.dry_run:
-                        ok_h = apply_htb(target)
-                        if te_monitor_owns_routes():
-                            owner = "te_monitor"
-                        else:
-                            _, ok_r = apply_route(target, label)
-                            owner = "self"
-                    if ok_h and ok_r:
-                        link_down = False
-                        current = target
-                        recover_streak = 0
-                    else:
-                        action += "_FAIL"
-                    print(f"\n[{time.strftime('%H:%M:%S')}] {action} 無線の復帰を{UP_CONFIRM}回連続で確認 "
-                          f"→ CR1_BW {target}M 重み {':'.join(map(str, weights_for(target)))} (経路={owner})")
-                w.writerow([time.time(),
-                            h1.get("tx_phy_mbps", 0), h1.get("tx_mcs", 0), h1.get("signal_dbm", ""),
-                            h2.get("tx_phy_mbps", 0), h2.get("tx_mcs", 0), h2.get("signal_dbm", ""),
-                            est, target, current or 0,
-                            0 if link_down else weights_for(current)[0], action])
-                log.flush()
-            else:
-                down_streak = 0
-                est = d["chain_mbps"]
-                target = max(MIN_MBPS, int(est * SAFETY))
-                action = "keep"
-
-                if current is None:
-                    action = "init"
-                elif target < current * (1 - args.threshold):
-                    action = "down"          # 低下は即座に反映
-                    up_streak = 0
-                elif target > current * (1 + args.threshold):
-                    up_streak += 1
-                    action = "up" if up_streak >= UP_CONFIRM else f"up_wait({up_streak}/{UP_CONFIRM})"
-                else:
-                    up_streak = 0
-
-                applied = current
-                owner = "-"
-                if action in ("init", "down", "up"):
-                    if not args.dry_run:
-                        ok_h = apply_htb(target)
-                        if te_monitor_owns_routes():
-                            # 経路表は te_monitor が重みファイルを読んで書く
-                            ww, ok_r, owner = weights_for(target), True, "te_monitor"
-                        else:
-                            ww, ok_r = apply_route(target, label)
-                            owner = "self"
-                    else:
-                        ww, ok_h, ok_r = weights_for(target), True, True
-
-                    if ok_h and ok_r:
-                        applied = target
-                        current = target
-                    else:
-                        # current を進めない。次のポーリングで再試行される。
-                        action += "_FAIL"
-                    up_streak = 0
-                    print(f"[{time.strftime('%H:%M:%S')}] {action:5s} "
-                          f"PHY {h1.get('tx_phy_mbps',0):.0f}/{h2.get('tx_phy_mbps',0):.0f} "
-                          f"(MCS {h1.get('tx_mcs')}/{h2.get('tx_mcs')}) "
-                          f"→ 推定 {est:.0f} Mbps → CR1_BW {target}M "
-                          f"重み {ww[0]}:{ww[1]}:{ww[2]} (経路={owner})")
-                else:
-                    ww = weights_for(current) if current else (0, 0, 0)
-                    print(f"[{time.strftime('%H:%M:%S')}] {action:5s} "
-                          f"PHY {h1.get('tx_phy_mbps',0):.0f}/{h2.get('tx_phy_mbps',0):.0f} "
-                          f"(MCS {h1.get('tx_mcs')}/{h2.get('tx_mcs')} "
-                          f"{h1.get('signal_dbm')}/{h2.get('signal_dbm')}dBm) "
-                          f"推定 {est:.0f} / 現在 {current}M   ", end="\r")
-
-                w.writerow([time.time(),
-                            h1.get("tx_phy_mbps", 0), h1.get("tx_mcs", 0), h1.get("signal_dbm", ""),
-                            h2.get("tx_phy_mbps", 0), h2.get("tx_mcs", 0), h2.get("signal_dbm", ""),
-                            est, target, applied or 0,
-                            weights_for(applied)[0] if applied else 0, action])
-                log.flush()
-
-            # 適用済みの重みを毎回公開する。値が変わらなくても TS を進め、
-            # 制御が生きていることを te_monitor に伝える (link_down 中も継続)。
-            if link_down and not args.dry_run:
-                publish_weights(LINK_DOWN_WEIGHTS, 0)
-            elif current is not None and not args.dry_run:
-                publish_weights(weights_for(current), current)
-
+            ctl.step(collect())
+            log.flush()
             if args.once:
                 break
             time.sleep(max(0.0, args.interval - (time.time() - t0)))

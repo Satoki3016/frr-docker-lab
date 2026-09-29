@@ -28,9 +28,9 @@
 | `failure` | t=20s に CR1 をダウン、t=40s 復旧。迂回なし（比較用） |
 | `failure_reroute` | failure と同条件だが、OSPF 隣接の消失を te_monitor が検知して CR1 を経路表から外し自動迂回 |
 
-**障害の与え方（2026-09-25 更新）:** 上の `failure` / `failure_reroute` の自動注入（t=20〜40s に leri-cr1 へ netem）は、
-無線区間を実装する前の代替手段。現在は不要で、障害は **無線 ODU のケーブル抜去** で与える（シナリオ `manual`：自動注入なし・te_monitor あり）。
-なお現在の注入方式は HTB の葉にだけ netem を付けるため、OSPF hello と BFD（fwmark なし → HTB の direct queue）を止められず、迂回が起きない可能性が高い（未検証・修正しない）。
+**障害の与え方:** 障害は無線 ODU のケーブル抜去で与える（シナリオ `manual`：自動注入なし・te_monitor あり）。
+`failure` / `failure_reroute` の自動注入（t=20〜40s に leri-cr1 へ netem）は無線区間を入れる前の代替手段で、
+HTB の葉にだけ netem を付けるため OSPF hello と BFD（fwmark なし → direct queue）を止められず、迂回を再現しない可能性が高い（未検証・未修正）。
 
 ---
 
