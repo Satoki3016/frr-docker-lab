@@ -15,6 +15,7 @@ RADWIN 実験 (C2: 無線1経路 + 有線2経路)
   sudo bash scripts/radwin_experiment.sh control [タグ] [間隔秒=2]
   sudo bash scripts/radwin_experiment.sh run [計測秒=120] [タグ] [間隔秒=2] [normal|failure_reroute|manual]
   sudo bash scripts/radwin_experiment.sh measure [計測秒=60] [normal|failure|failure_reroute|manual|all] [タグ] [wcmp|ecmp|primary]
+  sudo bash scripts/radwin_experiment.sh probe [計測秒=120] [タグ]
 
   config    使用する設定を表示 (sudo不要)
   check     HTB・マルチパス・ハッシュの前提確認のみ (設定変更・SSHなし)
@@ -27,6 +28,8 @@ RADWIN 実験 (C2: 無線1経路 + 有線2経路)
             manual: 自動の障害注入なし・te_monitor あり。障害は人が起こす (ケーブル抜去など)
             (failure は「迂回なし」の比較用なので動的制御とは組み合わせない)
   measure   動的制御を併用せず、既存の単一/3シナリオ計測を実行
+  probe     雨の観測の定時計測 (radwin_observe.py が呼ぶ)。経路表・HTB・te_monitor・制御には
+            触らず、常時動いている制御の下で3クラスの通信を流して記録するだけ
 
   --plan を先頭に付けると実行内容のみ表示 (sudo不要・ファイル作成なし):
     bash scripts/radwin_experiment.sh --plan run 120 antenna
@@ -41,6 +44,7 @@ RADWIN 実験 (C2: 無線1経路 + 有線2経路)
 
 ログ: run/control → results/frr/radwin/dynamic/<タグ>/
       measure     → results/frr/radwin/comparison/<タグ>/
+      probe       → $RADWIN_PROBE_ROOT/<タグ>/ (既定 results/frr/radwin/observation/probes)
 詳細: docs/radwin_experiment.md
 従来の radwin_wcmp_controller.py --interval 2 もそのまま使用可能。
 EOF
@@ -75,13 +79,16 @@ case "$ACTION" in
     measure)
         [ "$#" -le 4 ] || die "measure [計測秒] [シナリオ] [タグ] [モード]"
         DURATION="${1:-60}"; SCENARIO="${2:-normal}"; TAG="${3:-}"; MODE="${4:-wcmp}" ;;
+    probe)
+        [ "$#" -le 2 ] || die "probe [計測秒] [タグ]"
+        DURATION="${1:-120}"; TAG="${2:-}"; INTERVAL=2; SCENARIO=observe ;;
     *) die "不明な操作: $ACTION (help を参照)" ;;
 esac
 [[ "$MODE" =~ ^(wcmp|ecmp|primary)$ ]] || die "モードは wcmp / ecmp / primary"
-[[ "$SCENARIO" =~ ^(normal|failure|failure_reroute|manual|all)$ ]] || die "シナリオ名を確認してください"
+[[ "$SCENARIO" =~ ^(normal|failure|failure_reroute|manual|observe|all)$ ]] || die "シナリオ名を確認してください"
 [[ "$DURATION" =~ ^[1-9][0-9]*$ ]] || die "計測秒数は正の整数"
 [[ "$INTERVAL" =~ ^[0-9]+([.][0-9]+)?$ ]] && [[ "$INTERVAL" =~ [1-9] ]] || die "間隔は正の秒数"
-if [[ "$SCENARIO" != normal ]] && (( DURATION < 45 )); then
+if [[ "$SCENARIO" != normal && "$SCENARIO" != observe ]] && (( DURATION < 45 )); then
     die "障害シナリオは40秒時点の復旧を含めるため45秒以上を指定してください"
 fi
 
@@ -107,7 +114,7 @@ show_config() {
 if [ "$ACTION" = config ]; then show_config; exit 0; fi
 
 # 制御本体は有線9G・SP有効・WRR 4:2:1固定。異なる条件を混ぜて記録しない。
-if [[ "$ACTION" = run || "$ACTION" = control ]]; then
+if [[ "$ACTION" = run || "$ACTION" = control || "$ACTION" = probe ]]; then
     [[ "$CR2_BW" =~ ^(9[Gg]|9000[Mm])$ && "$CR3_BW" =~ ^(9[Gg]|9000[Mm])$ ]] || die "動的制御は有線9G固定です"
     [[ "$WRR_HI:$WRR_ME:$WRR_LO:${PRIO_HI:-0}" = "4:2:1:0" ]] || die "動的制御はSP有効・WRR 4:2:1固定です"
 fi
@@ -144,11 +151,12 @@ _next_seq() {       # 引数: 結果語を除いた接頭辞 YYYYMMDD_目的_条
 }
 
 RUN_DIR=""
-if [[ "$ACTION" = control || "$ACTION" = run || "$ACTION" = measure ]]; then
+if [[ "$ACTION" = control || "$ACTION" = run || "$ACTION" = measure || "$ACTION" = probe ]]; then
     case "$ACTION" in
         run)     _purpose=dynamic ;;
         control) _purpose=control ;;
         measure) _purpose=compare ;;
+        probe)   _purpose=probe ;;
     esac
     if [ -z "$TAG" ]; then
         # 未指定: 操作とモードから規則どおりに組み立てる
@@ -171,6 +179,8 @@ if [[ "$ACTION" = control || "$ACTION" = run || "$ACTION" = measure ]]; then
     echo "保存名: $TAG (終了時に running を success / fail に付け替えます)"
     if [ "$ACTION" = measure ]; then
         export FRR_RESULTS_ROOT="$LAB_DIR/results/frr/radwin/comparison"
+    elif [ "$ACTION" = probe ]; then
+        export FRR_RESULTS_ROOT="${RADWIN_PROBE_ROOT:-$LAB_DIR/results/frr/radwin/observation/probes}"
     else
         export FRR_RESULTS_ROOT="$LAB_DIR/results/frr/radwin/dynamic"
     fi
@@ -192,6 +202,15 @@ if [ "$PLAN" -eq 0 ]; then
     if [[ "$ACTION" != check && "$ACTION" != telemetry ]]; then
         exec 9>/run/lock/radwin_experiment.lock
         flock -n 9 || die "別のRADWIN実験を実行中です"
+    fi
+    # 雨の観測 (radwin_observe.py) の実行中は、設定を書き換える操作を受け付けない。
+    # 観測が呼ぶ probe だけは通す。
+    # 読み取りで開く (作らない)。ファイルが無ければ観測は動いていない。
+    # 書き込みで開くと、別ユーザーが作ったファイルを root が開けない (fs.protected_regular=2)。
+    if [[ "$ACTION" =~ ^(prepare|control|run|measure)$ ]] && [ -e /run/lock/radwin_observe.lock ]; then
+        exec 8</run/lock/radwin_observe.lock
+        flock -n 8 || die "雨の観測の実行中です。止めてから実行してください: sudo python3 scripts/radwin_observe.py stop"
+        exec 8<&-
     fi
 fi
 
@@ -269,6 +288,8 @@ case "$ACTION" in
         invoke bash "$SCRIPT_DIR/frr_dscp_te.sh"
         invoke env RADWIN_CONTROLLER_CSV="$RUN_DIR/controller.csv" RADWIN_CONTROLLER_INTERVAL="$INTERVAL" \
             bash "$SCRIPT_DIR/frr_measure.sh" "$DURATION" "$SCENARIO" "$TAG" ;;
+    probe)
+        invoke bash "$SCRIPT_DIR/frr_measure.sh" "$DURATION" observe "$TAG" ;;
     measure)
         if [ "$SCENARIO" = all ]; then
             invoke bash "$SCRIPT_DIR/run_all_scenarios.sh" "$DURATION" "$TAG"
@@ -278,7 +299,7 @@ case "$ACTION" in
         fi ;;
 esac
 
-if [[ "$ACTION" = run || "$ACTION" = measure ]] && [ "$PLAN" -eq 0 ]; then
+if [[ "$ACTION" = run || "$ACTION" = measure || "$ACTION" = probe ]] && [ "$PLAN" -eq 0 ]; then
     # 既存計測はiperfの失敗でも終了コード0になり得るため、欠測を別途検査する。
     python3 - "$RUN_DIR" "$IPERF_STREAMS" "$SCENARIO" "$ACTION" "${PRIO_HI:-0}" <<'PY'
 import csv

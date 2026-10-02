@@ -1,0 +1,65 @@
+time,event,detail
+1790931052.221,observe_start,/home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/observation/20261002_running_vethtest_01
+1790931052.222,child_start,te_monitor pid=2558654
+1790931052.222,child_start,controller pid=2558655
+1790931052.222,child_start,odu_logger pid=2558656
+1790931052.223,child_start,state_logger pid=2558657
+1790931052.223,child_start,load_server pid=2558659
+1790931052.224,child_start,load_client pid=2558661
+1790931054.227,child_exit,load_client code=1 (起動から2秒。30秒待って再起動)
+1790931054.227,load_pause,全負荷計測のため軽い負荷を止める
+1790931057.231,probe_start,start
+1790931185.398,probe_end,start code=0 success
+1790931185.398,load_resume,
+1790931187.402,child_start,load_client pid=2567865
+1790931600.108,load_pause,全負荷計測のため軽い負荷を止める
+1790931603.112,probe_start,hourly
+1790931731.280,probe_end,hourly code=0 success
+1790931731.280,load_resume,
+1790931733.285,child_start,load_client pid=2591520
+1790931901.579,load_pause,全負荷計測のため軽い負荷を止める
+1790931904.583,probe_start,degraded
+1790932034.752,probe_end,degraded code=0 success
+1790932034.753,load_resume,
+1790932036.757,child_start,load_client pid=2606369
+1790932503.560,load_pause,全負荷計測のため軽い負荷を止める
+1790932506.564,probe_start,repeat
+1790932636.735,probe_end,repeat code=0 success
+1790932636.735,load_resume,
+1790932638.740,child_start,load_client pid=2632053
+1790933105.528,load_pause,全負荷計測のため軽い負荷を止める
+1790933108.533,probe_start,repeat
+1790933236.699,probe_end,repeat code=0 success
+1790933236.699,load_resume,
+1790933238.704,child_start,load_client pid=2657802
+1790933406.997,load_pause,全負荷計測のため軽い負荷を止める
+1790933410.002,probe_start,recovered
+1790933540.173,probe_end,recovered code=0 success
+1790933540.173,load_resume,
+1790933542.177,child_start,load_client pid=2673013
+1790934063.102,load_pause,全負荷計測のため軽い負荷を止める
+1790934066.107,probe_start,degraded
+1790934194.270,probe_end,degraded code=0 success
+1790934194.270,load_resume,
+1790934196.274,child_start,load_client pid=2700861
+1790934665.083,load_pause,全負荷計測のため軽い負荷を止める
+1790934668.088,probe_start,repeat
+1790934796.256,probe_end,repeat code=0 success
+1790934796.256,load_resume,
+1790934798.261,child_start,load_client pid=2727591
+1790934966.556,load_pause,全負荷計測のため軽い負荷を止める
+1790934969.557,probe_start,recovered
+1790935097.725,probe_end,recovered code=0 success
+1790935097.725,load_resume,
+1790935099.729,child_start,load_client pid=2742961
+1790935258.010,child_exit,odu_logger code=0
+1790935258.011,child_start,odu_logger pid=2748721
+1790935268.030,load_pause,全負荷計測のため軽い負荷を止める
+1790935271.034,probe_start,hourly
+1790935401.205,probe_end,hourly code=0 success
+1790935401.205,load_resume,
+1790935403.210,child_start,load_client pid=2758196
+1790938801.717,load_pause,全負荷計測のため軽い負荷を止める
+1790938804.721,probe_start,hourly
+1790938848.787,observe_stop,
+1790938848.802,probe_abort,hourly

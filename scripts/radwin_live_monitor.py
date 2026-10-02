@@ -73,6 +73,26 @@ def measurement_running() -> bool:
                for q in ("1000", "2000", "3000"))
 
 
+# --telemetry 指定時に CSV へ書く列。各無線の親機 (.31 / .33) から見た値。
+# tele_time はその値を取得した時刻 (UNIX 秒)。行の time とずれるので、鮮度の確認に使う。
+TELE_COLS = ["tele_time",
+             "hop1_tx_mcs", "hop1_rx_mcs", "hop1_dbm", "hop1_tx_phy_mbps",
+             "hop2_tx_mcs", "hop2_rx_mcs", "hop2_dbm", "hop2_tx_phy_mbps"]
+
+
+def tele_values(hops: list[dict], t: float) -> list:
+    """collect() の結果を TELE_COLS の並びにする。未接続のホップは空欄。"""
+    row = [f"{t:.3f}"]
+    for i in range(2):
+        x = hops[i] if i < len(hops) else {}
+        if x.get("connected"):
+            row += [x.get("tx_mcs", ""), x.get("rx_mcs", ""), x.get("signal_dbm", ""),
+                    x.get("tx_phy_mbps", "")]
+        else:
+            row += ["", "", "", ""]
+    return [("" if v is None else v) for v in row]
+
+
 def start_load(streams: int) -> list[subprocess.Popen]:
     """無線区間 (CR1 → LER_Egress) に負荷をかける。
 
@@ -183,9 +203,10 @@ def main() -> int:
         log = path.open("w", newline="")
         writer = csv.writer(log)
         writer.writerow(["time", "wireless_tx_gbps", "wireless_rx_gbps", "wireless_loss_pct",
-                         "cr2_tx_gbps", "cr3_tx_gbps", "load"])
+                         "cr2_tx_gbps", "cr3_tx_gbps", "load"] + TELE_COLS)
 
     tele, tele_at = "", 0.0
+    tele_row = [""] * len(TELE_COLS)   # 直近のテレメトリ。取得のない行は前回値を繰り返す
     try:
         while True:
             time.sleep(a.interval)
@@ -209,8 +230,10 @@ def main() -> int:
                         f"無線{i+1} MCS{x.get('tx_mcs')}/{x.get('signal_dbm')}dBm"
                         for i, x in enumerate(h) if x.get("connected"))
                     tele += f"   推定容量 {d.get('chain_mbps', 0)/1000:.2f} Gbps"
+                    tele_row = tele_values(h, time.time())
                 except Exception as e:                       # 取得失敗で監視は止めない
                     tele = f"(テレメトリ取得失敗: {e})"
+                    tele_row = [""] * len(TELE_COLS)
                 tele_at = now
 
             tx, rx = vals["無線 送信"], vals["無線 受信"]
@@ -219,7 +242,7 @@ def main() -> int:
                 # 時刻は測定区間の終わり。値はその直前 dt 秒の平均レート。
                 writer.writerow([f"{time.time():.3f}", f"{tx:.4f}", f"{rx:.4f}", f"{loss:.2f}",
                                  f"{vals['CR2 送信']:.4f}", f"{vals['CR3 送信']:.4f}",
-                                 int(bool(load_procs))])
+                                 int(bool(load_procs))] + tele_row)
                 log.flush()
             vmax = max(9.5, tx, rx)
 

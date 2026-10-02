@@ -1,0 +1,72 @@
+████████████████████████████████████████
+  FRR OSPF-SR 計測  [observe]
+████████████████████████████████████████
+  計測時間 : 120s
+  PRIOモード: SP有効(デフォルト)
+  結果保存 : /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/observation/20261002_running_rainobs_01/probes/20261002_running_rainobs_wcmp_14/frr_observe
+
+=== [1] OSPF-SR ラベル取得 ===
+  LER_Egress SID: 16005
+
+=== [2] シナリオ別セットアップ ===
+  モード: 観測 (経路表・HTB・te_monitor・制御には触らない)
+  [ok] frr_te_monitor 稼働中
+
+=== [3] 現在のルーティングテーブル ===
+  table41: 10.20.0.0/16 
+  table41: 	nexthop  encap mpls  16005 via 10.0.1.2 dev leri-cr1 weight 13 
+  table41: 	nexthop  encap mpls  16005 via 10.0.3.2 dev leri-cr2 weight 100 
+  table41: 	nexthop  encap mpls  16005 via 10.0.5.2 dev leri-cr3 weight 100 
+  table42: 10.20.0.0/16 
+  table42: 	nexthop  encap mpls  16005 via 10.0.1.2 dev leri-cr1 weight 13 
+  table42: 	nexthop  encap mpls  16005 via 10.0.3.2 dev leri-cr2 weight 100 
+  table42: 	nexthop  encap mpls  16005 via 10.0.5.2 dev leri-cr3 weight 100 
+  table43: 10.20.0.0/16 
+  table43: 	nexthop  encap mpls  16005 via 10.0.1.2 dev leri-cr1 weight 13 
+  table43: 	nexthop  encap mpls  16005 via 10.0.3.2 dev leri-cr2 weight 100 
+  table43: 	nexthop  encap mpls  16005 via 10.0.5.2 dev leri-cr3 weight 100 
+
+=== [4] iperf3 / OWD サーバー起動 ===
+  [ok] Rx1:1000(AF41 iperf3) / Rx2:2000(AF42 iperf3) / Rx3:3000(AF43 iperf3)
+  [ok] Rx1:5001(AF41 OWD) / Rx2:5002(AF42 OWD) / Rx3:5003(AF43 OWD)
+
+=== [5] スループットモニター起動 ===
+  [ok] LER_Egress PID=2891067 → /proc/2891067/net/dev 直読みモード
+  [ok] PID=3002120 → /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/observation/20261002_running_rainobs_01/probes/20261002_running_rainobs_wcmp_14/frr_observe/throughput.csv
+
+=== [5b] ドロップモニター起動 ===
+  [ok] LER_Ingress PID=2890830
+  [ok] 経路別モニター PID=3002138 → /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/observation/20261002_running_rainobs_01/probes/20261002_running_rainobs_wcmp_14/frr_observe/path_stats.csv
+  [ok] PID=3002140 → /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/observation/20261002_running_rainobs_01/probes/20261002_running_rainobs_wcmp_14/frr_observe/tc_drops.csv / /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/observation/20261002_running_rainobs_01/probes/20261002_running_rainobs_wcmp_14/frr_observe/ip_drops.csv
+
+=== [7] 計測開始 (120s) ===
+  DSCP マーキング: port1000→AF41(mark41) / port2000→AF42(mark42) / port3000→AF43(mark43)
+  MPLS encap: label 16005 (LER_Egress SID, OSPF-SR 動的取得)
+  WRR 重み: AF41:AF42:AF43 = 4:2:1
+  送信レート: Tx1=125000K / Tx2=125000K / Tx3=125000K
+  計測中... 120秒待機
+  計測完了
+  [ok] OWD ログ回収完了
+
+=== 収集ファイル ===
+-rw-r--r-- 1 root root 2.9K 10月  2 20:45 /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/observation/20261002_running_rainobs_01/probes/20261002_running_rainobs_wcmp_14/frr_observe/ip_drops.csv
+-rw-r--r-- 1 root root 1.1M 10月  2 20:45 /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/observation/20261002_running_rainobs_01/probes/20261002_running_rainobs_wcmp_14/frr_observe/iperf3_af41.log
+-rw-r--r-- 1 root root 1.1M 10月  2 20:45 /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/observation/20261002_running_rainobs_01/probes/20261002_running_rainobs_wcmp_14/frr_observe/iperf3_af42.log
+-rw-r--r-- 1 root root 1.2M 10月  2 20:45 /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/observation/20261002_running_rainobs_01/probes/20261002_running_rainobs_wcmp_14/frr_observe/iperf3_af43.log
+-rw-r--r-- 1 root root 246K 10月  2 20:45 /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/observation/20261002_running_rainobs_01/probes/20261002_running_rainobs_wcmp_14/frr_observe/owd_af41.log
+-rw-r--r-- 1 root root 246K 10月  2 20:45 /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/observation/20261002_running_rainobs_01/probes/20261002_running_rainobs_wcmp_14/frr_observe/owd_af42.log
+-rw-r--r-- 1 root root 222K 10月  2 20:45 /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/observation/20261002_running_rainobs_01/probes/20261002_running_rainobs_wcmp_14/frr_observe/owd_af43.log
+-rw-r--r-- 1 root root 4.3K 10月  2 20:45 /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/observation/20261002_running_rainobs_01/probes/20261002_running_rainobs_wcmp_14/frr_observe/path_stats.csv
+-rw-r--r-- 1 root root  36K 10月  2 20:45 /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/observation/20261002_running_rainobs_01/probes/20261002_running_rainobs_wcmp_14/frr_observe/tc_drops.csv
+-rw-r--r-- 1 root root 4.2K 10月  2 20:45 /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/observation/20261002_running_rainobs_01/probes/20261002_running_rainobs_wcmp_14/frr_observe/throughput.csv
+
+=== グラフ生成 ===
+  (observe: 図は作らない)
+
+████████████████████████████████████████
+  計測完了: /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/observation/20261002_running_rainobs_01/probes/20261002_running_rainobs_wcmp_14/frr_observe
+████████████████████████████████████████
+
+■ 結果確認:
+  head /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/observation/20261002_running_rainobs_01/probes/20261002_running_rainobs_wcmp_14/frr_observe/throughput.csv
+  ls   /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/observation/20261002_running_rainobs_01/probes/20261002_running_rainobs_wcmp_14/frr_observe/

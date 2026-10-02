@@ -5,6 +5,8 @@
 #   sudo bash scripts/frr_measure.sh [duration] [normal|failure|failure_reroute|manual]
 #   manual         : 自動の障害注入なし・frr_te_monitor あり。障害は人が起こす
 #                    (無線 ODU のケーブル抜去など)。3シナリオ比較には含めない。
+#   observe        : 通信を流して記録するだけ。経路表・HTB・te_monitor・制御には触らない。
+#                    常時動いている te_monitor と動的制御の下で計測する (雨の観測の定時計測)。
 #
 # シナリオ:
 #   normal         : 障害なし。OSPF-SR + DiffServ-TE + WRR が正常動作
@@ -42,9 +44,9 @@ if ! [[ "$DURATION" =~ ^[0-9]+$ ]]; then
     echo "使い方: sudo bash $0 [duration] [normal|failure|failure_reroute] [experiment_name]"
     exit 1
 fi
-if ! [[ "$SCENARIO" =~ ^(normal|failure|failure_reroute|manual)$ ]]; then
-    echo "[ERROR] 第2引数は normal / failure / failure_reroute / manual のいずれかを指定してください"
-    echo "使い方: sudo bash $0 [duration] [normal|failure|failure_reroute|manual] [experiment_name]"
+if ! [[ "$SCENARIO" =~ ^(normal|failure|failure_reroute|manual|observe)$ ]]; then
+    echo "[ERROR] 第2引数は normal / failure / failure_reroute / manual / observe のいずれかを指定してください"
+    echo "使い方: sudo bash $0 [duration] [normal|failure|failure_reroute|manual|observe] [experiment_name]"
     exit 1
 fi
 
@@ -96,8 +98,11 @@ if ! docker exec LER_Ingress iptables -t mangle -L DSCPMARK 2>/dev/null | grep -
 fi
 
 # ── frr_te_monitor を一旦停止 ─────────────────────────────────────────
-pkill -f "frr_te_monitor.sh" > /dev/null 2>&1 || true
-sleep 0.5
+# observe は常時動いている te_monitor の下で計測するので止めない。
+if [ "$SCENARIO" != "observe" ]; then
+    pkill -f "frr_te_monitor.sh" > /dev/null 2>&1 || true
+    sleep 0.5
+fi
 
 # ── OSPF-SR ラベルを動的取得 ──────────────────────────────────────────
 echo "=== [1] OSPF-SR ラベル取得 ==="
@@ -282,6 +287,21 @@ manual)
     echo "  [ok] 初期テーブル構築完了 (SID=${LERE_LABEL}, WRR ${WRR_HI}:${WRR_ME}:${WRR_LO})"
     echo ""
     echo "  障害は手動で起こす。操作した時刻を date +%T で控えること"
+    ;;
+
+# ─────────────────────────────────────────────
+# observe: 設定に触らず、通信を流して記録するだけ
+#   経路表は te_monitor、HTB と重みは常時動いている動的制御が決める。
+#   ここで書き換えると、制御は自分が最後に適用した値との差でしか動かないため、
+#   上書きされたことに気づかず、誤った整形レートのまま計測してしまう。
+# ─────────────────────────────────────────────
+observe)
+    echo "  モード: 観測 (経路表・HTB・te_monitor・制御には触らない)"
+    if pgrep -f "frr_te_monitor.sh" > /dev/null 2>&1; then
+        echo "  [ok] frr_te_monitor 稼働中"
+    else
+        echo "  [WARN] frr_te_monitor が動いていない。無線断で CR1 が外れない"
+    fi
     ;;
 esac
 
@@ -635,6 +655,8 @@ echo "  [ok] OWD ログ回収完了"
 [ -n "$FAILURE_PID" ] && { wait "$FAILURE_PID" 2>/dev/null || true; }
 # netem が残っている場合は確実に削除して復旧。
 # 葉に付けた netem を外す。HTB (root) は消さない。
+# observe は netem を付けておらず、設定にも触らない約束なので何もしない。
+if [ "$SCENARIO" != "observe" ]; then
 docker exec LER_Ingress tc qdisc replace dev leri-cr1 \
     parent 1:1 handle 11: pfifo limit "${PFIFO_LIMIT_HI:-1000}" 2>/dev/null || true
 docker exec LER_Ingress tc qdisc replace dev leri-cr1 \
@@ -646,6 +668,7 @@ if docker exec LER_Ingress tc qdisc show dev leri-cr1 2>/dev/null \
      | grep -q "qdisc netem .* root"; then
     echo "  [warn] root netem の残骸を検出 → 削除。HTB の再適用が必要"
     docker exec LER_Ingress tc qdisc del dev leri-cr1 root 2>/dev/null || true
+fi
 fi
 # failure_reroute: OSPF タイマーを基本設定 (frr_setup.sh: hello 1s / dead 3s) に戻す。
 # 以前は "no ip ospf hello-interval" で FRR の既定値 (10s/40s) に戻しており、
@@ -676,7 +699,8 @@ if [ -n "${TE_MONITOR_PID:-}" ]; then
     pkill -9 -P "$TE_MONITOR_PID" 2>/dev/null || true
     wait "$TE_MONITOR_PID" 2>/dev/null || true
 fi
-pkill -9 -f "frr_te_monitor.sh" > /dev/null 2>&1 || true
+# observe では常時動いている te_monitor を残す
+[ "$SCENARIO" = "observe" ] || pkill -9 -f "frr_te_monitor.sh" > /dev/null 2>&1 || true
 
 for rx in Rx1 Rx2 Rx3; do
     docker exec "$rx" pkill -f "iperf3"       2>/dev/null || true
@@ -710,7 +734,10 @@ _bw_to_mbps() {
 }
 CR_MBPS=$(_bw_to_mbps "${CR1_BW:-3G}")
 
-if $PLOT_CMD "$PLOT_SCRIPT" --base "$FRR_BASE" --cr-mbps "$CR_MBPS"; then
+# observe (WCMP・1時間ごと) では plot_frr.py の図は使えない (単一経路前提) ので作らない
+if [ "$SCENARIO" = "observe" ]; then
+    echo "  (observe: 図は作らない)"
+elif $PLOT_CMD "$PLOT_SCRIPT" --base "$FRR_BASE" --cr-mbps "$CR_MBPS"; then
     echo "グラフ保存先: $FRR_BASE/figures/"
 else
     echo "[WARN] グラフ生成失敗"

@@ -540,7 +540,9 @@ class LauncherTests(unittest.TestCase):
             shutil.copyfile(SCRIPTS / name, script_dir / name)
         self.launcher = script_dir / "radwin_experiment.sh"
         # 本番のroot専用ロック位置をテストコピーの中だけ差し替える。
-        self.launcher.write_text(self.launcher.read_text().replace("/run/lock/radwin_experiment.lock", str(self.root / "experiment.lock")))
+        self.launcher.write_text(self.launcher.read_text()
+                                 .replace("/run/lock/radwin_experiment.lock", str(self.root / "experiment.lock"))
+                                 .replace("/run/lock/radwin_observe.lock", str(self.root / "observe.lock")))
         (script_dir / "frr_dscp_te.sh").write_text("#!/bin/bash\nprintf 'prepare\\n'\n")
         (self.root / "results/frr").mkdir(parents=True)
         (self.root / "results/frr/plot_frr.py").write_text("")

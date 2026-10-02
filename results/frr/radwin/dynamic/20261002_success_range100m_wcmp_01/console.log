@@ -1,0 +1,139 @@
+=== [1] OSPF-SR ラベル取得 ===
+  LER_Egress SID : 16005
+  CR1 SID        : 16002
+  CR2 SID        : 16003
+  CR3 SID        : 16004
+
+=== [2] iptables DSCP マーキング (LER_Ingress) ===
+  [ok] AF41(port 5101,5001)→mark41 / AF42(port 2000,5002)→mark42 / AF43(port 3000,5003)→mark43
+
+=== [3] ポリシールーティングテーブル (LER_Ingress) ===
+  [ok] fwmark 41→table41 / 42→table42 / 43→table43
+
+=== [4] SR-MPLS 明示経路 ===
+  モード: wcmp — 3経路マルチパス 重み CR1:CR2:CR3 = 6:25:25
+  table41/42/43 とも同一の重み (経路選択に優先度は使わない) → label=16005
+
+=== [5] LER_Egress MPLS 設定 ===
+  [ok] MPLS入力有効
+
+=== [6] TC/HTB WRR (LER_Ingress → CoreRouters) ===
+Warning: sch_htb: quantum of class 10000 is big. Consider r2q change.
+  [ok] LER_Ingress:leri-cr1  SP+WRR(4:2:1)  216000/61714/30857kbit
+Warning: sch_htb: quantum of class 10000 is big. Consider r2q change.
+  [ok] LER_Ingress:leri-cr2  SP+WRR(4:2:1)  900000/257142/128571kbit
+Warning: sch_htb: quantum of class 10000 is big. Consider r2q change.
+  [ok] LER_Ingress:leri-cr3  SP+WRR(4:2:1)  900000/257142/128571kbit
+Warning: sch_htb: quantum of class 10000 is big. Consider r2q change.
+  [ok] CR1:cr1-lere  SP+WRR(4:2:1)  216000/61714/30857kbit
+Warning: sch_htb: quantum of class 10000 is big. Consider r2q change.
+  [ok] CR2:cr2-lere  SP+WRR(4:2:1)  900000/257142/128571kbit
+Warning: sch_htb: quantum of class 10000 is big. Consider r2q change.
+  [ok] CR3:cr3-lere  SP+WRR(4:2:1)  900000/257142/128571kbit
+
+=== [7] Ingress policing (leri-tx1/2/3) ===
+  [skip] 入口ポリサー無効 (ROUTE_MODE=wcmp / INGRESS_POLICE=auto)
+         クラス間の差は各リンクの HTB だけで決まる
+
+=== DiffServ-TE 設定完了 ===
+
+経路確認:
+  docker exec LER_Ingress ip route show table 41
+  docker exec LER_Ingress ip route show table 42
+  docker exec frr-LER_Ingress vtysh -c 'show ip ospf route'
+
+次のステップ: sudo bash scripts/frr_te_monitor.sh &
+████████████████████████████████████████
+  FRR OSPF-SR 計測  [normal]
+████████████████████████████████████████
+  計測時間 : 120s
+  PRIOモード: SP有効(デフォルト)
+  結果保存 : /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/dynamic/20261002_running_range100m_wcmp_01/frr_normal
+
+=== [1] OSPF-SR ラベル取得 ===
+  LER_Egress SID: 16005
+
+=== [2] シナリオ別セットアップ ===
+  モード: 正常系 / 3経路マルチパス (wcmp)
+  [ok] fib_multipath_hash_policy=1 (L3+L4ハッシュ)
+  [ok] table41/42/43: 3経路マルチパス 重み CR1:CR2:CR3 = 6:25:25 (wcmp)
+       経路選択に優先度は使わない。優先制御は各リンクのHTBのみ。
+  [ok] frr_te_monitor 停止済み (障害なしシナリオ)
+
+=== [3] 現在のルーティングテーブル ===
+  table41: 10.20.0.0/16 
+  table41: 	nexthop  encap mpls  16005 via 10.0.1.2 dev leri-cr1 weight 6 
+  table41: 	nexthop  encap mpls  16005 via 10.0.3.2 dev leri-cr2 weight 25 
+  table41: 	nexthop  encap mpls  16005 via 10.0.5.2 dev leri-cr3 weight 25 
+  table42: 10.20.0.0/16 
+  table42: 	nexthop  encap mpls  16005 via 10.0.1.2 dev leri-cr1 weight 6 
+  table42: 	nexthop  encap mpls  16005 via 10.0.3.2 dev leri-cr2 weight 25 
+  table42: 	nexthop  encap mpls  16005 via 10.0.5.2 dev leri-cr3 weight 25 
+  table43: 10.20.0.0/16 
+  table43: 	nexthop  encap mpls  16005 via 10.0.1.2 dev leri-cr1 weight 6 
+  table43: 	nexthop  encap mpls  16005 via 10.0.3.2 dev leri-cr2 weight 25 
+  table43: 	nexthop  encap mpls  16005 via 10.0.5.2 dev leri-cr3 weight 25 
+=== 事前確認 ===
+  [OK] LER_Ingress/leri-cr1 に HTB qdisc あり
+  [OK] CR1/cr1-lere に HTB qdisc あり
+  [OK] table 41 は 3 本の nexthop (マルチパス)
+  [OK] fib_multipath_hash_policy = 1 (L3+L4ハッシュ)
+
+  [ok] 動的制御 PID=2500213 / CSV: /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/dynamic/20261002_running_range100m_wcmp_01/controller.csv
+
+=== [4] iperf3 / OWD サーバー起動 ===
+  [ok] Rx1:1000(AF41 iperf3) / Rx2:2000(AF42 iperf3) / Rx3:3000(AF43 iperf3)
+  [ok] Rx1:5001(AF41 OWD) / Rx2:5002(AF42 OWD) / Rx3:5003(AF43 OWD)
+
+=== [5] スループットモニター起動 ===
+  [ok] LER_Egress PID=29698 → /proc/29698/net/dev 直読みモード
+  [ok] PID=2500633 → /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/dynamic/20261002_running_range100m_wcmp_01/frr_normal/throughput.csv
+
+=== [5b] ドロップモニター起動 ===
+  [ok] LER_Ingress PID=29462
+  [ok] 経路別モニター PID=2500649 → /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/dynamic/20261002_running_range100m_wcmp_01/frr_normal/path_stats.csv
+  [ok] PID=2500650 → /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/dynamic/20261002_running_range100m_wcmp_01/frr_normal/tc_drops.csv / /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/dynamic/20261002_running_range100m_wcmp_01/frr_normal/ip_drops.csv
+
+=== [7] 計測開始 (120s) ===
+  DSCP マーキング: port1000→AF41(mark41) / port2000→AF42(mark42) / port3000→AF43(mark43)
+  MPLS encap: label 16005 (LER_Egress SID, OSPF-SR 動的取得)
+  WRR 重み: AF41:AF42:AF43 = 4:2:1
+  送信レート: Tx1=125000K / Tx2=125000K / Tx3=125000K
+  計測中... 120秒待機
+  計測完了
+  [ok] OWD ログ回収完了
+
+=== 収集ファイル ===
+-rw-r--r-- 1 root root 2.9K 10月  2 15:21 /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/dynamic/20261002_running_range100m_wcmp_01/frr_normal/ip_drops.csv
+-rw-r--r-- 1 root root 1.1M 10月  2 15:21 /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/dynamic/20261002_running_range100m_wcmp_01/frr_normal/iperf3_af41.log
+-rw-r--r-- 1 root root 1.1M 10月  2 15:21 /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/dynamic/20261002_running_range100m_wcmp_01/frr_normal/iperf3_af42.log
+-rw-r--r-- 1 root root 1.2M 10月  2 15:21 /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/dynamic/20261002_running_range100m_wcmp_01/frr_normal/iperf3_af43.log
+-rw-r--r-- 1 root root 246K 10月  2 15:21 /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/dynamic/20261002_running_range100m_wcmp_01/frr_normal/owd_af41.log
+-rw-r--r-- 1 root root 246K 10月  2 15:21 /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/dynamic/20261002_running_range100m_wcmp_01/frr_normal/owd_af42.log
+-rw-r--r-- 1 root root 165K 10月  2 15:21 /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/dynamic/20261002_running_range100m_wcmp_01/frr_normal/owd_af43.log
+-rw-r--r-- 1 root root 4.3K 10月  2 15:21 /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/dynamic/20261002_running_range100m_wcmp_01/frr_normal/path_stats.csv
+-rw-r--r-- 1 root root  36K 10月  2 15:21 /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/dynamic/20261002_running_range100m_wcmp_01/frr_normal/tc_drops.csv
+-rw-r--r-- 1 root root 4.2K 10月  2 15:21 /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/dynamic/20261002_running_range100m_wcmp_01/frr_normal/throughput.csv
+
+=== グラフ生成 ===
+結果ディレクトリ : 20261002_running_range100m_wcmp_01
+CRリンク帯域     : 2160 Mbps
+検出シナリオ     : ['正常時']
+理論値 (SP+WRR)  : AF41=2.2 / AF42=0.0 / AF43=0.0 Gbps
+
+[*] ja/compare_throughput.png / .pdf
+[*] ja/compare_rtt.png / .pdf
+[*] ja/compare_packetloss.png / .pdf
+[*] ja/compare_loss_timeseries.png / .pdf
+[*] ja/compare_drop_location.png / .pdf
+
+完了 → /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/dynamic/20261002_running_range100m_wcmp_01/figures
+グラフ保存先: /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/dynamic/20261002_running_range100m_wcmp_01/figures/
+
+████████████████████████████████████████
+  計測完了: /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/dynamic/20261002_running_range100m_wcmp_01/frr_normal
+████████████████████████████████████████
+
+■ 結果確認:
+  head /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/dynamic/20261002_running_range100m_wcmp_01/frr_normal/throughput.csv
+  ls   /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/dynamic/20261002_running_range100m_wcmp_01/frr_normal/

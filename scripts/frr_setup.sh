@@ -234,6 +234,21 @@ elif [ "${C1_FABRIC:-0}" = "1" ] || [ "${LAB_MODE:-}" = "c1" ]; then
     wire_fabric CR2 cr2-lere 10.0.4.1/30  LER_Egress lere-cr2 10.0.4.2/30  102
     wire_fabric CR3 cr3-lere 10.0.6.1/30  LER_Egress lere-cr3 10.0.6.2/30  103
 else
+    # c2 のあとは、物理 NIC が cr1-lere などの名前のまま root netns に戻っている。
+    # そのままだと veth を同じ名前で作れず "RTNETLINK answers: File exists" で止まる。
+    # 元の名前は udev が altname として持っているので、altname を外してから付け直す
+    # (先に外さないと、付け直し先の名前が「既にある」と判定される)。
+    for _ifn in cr1-lere cr2-lere cr3-lere lere-cr1 lere-cr2 lere-cr3; do
+        [ -e "/sys/class/net/$_ifn/device" ] || continue          # 物理 NIC だけが対象
+        _orig=$(ip -d link show "$_ifn" | awk '/altname/{print $2; exit}')
+        if [ -z "$_orig" ]; then
+            echo "  [NG] 物理 NIC $_ifn の元の名前 (altname) が分からない。手で付け直すこと"; exit 1
+        fi
+        ip link property del dev "$_ifn" altname "$_orig"
+        ip link set "$_ifn" down
+        ip link set "$_ifn" name "$_orig"
+        echo "  [ok] 物理 NIC の名前を戻した: $_ifn → $_orig"
+    done
     wire CR1 cr1-lere 10.0.2.1/30  LER_Egress lere-cr1 10.0.2.2/30
     wire CR2 cr2-lere 10.0.4.1/30  LER_Egress lere-cr2 10.0.4.2/30
     wire CR3 cr3-lere 10.0.6.1/30  LER_Egress lere-cr3 10.0.6.2/30

@@ -109,8 +109,25 @@ def ensure_mgmt_ip() -> None:
         capture_output=True)
 
 
+# veth での動作確認用の偽の ODU。ディレクトリに <IP>.txt (iw station dump の出力) を置くと、
+# SSH の代わりにその内容を返す。ファイルが無い ODU は「届かない」(終了コード 255) になる。
+# 実機の計測では設定しないこと (radwin_observe.py は LAB_MODE=c2 では拒否する)。
+FAKE_ODU_DIR = os.environ.get("RADWIN_FAKE_ODU_DIR", "")
+
+
+def _fake_run(host: str) -> tuple[int, str]:
+    path = os.path.join(FAKE_ODU_DIR, f"{host}.txt")
+    try:
+        with open(path) as f:
+            return 0, f.read()
+    except OSError:
+        return 255, f"fake: {host} unreachable"
+
+
 def ssh_run(host: str, command: str, timeout: float = 20.0) -> tuple[int, str]:
     """ODU でコマンドを実行し (終了コード, 出力) を返す。"""
+    if FAKE_ODU_DIR:
+        return _fake_run(host)
     ensure_mgmt_ip()
     password = read_password()
     argv = ["ip", "netns", "exec", NETNS, "ssh"] + SSH_OPTS + [f"{USER}@{host}", command]

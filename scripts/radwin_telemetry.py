@@ -67,7 +67,15 @@ def collect() -> dict:
     hops = []
     for h in HOPS:
         code, out = ssh_run(h["ap"], CMD, timeout=SSH_TIMEOUT)
-        st = parse_dump(out) if code == 0 else {"connected": False, "error": out[:200]}
+        # 失敗の理由を区別して残す。どちらも「未接続」だが、対処が違う。
+        #   ssh_failed … 親機に管理用の通信が届かない (中継・ケーブル・電源、Web UI で ODU が重い)
+        #   no_station … 親機には届いたが、相手の局がいない (その区間の無線が切れている)
+        if code != 0:
+            st = {"connected": False, "error": out[:200], "why": "ssh_failed", "code": code}
+        else:
+            st = parse_dump(out)
+            if not st.get("connected"):
+                st["why"] = "no_station"
         st.update(name=h["name"], ap=h["ap"], channel=h["ch"])
         hops.append(st)
 
@@ -102,7 +110,12 @@ if __name__ == "__main__":
                   f"MCS {h['tx_mcs']}/{h['rx_mcs']}  {h['signal_dbm']} dBm  "
                   f"相手 {h['peer']}")
         else:
-            print(f"  {h['name']} (AP {h['ap']}) : **未接続** {h.get('error') or h.get('raw','')}")
+            why = {"ssh_failed": f"親機 {h['ap']} に SSH で接続できない (終了コード {h.get('code')})。"
+                                 "管理用の通信が届いていない: 中継・ケーブル・電源、または Web UI で ODU が重い",
+                   "no_station": f"親機 {h['ap']} には接続できたが、相手の局がいない。この区間の無線が切れている"
+                   }.get(h.get("why"), "")
+            detail = (h.get("error") or h.get("raw") or "").strip()
+            print(f"  {h['name']} (AP {h['ap']}) : **未接続** {why}" + (f"\n      詳細: {detail}" if detail else ""))
     print()
     if data["ok"]:
         print(f"  瓶首: {data['bottleneck']} (PHY {data['bottleneck_phy_mbps']:.0f} Mbps)")
