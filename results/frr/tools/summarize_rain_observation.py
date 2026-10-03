@@ -261,14 +261,14 @@ def plot(obs: Path, out: Path, ctl, odu, ping, wx, nc, summary, t_from, t_to) ->
 
     # (e) 往復遅延。全負荷計測の時間帯 (遅延が増える) は除く
     e = ax[4]
-    spans = [(dt.datetime.fromisoformat(s["start_jst"]).replace(tzinfo=JST).timestamp(),) for s in summary]
-    busy = [(s, s + 125) for (s,) in spans]
-    keep = lambda r: r["status"] == "ok" and not any(a - 5 <= num(r["time"]) <= b for a, b in busy)
+    busy = busy_spans(obs, max([num(r["time"]) for r in ping] or [0]))
+    keep = lambda r: r["status"] == "ok" and not any(a - 5 <= num(r["time"]) <= b + 5 for a, b in busy)
     t, v = per_minute(ping, lambda r: num(r["rtt_ms"]), keep)
     e.plot(t, v, color="0.25", lw=0.8)
-    lost = [dt.datetime.fromtimestamp(num(r["time"]), JST) for r in ping if r["status"] != "ok"]
+    lost = [dt.datetime.fromtimestamp(num(r["time"]), JST) for r in ping if r["status"] != "ok"
+            and not any(a - 5 <= num(r["time"]) <= b + 5 for a, b in busy)]
     if lost:
-        e.plot(lost, [0] * len(lost), "|", color="#D55E00", ms=6, label="応答なし・届かず")
+        e.plot(lost, [0] * len(lost), "|", color="#D55E00", ms=6, label="応答なし・届かず (平常時)")
         e.legend(loc="upper left")
     e.set_ylabel("往復遅延 [ms]\n(1 分の中央値)")
     e.set_ylim(bottom=0)
@@ -304,6 +304,24 @@ def plot(obs: Path, out: Path, ctl, odu, ping, wx, nc, summary, t_from, t_to) ->
     fig.savefig(out.with_suffix(".pdf"), bbox_inches="tight")
     fig.savefig(out.with_suffix(".png"), dpi=200, bbox_inches="tight")
     plt.close(fig)
+
+
+def busy_spans(obs: Path, until: float) -> list[tuple[float, float]]:
+    """全負荷計測の時間帯 (events.csv の probe_start〜probe_end)。実行中の回は until までとする。
+
+    probes.csv には終わった回しか載らないため、それだけを使うと、実行中の計測の最中の
+    ping の応答なしを「平常時」として数えてしまう (2026-10-03 19:00 に発生)。
+    """
+    spans, start = [], None
+    for r in rows(obs, "events.csv"):
+        if r["event"] == "probe_start":
+            start = num(r["time"])
+        elif r["event"] in ("probe_end", "probe_abort") and start is not None:
+            spans.append((start, num(r["time"])))
+            start = None
+    if start is not None:
+        spans.append((start, until))
+    return spans
 
 
 def pct(n: float, d: float) -> str:
@@ -361,9 +379,8 @@ def build_report(obs: Path, t0: float, t1: float, ctl, odu, ping, wx, nc, summar
         warn.append(f"実験場所で雨を観測 (最大 {hi:g} mm/h の階級)")
 
     # 無線
-    spans = [(jst_epoch(x["start_jst"].replace(" ", "T")), jst_epoch(x["start_jst"].replace(" ", "T")) + 125)
-             for x in summary]
-    busy = lambda t: any(a - 5 <= t <= b for a, b in spans)
+    spans = busy_spans(obs, t1)
+    busy = lambda t: any(a - 5 <= t <= b + 5 for a, b in spans)
     L += ["## 無線", "", "| ODU | 受信電力 平常時の中央値 (最小) | 全負荷中の中央値 | 再接続 |", "|---|---|---|---|"]
     for ip, label, _, _ in ODUS:
         sub = [r for r in odu if r["odu"] == ip]
