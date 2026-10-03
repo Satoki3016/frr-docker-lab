@@ -20,7 +20,7 @@
 
 全負荷計測 (radwin_experiment.sh probe。経路表・HTB には触らない) を行う時:
     periodic     15 分ごと (毎時 0・15・30・45 分)
-    degraded     CR1 の整形レートが直近 6 時間の最大値の 90% 以下になった、または CR1 が外れた
+    degraded     CR1 の整形レートが直近 6 時間の中央値の 90% 以下になった、または CR1 が外れた
     repeat       低下が続く間、10 分ごと (2 時間を超えたら 30 分ごと)
     recovered    低下から戻ったとき
     どの計測も、前の計測の開始から 5 分以上あける。
@@ -94,7 +94,15 @@ class Scheduler:
             self.history.pop(0)
 
     def baseline(self) -> float | None:
-        return max(a for _, a in self.history) if self.history else None
+        """平常時の整形レート = 直近 6 時間の中央値。
+
+        最大値にすると、制御が 2 秒だけ上げてすぐ戻した値 (MCS が一瞬 10 になった) が基準になり、
+        普段の値が「90% 以下」と判定されて、低下していないのに追加の計測が続いた (2026-10-03 に発生)。
+        """
+        if not self.history:
+            return None
+        v = sorted(a for _, a in self.history)
+        return v[len(v) // 2]
 
     def _is_degraded(self) -> bool:
         if self.latest is None:

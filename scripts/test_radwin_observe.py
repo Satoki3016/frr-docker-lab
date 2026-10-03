@@ -69,6 +69,20 @@ class SchedulerTests(unittest.TestCase):
         self.assertIsNone(self.run_feed(s, t0 + 400, 1060))   # 90.5% は低下とみなさない
         self.assertFalse(s.degraded)
 
+    def test_brief_upward_blip_does_not_make_normal_look_degraded(self):
+        # 2026-10-03 の実例: 制御が 2 秒だけ 1441M に上げてすぐ 1171M に戻した
+        s = obs.Scheduler()
+        t = 10 * H + 60
+        self.run_feed(s, t, 1171)
+        for _ in range(600):
+            t += 2
+            self.run_feed(s, t, 1171)
+        self.run_feed(s, t + 2, 1441, w1=16)
+        reasons = {self.run_feed(s, t + 4 + 2 * i, 1171) for i in range(300)}
+        self.assertFalse(s.degraded)
+        self.assertNotIn("degraded", reasons)
+        self.assertEqual(s.baseline(), 1171)
+
     def test_link_down_weight_zero_is_degraded_even_with_same_rate(self):
         s = obs.Scheduler()
         t0 = 10 * H + 60
