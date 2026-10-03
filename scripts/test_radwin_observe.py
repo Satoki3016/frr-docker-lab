@@ -461,6 +461,33 @@ class NowcastTests(unittest.TestCase):
         self.assertEqual((r["mmh_lo"], r["rgba"]), ("unknown", "12-34-56-255"))
 
 
+class ReportScheduleTests(unittest.TestCase):
+    def test_report_slots_are_0_6_12_18_jst(self):
+        import datetime as dt
+        jst = dt.timezone(dt.timedelta(hours=9))
+        at = lambda h, m: dt.datetime(2026, 10, 3, h, m, tzinfo=jst).timestamp()
+        slot = obs.Observer._report_slot
+        self.assertEqual(slot(at(5, 59)), slot(at(0, 0)))
+        self.assertNotEqual(slot(at(6, 0)), slot(at(5, 59)))
+        self.assertEqual(slot(at(6, 0)), slot(at(11, 59)))
+        self.assertNotEqual(slot(at(18, 0)), slot(at(17, 59)))
+
+    def test_report_runs_once_per_slot_in_background(self):
+        with tempfile.TemporaryDirectory() as d:
+            o = obs.Observer(Path(d), dict(os.environ))
+            (Path(d) / "summary").mkdir()
+            calls = []
+            with patch.object(obs.subprocess, "Popen", side_effect=lambda *a, **k: calls.append(a[0]) or
+                              type("P", (), {"poll": lambda self: None})()):
+                o.maybe_report(time.time())                       # 起動直後の区切りでは作らない
+                self.assertEqual(calls, [])
+                o.report_slot -= 1                                 # 次の区切りを越えたことにする
+                o.maybe_report(time.time())
+                o.maybe_report(time.time())                        # 同じ区切りでは 1 回だけ
+            self.assertEqual(len(calls), 1)
+            self.assertIn("--report", calls[0])
+
+
 class HarnessTests(unittest.TestCase):
     def test_probe_plan_uses_observe_and_never_reapplies_settings(self):
         p = subprocess.run(["bash", str(SCRIPTS / "radwin_experiment.sh"), "--plan", "probe", "120", "rainobs"],

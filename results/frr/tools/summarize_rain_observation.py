@@ -15,7 +15,11 @@
       (e) 無線区間の往復遅延 (全負荷計測の時間帯を除く)  (f) 全負荷計測ごとの各クラスの受信量
           (Rx のインタフェースで数えたバイト数。IP/UDP ヘッダを含むので iperf3 の値より約 0.6% 大きい)
 
-使い方 (観測中のフォルダは root の持ち物なので sudo を付ける。止めたあとは不要):
+  reports/report_YYYYMMDD_HHMM.md (と同名の .png)   --report を付けたときだけ。直近 N 時間の途中経過の報告書
+      観測の健全さ・雨・無線・制御・全負荷計測・ping の要点と、注意すべき点。latest_report.md は最新の写し
+      radwin_observe.py が日本時間の 0・6・12・18 時に自動で作る
+
+使い方 (2026-10-03 以降に始めた観測は sudo 不要。それより前の観測中のフォルダは sudo が要る):
     sudo python3 results/frr/tools/summarize_rain_observation.py --dir 20261002_rainobs_04
     python3 results/frr/tools/summarize_rain_observation.py --dir <フォルダ> --from 2026-10-03T06:00 --to 2026-10-03T18:00
 """
@@ -302,15 +306,136 @@ def plot(obs: Path, out: Path, ctl, odu, ping, wx, nc, summary, t_from, t_to) ->
     plt.close(fig)
 
 
+def pct(n: float, d: float) -> str:
+    return f"{100 * n / d:.2f}%" if d else "-"
+
+
+def build_report(obs: Path, t0: float, t1: float, ctl, odu, ping, wx, nc, summary) -> tuple[str, list[str]]:
+    """直近の期間の要点を、日本語の Markdown にする。戻り値は (本文, 注意点のリスト)。"""
+    L, warn = [], []
+    hours = (t1 - t0) / 3600
+    L += [f"# 雨の観測 途中経過 ({fmt(t0)[5:16]} 〜 {fmt(t1)[5:16]}、{hours:.0f} 時間)", "",
+          f"観測フォルダ: `{obs.name}`", ""]
+
+    # 観測の健全さ
+    ev = [r for r in rows(obs, "events.csv") if t0 <= num(r["time"]) <= t1]
+    exits = Counter(r["detail"].split()[0] for r in ev if r["event"] == "child_exit")
+    gaps = []
+    for name, data, limit in (("ODU", odu, 30), ("制御", ctl, 30), ("ping", ping, 30)):
+        ts = sorted(num(r["time"]) for r in data)
+        g = [b - a for a, b in zip(ts, ts[1:]) if b - a > limit]
+        if not ts:
+            gaps.append(f"{name}: 記録なし")
+        elif g:
+            gaps.append(f"{name}: {len(g)} 回 (最長 {max(g):.0f} 秒)")
+    fails = [s for s in summary if s["result"] != "success"]
+    L += ["## 観測の状態", "",
+          f"- 記録の空白: {'なし' if not gaps else ' / '.join(gaps)}",
+          f"- 部品の再起動: {'なし' if not exits else ', '.join(f'{k} {v} 回' for k, v in exits.items())}",
+          f"- 全負荷計測: {len(summary)} 回 (失敗 {len(fails)} 回)", ""]
+    if gaps:
+        warn.append("記録に空白がある")
+    if [k for k in exits if k != "load_client"]:
+        warn.append("部品が再起動した: " + ", ".join(k for k in exits if k != "load_client"))
+    if fails:
+        warn.append(f"全負荷計測の失敗 {len(fails)} 回")
+
+    # 雨
+    ncw = [r for r in nc if r.get("valid_jst") and t0 <= jst_epoch(r["valid_jst"]) <= t1]
+    rain = [r for r in ncw if r["mmh_hi"] not in ("", "0")]
+    near = [r for r in ncw if r["area_max_hi"] not in ("", "0")]
+    wxw = [r for r in wx if r.get("obs_time") and t0 <= jst_epoch(r["obs_time"]) <= t1]
+    p10 = [num(r["precipitation10m"]) for r in wxw if r["precipitation10m"] != ""]
+    temps = [num(r["temp"]) for r in wxw if r["temp"] != ""]
+    spread = [num(r["temp"]) - num(r["dew_point"]) for r in wxw if r.get("dew_point") not in ("", None)]
+    hi = max((999 if r["mmh_hi"] == "" else num(r["mmh_hi"])) for r in rain) if rain else 0
+    L += ["## 雨と気象", "",
+          f"- 実験場所 (ナウキャスト): " + (f"雨あり {len(rain)}/{len(ncw)} 回 (5 分ごと)、最も強い階級の上限 {hi:g} mm/h"
+                                        if rain else f"雨なし ({len(ncw)} 回すべて)")
+          + (f"。周囲 約 ±300 m では {len(near)} 回" if near and len(near) != len(rain) else ""),
+          f"- アメダス名古屋: 降水量の合計 {sum(p10):.1f} mm、10 分間の最大 {max(p10) if p10 else 0:.1f} mm、"
+          f"天気 {', '.join(f'{k} {v}' for k, v in Counter(r['weather_name'] for r in wxw if r['weather_name']).items()) or '-'}",
+          f"- 気温 {min(temps):.1f}〜{max(temps):.1f}℃、気温と露点の差の最小 {min(spread):.1f}℃ (小さいほど結露しやすい)"
+          if temps and spread else "- 気温: 記録なし", ""]
+    if rain:
+        warn.append(f"実験場所で雨を観測 (最大 {hi:g} mm/h の階級)")
+
+    # 無線
+    spans = [(jst_epoch(x["start_jst"].replace(" ", "T")), jst_epoch(x["start_jst"].replace(" ", "T")) + 125)
+             for x in summary]
+    busy = lambda t: any(a - 5 <= t <= b for a, b in spans)
+    L += ["## 無線", "", "| ODU | 受信電力 平常時の中央値 (最小) | 全負荷中の中央値 | 再接続 |", "|---|---|---|---|"]
+    for ip, label, _, _ in ODUS:
+        sub = [r for r in odu if r["odu"] == ip]
+        idle = [num(r["signal_dbm"]) for r in sub if not busy(num(r["time"]))]
+        load = [num(r["signal_dbm"]) for r in sub if busy(num(r["time"]))]
+        cs = [num(r["connected_s"]) for r in sub if r.get("connected_s")]
+        re_assoc = sum(b < a for a, b in zip(cs, cs[1:]))
+        disc = sum(r["connected"] != "1" for r in sub)
+        L.append(f"| {label.split()[0]} | {median(idle):.0f} dBm ({min(idle) if idle else float('nan'):.0f}) | "
+                 f"{median(load):.0f} dBm | {re_assoc} 回" + (f"、未接続 {disc} 回" if disc else "") + " |")
+        if re_assoc or disc:
+            warn.append(f"{label.split()[0]} で無線の切断 (再接続 {re_assoc} 回、未接続 {disc} 回)")
+    L.append("")
+    for ip, name in (("192.168.1.31", "無線1"), ("192.168.1.33", "無線2")):
+        m = Counter(r["tx_mcs"] for r in odu if r["odu"] == ip and r["tx_mcs"])
+        tot = sum(m.values())
+        L.append(f"- {name} の送信 MCS: " + ", ".join(f"{k}: {pct(v, tot)}" for k, v in sorted(m.items(), key=lambda kv: -num(kv[0]))))
+    L.append("")
+
+    # 制御
+    ap_ = [num(r["applied_mbps"]) for r in ctl]
+    w0 = sum(r["w1"] == "0" for r in ctl)
+    acts = Counter(r["action"].split("(")[0] for r in ctl)
+    L += ["## 制御", "",
+          f"- CR1 の整形レート: {min(ap_):.0f}〜{max(ap_):.0f} Mbps (中央値 {median(ap_):.0f})" if ap_ else "- 制御: 記録なし",
+          f"- 下げた {acts.get('down', 0)} 回 / 上げた {acts.get('up', 0)} 回 / 無線断で CR1 を外した {acts.get('link_down', 0)} 回"
+          + (f" (重み 0 の記録 {w0} 回 ≒ {w0 * 2 / 60:.0f} 分)" if w0 else ""), ""]
+    if acts.get("link_down") or w0:
+        warn.append("無線断で CR1 を経路から外した")
+
+    # 全負荷計測
+    if summary:
+        g = {k: [s[f"{k}_gbps"] for s in summary if s[f"{k}_gbps"] == s[f"{k}_gbps"]] for k, _, _ in CLASSES}
+        lo = {k: [s[f"{k}_loss_pct"] for s in summary if s[f"{k}_loss_pct"] == s[f"{k}_loss_pct"]] for k, _, _ in CLASSES}
+        L += ["## 全負荷計測", "", "| クラス | 受信量 最小〜最大 [Gbps] | 損失率 最大 |", "|---|---|---|"]
+        for k, label, _ in CLASSES:
+            if g[k]:
+                L.append(f"| {label} | {min(g[k]):.3f}〜{max(g[k]):.3f} | {max(lo[k]):.4f}% |")
+        L += ["", "- 理由: " + ", ".join(f"{k} {v}" for k, v in Counter(s["reason"] for s in summary).items())
+              + f" / 途中で制御の値が変わった回 {sum(s['changed'] == 1 for s in summary)}", ""]
+        if g["af41"] and (min(g["af41"]) < 7.9 or max(lo["af41"]) > 0.1):
+            warn.append(f"AF41 が守られていない回がある (最小 {min(g['af41']):.3f} Gbps、損失 最大 {max(lo['af41']):.3f}%)")
+
+    # ping (全負荷計測の時間帯を除く)
+    pi = [r for r in ping if not busy(num(r["time"]))]
+    ok = sorted(num(r["rtt_ms"]) for r in pi if r["status"] == "ok")
+    bad = len(pi) - len(ok)
+    L += ["## 無線区間の ping (全負荷計測の時間帯を除く)", "",
+          f"- 応答なし・届かず {bad}/{len(pi)} 回 ({pct(bad, len(pi))})、往復遅延 中央値 {median(ok):.2f} ms・"
+          f"上位 1% {ok[int(0.99 * (len(ok) - 1))] if ok else float('nan'):.2f} ms", ""]
+    if bad:
+        warn.append(f"平常時に ping の応答なし {bad} 回")
+
+    L = L[:4] + ["## 注意すべき点", ""] + ([f"- {w}" for w in warn] or ["- なし"]) + [""] + L[4:]
+    return "\n".join(L), warn
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--dir", required=True, help="観測フォルダ (結果語を省いた名前でもよい)")
     ap.add_argument("--from", dest="t_from", default=None, help="図の始まり (日本時間 2026-10-03T06:00)")
     ap.add_argument("--to", dest="t_to", default=None, help="図の終わり (日本時間)")
+    ap.add_argument("--report", type=float, default=None, metavar="時間",
+                    help="直近 N 時間の途中経過の報告書を reports/ に作る (全期間の表と図は作らない)")
     a = ap.parse_args()
     obs = result_dir(a.dir)
     t_from = jst_epoch(a.t_from) if a.t_from else None
     t_to = jst_epoch(a.t_to) if a.t_to else None
+    if a.report:
+        import time as _time
+        t_to = t_to or _time.time()
+        t_from = t_to - a.report * 3600
     sel = lambda data: [r for r in data if (t_from is None or num(r["time"]) >= t_from)
                         and (t_to is None or num(r["time"]) <= t_to)]
     ctl = sel(rows(obs, "controller.csv"))
@@ -328,6 +453,21 @@ def main() -> int:
         (out_dir / ".write_test").unlink()
     except PermissionError:
         sys.exit(f"[NG] {out_dir} に書けません。観測中のフォルダは root の持ち物なので、sudo を付けて実行してください")
+    if a.report:
+        rep_dir = out_dir / "reports"
+        rep_dir.mkdir(exist_ok=True)
+        text, warn = build_report(obs, t_from, t_to, ctl, odu, ping, wx, nc, summary)
+        stem = rep_dir / ("report_" + dt.datetime.fromtimestamp(t_to, JST).strftime("%Y%m%d_%H%M"))
+        stem.with_suffix(".md").write_text(text)
+        (out_dir / "latest_report.md").write_text(text)
+        plot(obs, stem, ctl, odu, ping, wx, nc, summary, t_from, t_to)
+        stem.with_suffix(".pdf").unlink(missing_ok=True)       # 報告には PNG だけ残す
+        uid, gid = os.environ.get("SUDO_UID"), os.environ.get("SUDO_GID")
+        if uid and gid:
+            for p in [out_dir, rep_dir, *rep_dir.iterdir(), out_dir / "latest_report.md"]:
+                os.chown(p, int(uid), int(gid))
+        print(f"報告書: {stem.with_suffix('.md')} (注意すべき点 {len(warn)} 件)")
+        return 0
     if summary:
         with (out_dir / "probes_summary.csv").open("w", newline="") as fp:
             w = csv.DictWriter(fp, fieldnames=list(summary[0]))

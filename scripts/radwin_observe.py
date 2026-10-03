@@ -17,6 +17,8 @@
     nowcast_logger    実験場所の降水強度 (気象庁 高解像度降水ナウキャスト) を 5 分ごとに記録。radwin_nowcast.py
     ping_logger       無線区間 (CR1 → 10.0.2.2) の往復遅延と応答を 1 秒ごとに記録。radwin_ping_logger.py
 全負荷計測の終了時には、その時点の気象を probes/<回>/weather.json と probes.csv に残す。
+日本時間の 0・6・12・18 時に、直近 6 時間の途中経過の報告書を summary/reports/ に作る
+(results/frr/tools/summarize_rain_observation.py --report 6。最新は summary/latest_report.md)。
 
 全負荷計測 (radwin_experiment.sh probe。経路表・HTB には触らない) を行う時:
     periodic     15 分ごと (毎時 0・15・30・45 分)
@@ -61,6 +63,9 @@ PERIOD = 900.0             # 平常時の全負荷計測の間隔 [s]。毎時 0
 RESTART_HOLD = 30.0        # 起動から 30 秒以内に止まった部品は、30 秒待ってから起動し直す
 MIN_FREE_GB = 5.0          # 空き容量がこれを下回ったら全負荷計測を止める (常時の記録は続ける)
 LOAD_RATE = "50M"
+REPORT_HOURS = 6           # 途中経過の報告書の間隔 [時間]。日本時間の 0 時を起点に区切る
+JST_OFFSET = 9 * 3600
+SUMMARIZE = LAB / "results" / "frr" / "tools" / "summarize_rain_observation.py"
 LOAD_PORT = "5301"
 
 
@@ -245,6 +250,8 @@ class Observer:
         self.probe: subprocess.Popen | None = None
         self.probe_info: dict = {}
         self.probe_count = 0
+        self.report: subprocess.Popen | None = None
+        self.report_slot = self._report_slot(time.time())   # 起動直後は作らない (次の区切りから)
 
     # 記録
     def event(self, kind: str, detail: str = "") -> None:
@@ -334,6 +341,28 @@ class Observer:
         load.paused = False                              # 次の見張りで起動し直される
         self.event("load_resume", "")
 
+    @staticmethod
+    def _report_slot(t: float) -> int:
+        return int((t + JST_OFFSET) // (REPORT_HOURS * 3600))
+
+    def maybe_report(self, now: float) -> None:
+        """日本時間の区切り (0・6・12・18 時) を越えたら、報告書を裏で作る。計測は止めない。"""
+        if self.report is not None and self.report.poll() is not None:
+            self.event("report_end", f"code={self.report.returncode}")
+            self.report = None
+        slot = self._report_slot(now)
+        if slot == self.report_slot or self.report is not None:
+            return
+        self.report_slot = slot
+        log = (self.obs / "summary" / "report.log").open("a") if (self.obs / "summary").is_dir() \
+            else (self.obs / "children.log").open("a")
+        self.report = subprocess.Popen([sys.executable, str(SUMMARIZE), "--dir", str(self.obs),
+                                        "--report", str(REPORT_HOURS)],
+                                       stdout=log, stderr=subprocess.STDOUT, env=self.env,
+                                       start_new_session=True)
+        log.close()
+        self.event("report_start", f"直近 {REPORT_HOURS} 時間")
+
     def run(self) -> int:
         self.event("observe_start", str(self.obs))
         last_check_day = time.strftime("%Y%m%d")
@@ -345,6 +374,7 @@ class Observer:
             reason = self.sched.decide(time.time(), busy=self.probe is not None)
             if reason:
                 self.start_probe(reason)
+            self.maybe_report(time.time())
             day = time.strftime("%Y%m%d")
             if day != last_check_day:                    # 日付が変わったら欠測の検査
                 last_check_day = day
