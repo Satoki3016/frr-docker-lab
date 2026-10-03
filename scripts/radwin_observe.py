@@ -16,9 +16,9 @@
     weather_logger    気象庁アメダス (名古屋) などを 10 分ごとに記録 (W1)。radwin_weather.py
     nowcast_logger    実験場所の降水強度 (気象庁 高解像度降水ナウキャスト) を 5 分ごとに記録。radwin_nowcast.py
     ping_logger       無線区間 (CR1 → 10.0.2.2) の往復遅延と応答を 1 秒ごとに記録。radwin_ping_logger.py
-全負荷計測の終了時には、その時点の気象を probes/<回>/weather.json と probes.csv に残す。
-日本時間の 0・6・12・18 時に、直近 6 時間の途中経過の報告書を summary/reports/ に作る
-(results/frr/tools/summarize_rain_observation.py --report 6。最新は summary/latest_report.md)。
+全負荷計測の終了時には、その時点の気象を 02_fullload/<回>/weather.json と probes.csv に残す。
+日本時間の 0・6・12・18 時に、直近 6 時間の途中経過の報告書を 01_report/reports/ に作る
+(results/frr/tools/summarize_rain_observation.py --report 6。最新は 01_report/latest_report.md)。
 
 全負荷計測 (radwin_experiment.sh probe。経路表・HTB には触らない) を行う時:
     periodic     15 分ごと (毎時 0・15・30・45 分)
@@ -27,12 +27,10 @@
     recovered    低下から戻ったとき
     どの計測も、前の計測の開始から 5 分以上あける。
 
-記録: results/frr/radwin/observation/YYYYMMDD_running_rainobs_NN/
-    events.csv    起動・再起動・計測の開始と終了
-    probes.csv    全負荷計測の一覧 (理由・結果フォルダ・合否)
-    status.json   最新の状態 (status が読む)
-    probes/       全負荷計測の結果 (1回ごとのフォルダ)
-    odu_*.csv / state_*.csv / ospf_bfd_*.csv / controller.csv / te_monitor.log
+記録: results/frr/radwin/observation/YYYYMMDD_running_rainobs_NN/ (並べ方は radwin_obs_layout.py と README.md)
+    01_report/    途中経過の報告書・集計表・図        02_fullload/  全負荷計測 (probes.csv と 1 回ごと)
+    03_radio/     ODU と ping                         04_control/   制御・経路表・OSPF/BFD・te_monitor
+    05_weather/   アメダスとナウキャスト              06_system/    events.csv・check.txt・status.json・画面出力
 """
 from __future__ import annotations
 
@@ -50,11 +48,14 @@ import time
 from pathlib import Path
 
 SCRIPTS = Path(__file__).resolve().parent
+sys.path.insert(0, str(SCRIPTS))
+import radwin_obs_layout as lay  # noqa: E402
 LAB = SCRIPTS.parent
 OBS_ROOT = LAB / "results" / "frr" / "radwin" / "observation"
 RUN_DIR = Path(os.environ.get("RADWIN_OBSERVE_RUN", "/run/radwin"))
 PID_FILE = RUN_DIR / "observe.pid"
 DIR_FILE = RUN_DIR / "observe.dir"
+FINAL_FILE = RUN_DIR / "observe.final"     # 止めたあとの最終的なフォルダ名 (stop が読む)
 LOCK_FILE = Path(os.environ.get("RADWIN_OBSERVE_LOCK", "/run/lock/radwin_observe.lock"))
 
 TICK = 2.0                 # 監督のループの間隔 [s]
@@ -218,35 +219,39 @@ class Observer:
     def __init__(self, obs: Path, env: dict):
         self.obs, self.env = obs, env
         self.stop_flag = False
-        self.events = obs / "events.csv"
-        self.probes_csv = obs / "probes.csv"
+        lay.make(obs)
+        self.sysdir = obs / lay.SYSTEM
+        self.loaddir = obs / lay.FULLLOAD
+        self.events = self.sysdir / "events.csv"
+        self.probes_csv = self.loaddir / "probes.csv"
+        radio, control, weather = obs / lay.RADIO, obs / lay.CONTROL, obs / lay.WEATHER
         py = sys.executable
-        log = obs / "children.log"
+        log = self.sysdir / "children.log"
         self.children = {
             "te_monitor": Child("te_monitor", ["bash", str(SCRIPTS / "frr_te_monitor.sh"),
-                                               str(obs / "te_monitor.log")], log, env),
+                                               str(control / "te_monitor.log")], log, env),
             "controller": Child("controller", [py, "-u", str(SCRIPTS / "radwin_wcmp_controller.py"),
-                                               "--interval", "2", "--log-csv", str(obs / "controller.csv")],
-                                obs / "controller.log", env),
+                                               "--interval", "2", "--log-csv", str(control / "controller.csv")],
+                                self.sysdir / "controller.log", env),
             "odu_logger": Child("odu_logger", [py, "-u", str(SCRIPTS / "radwin_odu_logger.py"),
-                                               "--dir", str(obs), "--interval", "5"], log, env),
+                                               "--dir", str(radio), "--interval", "5"], log, env),
             "state_logger": Child("state_logger", [py, "-u", str(SCRIPTS / "radwin_state_logger.py"),
-                                                   "--dir", str(obs)], log, env),
+                                                   "--dir", str(control)], log, env),
             "load_server": Child("load_server", ["ip", "netns", "exec", "LER_Egress", "iperf3", "-s",
                                                  "-p", LOAD_PORT], log, env),
             "load_client": Child("load_client", ["ip", "netns", "exec", "CR1", "iperf3", "-c", "10.0.2.2",
                                                  "-p", LOAD_PORT, "-b", LOAD_RATE, "-t", "86400"], log, env),
             "weather_logger": Child("weather_logger", [py, "-u", str(SCRIPTS / "radwin_weather.py"),
-                                                       "--dir", str(obs)], log, env),
+                                                       "--dir", str(weather)], log, env),
             "nowcast_logger": Child("nowcast_logger", [py, "-u", str(SCRIPTS / "radwin_nowcast.py"),
-                                                       "--dir", str(obs)], log, env),
+                                                       "--dir", str(weather)], log, env),
             "ping_logger": Child("ping_logger", [py, "-u", str(SCRIPTS / "radwin_ping_logger.py"),
-                                                 "--dir", str(obs)], log, env),
+                                                 "--dir", str(radio)], log, env),
         }
         # 受信側 (iperf3 -s) の起動を待ってから送信側を始める (同時に起動すると接続に失敗する)
         self.children["load_client"].hold_until = time.monotonic() + 3
         self.sched = Scheduler()
-        self.tail = ControllerTail(obs / "controller.csv")
+        self.tail = ControllerTail(control / "controller.csv")
         self.probe: subprocess.Popen | None = None
         self.probe_info: dict = {}
         self.probe_count = 0
@@ -273,9 +278,9 @@ class Observer:
             "baseline_mbps": self.sched.baseline(),
             "latest": self.sched.latest,
         }
-        tmp = self.obs / "status.json.tmp"
+        tmp = self.sysdir / "status.json.tmp"
         tmp.write_text(json.dumps(st, ensure_ascii=False))
-        tmp.replace(self.obs / "status.json")
+        tmp.replace(self.sysdir / "status.json")
 
     # 見張り
     def supervise(self) -> None:
@@ -308,8 +313,8 @@ class Observer:
         load.proc = None                                 # 止めたのはこちら。再起動の回数に数えない
         self.event("load_pause", "全負荷計測のため軽い負荷を止める")
         time.sleep(3)                                   # 軽い負荷の残りが抜けるのを待つ
-        env = dict(self.env, RADWIN_PROBE_ROOT=str(self.obs / "probes"))
-        log = (self.obs / "probes.log").open("a")
+        env = dict(self.env, RADWIN_PROBE_ROOT=str(self.loaddir))
+        log = (self.sysdir / "probes.log").open("a")
         log_pos = log.tell()
         self.probe = subprocess.Popen(
             ["bash", str(SCRIPTS / "radwin_experiment.sh"), "probe", str(PROBE_SECONDS), "rainobs"],
@@ -322,7 +327,7 @@ class Observer:
         if self.probe is None or self.probe.poll() is None:
             return
         code = self.probe.returncode
-        folder = _probe_result_dir(self.obs / "probes.log", self.probe_info.get("log_pos", 0))
+        folder = _probe_result_dir(self.sysdir / "probes.log", self.probe_info.get("log_pos", 0))
         result = "success" if folder and "_success_" in folder.name else "fail"
         end = time.time()
         wx = snapshot_weather(folder)
@@ -354,8 +359,7 @@ class Observer:
         if slot == self.report_slot or self.report is not None:
             return
         self.report_slot = slot
-        log = (self.obs / "summary" / "report.log").open("a") if (self.obs / "summary").is_dir() \
-            else (self.obs / "children.log").open("a")
+        log = (self.sysdir / "report.log").open("a")
         self.report = subprocess.Popen([sys.executable, str(SUMMARIZE), "--dir", str(self.obs),
                                         "--report", str(REPORT_HOURS)],
                                        stdout=log, stderr=subprocess.STDOUT, env=self.env,
@@ -442,7 +446,7 @@ def _probe_result_dir(log: Path, pos: int) -> Path | None:
 
 def run_check(obs: Path) -> None:
     subprocess.run([sys.executable, str(SCRIPTS / "radwin_observe_check.py"), str(obs)],
-                   stdout=(obs / "check.txt").open("w"), stderr=subprocess.STDOUT)
+                   stdout=(lay.sub(obs, lay.SYSTEM) / "check.txt").open("w"), stderr=subprocess.STDOUT)
 
 
 # ── 入口 ──────────────────────────────────────────────────────────
@@ -464,9 +468,29 @@ def _cr1_lere_is_physical() -> bool:
     return r.returncode == 0
 
 
+_NAME = re.compile(r"^(\d{8})(?:-(\d{4}|\d{8}))?_(running|success|fail)_(.+)$")
+
+
 def _strip_result(name: str) -> str:
-    m = re.match(r"^(\d{8})_(running|success|fail)_(.+)$", name)
-    return f"{m.group(1)}_{m.group(3)}" if m else name
+    """'20261002-1003_success_rainobs_04' → '20261002_rainobs_04' (終わりの日と結果語を外す)。"""
+    m = _NAME.match(name)
+    return f"{m.group(1)}_{m.group(4)}" if m else name
+
+
+def final_name(name: str, result: str, end: float) -> str:
+    """止めたときの名前。日付をまたいだ観測は、始めた日のあとに終わった日を付ける。
+
+    '20261002_running_rainobs_04' を 10/03 に止めた → '20261002-1003_success_rainobs_04'
+    年をまたいだときは終わりの日を 8 桁で書く (例 20261231-20270101)。同じ日なら付けない。
+    すでに付いている名前に使っても、終わりの日を付け直すだけ (何度使ってもよい)。
+    """
+    m = _NAME.match(name)
+    if not m:
+        return name.replace("_running_", f"_{result}_", 1)
+    start, _, _, rest = m.groups()
+    e = time.strftime("%Y%m%d", time.localtime(end))
+    span = start if e == start else f"{start}-{e[4:] if e[:4] == start[:4] else e}"
+    return f"{span}_{result}_{rest}"
 
 
 def new_obs_dir(root: Path, purpose: str) -> Path:
@@ -517,19 +541,22 @@ def cmd_start(a) -> int:
             sys.exit(f"[NG] radwin_experiment.sh {step[0]} が失敗しました。上の表示を確認してください")
     obs = Path(a.dir) if a.dir else new_obs_dir(a.root, a.purpose)
     obs.mkdir(parents=True)
-    (obs / "probes").mkdir()
+    lay.make(obs)
+    # 観測フォルダの親 (observation/) も root が作ると、ふだんのユーザーが README などを置けない
+    uid_, gid_ = os.environ.get("SUDO_UID"), os.environ.get("SUDO_GID")
+    if uid_ and gid_ and obs.parent.stat().st_uid == 0:
+        os.chown(obs.parent, int(uid_), int(gid_))
     # 集計 (results/frr/tools/summarize_rain_observation.py) の出力先。観測中でも sudo なしで書けるようにする
-    (obs / "summary").mkdir()
     uid, gid = os.environ.get("SUDO_UID"), os.environ.get("SUDO_GID")
     if uid and gid:
-        os.chown(obs / "summary", int(uid), int(gid))
+        os.chown(obs / lay.REPORT, int(uid), int(gid))
     rev = subprocess.run(["git", "-C", str(LAB), "rev-parse", "--short", "HEAD"],
                          capture_output=True, text=True).stdout.strip()
-    (obs / "run.info").write_text(
+    (obs / lay.SYSTEM / "run.info").write_text(
         f"started_at={time.strftime('%Y-%m-%dT%H:%M:%S%z')}\ngit={rev}\n"
         f"fake_odu_dir={a.fake_odu_dir or ''}\nprobe_seconds={PROBE_SECONDS}\nperiod={PERIOD:.0f}\nload={LOAD_RATE}\n")
     RUN_DIR.mkdir(parents=True, exist_ok=True)
-    log = (obs / "supervisor.log").open("a")
+    log = (obs / lay.SYSTEM / "supervisor.log").open("a")
     proc = subprocess.Popen([sys.executable, "-u", __file__, "_daemon", str(obs)]
                             + (["--fake-odu-dir", a.fake_odu_dir] if a.fake_odu_dir else []),
                             stdout=log, stderr=subprocess.STDOUT, env=env, start_new_session=True)
@@ -537,7 +564,7 @@ def cmd_start(a) -> int:
     DIR_FILE.write_text(str(obs))
     time.sleep(5)
     if proc.poll() is not None:
-        sys.exit(f"[NG] 観測がすぐに止まりました。{obs / 'supervisor.log'} を確認してください")
+        sys.exit(f"[NG] 観測がすぐに止まりました。{obs / lay.SYSTEM / 'supervisor.log'} を確認してください")
     print(f"観測を始めました: {obs}")
     print("状態: sudo python3 scripts/radwin_observe.py status")
     print("停止: sudo python3 scripts/radwin_observe.py stop")
@@ -567,12 +594,13 @@ def cmd_daemon(a) -> int:
     finally:
         run_check(obs)
         result = "success" if rc == 0 else "fail"
-        final = obs.with_name(obs.name.replace("_running_", f"_{result}_", 1))
+        final = obs.with_name(final_name(obs.name, result, time.time()))
         uid, gid = os.environ.get("SUDO_UID"), os.environ.get("SUDO_GID")
         if uid and gid:
             subprocess.run(["chown", "-R", f"{uid}:{gid}", str(obs)])
         try:
             obs.rename(final)
+            FINAL_FILE.write_text(str(final))
             print(f"結果: {final}", flush=True)
         except OSError as e:
             print(f"[WARN] 結果名への付け替えに失敗: {e}", flush=True)
@@ -589,6 +617,7 @@ def cmd_stop(a) -> int:
         print("観測は動いていません")
         return 0
     obs = DIR_FILE.read_text().strip() if DIR_FILE.exists() else ""
+    FINAL_FILE.unlink(missing_ok=True)
     os.kill(pid, signal.SIGTERM)
     print("停止中 (全負荷計測の途中なら、その終了を待つので最大 4 分ほどかかります) ...")
     for _ in range(420):
@@ -598,7 +627,22 @@ def cmd_stop(a) -> int:
     else:
         print("[WARN] 7 分待っても止まりません。supervisor.log を確認してください")
         return 1
-    print(f"停止しました。検査結果: {obs.replace('_running_', '_success_', 1)}/check.txt")
+    if FINAL_FILE.exists():
+        final = Path(FINAL_FILE.read_text().strip())
+    else:                                                   # 2026-10-03 より前のプログラムで動いていた観測
+        final = Path(obs.replace("_running_", "_success_", 1))
+    named = final.with_name(final_name(final.name, "fail" if "_fail_" in final.name else "success", time.time()))
+    if final.is_dir() and named != final:                   # 日付をまたいだのに終わりの日が付いていない
+        final.rename(named)
+        final = named
+        print(f"フォルダ名に終わりの日を付けました: {final.name}")
+    if final.is_dir() and not lay.is_new(final):           # 2026-10-03 より前の形で記録した観測は、ここで整理する
+        lay.organize(final)
+        uid, gid = os.environ.get("SUDO_UID"), os.environ.get("SUDO_GID")
+        if uid and gid:
+            subprocess.run(["chown", "-R", f"{uid}:{gid}", str(final)])
+        print("記録をフォルダの役割ごとに整理しました (README.md を参照)")
+    print(f"停止しました。検査結果: {lay.sub(final, lay.SYSTEM) / 'check.txt'}")
     return 0
 
 
@@ -610,7 +654,7 @@ def cmd_status(a) -> int:
     obs = Path(DIR_FILE.read_text().strip())
     print(f"観測中 pid={pid}  フォルダ: {obs}")
     try:
-        st = json.loads((obs / "status.json").read_text())
+        st = json.loads((lay.sub(obs, lay.SYSTEM) / "status.json").read_text())
     except (OSError, ValueError):
         print("  (status.json がまだありません)")
         return 0

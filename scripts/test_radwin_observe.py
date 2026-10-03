@@ -293,7 +293,7 @@ class SupervisorTests(unittest.TestCase):
             c.hold_until = 0
             o.supervise()
             self.assertIsNotNone(c.proc)
-            ev = list(csv.DictReader((Path(d) / "events.csv").open()))
+            ev = list(csv.DictReader((Path(d) / "06_system" / "events.csv").open()))
             self.assertEqual([e["event"] for e in ev], ["child_start", "child_exit", "child_start"])
 
     def test_paused_load_is_not_counted_as_exit(self):
@@ -324,7 +324,7 @@ class SupervisorTests(unittest.TestCase):
             self.assertTrue(c.alive())
             self.assertEqual(c.restarts, 0)
             c.stop()
-            pr = list(csv.DictReader((Path(d) / "probes.csv").open()))
+            pr = list(csv.DictReader((Path(d) / "02_fullload" / "probes.csv").open()))
             self.assertEqual((pr[0]["reason"], pr[0]["result"]), ("periodic", "success"))
             self.assertEqual(pr[0]["folder"], "20260101_success_rainobs_wcmp_01")
             self.assertEqual((pr[0]["weather_name"], pr[0]["temp"]), ("雨", "18.2"))
@@ -347,9 +347,9 @@ class ShutdownTests(unittest.TestCase):
                     o.shutdown()
             finally:
                 obs.SCRIPTS = orig
-            pr = list(csv.DictReader((Path(d) / "probes.csv").open()))
+            pr = list(csv.DictReader((Path(d) / "02_fullload" / "probes.csv").open()))
             self.assertEqual((pr[0]["result"], pr[0]["exit_code"]), ("success", "0"))
-            ev = [e["event"] for e in csv.DictReader((Path(d) / "events.csv").open())]
+            ev = [e["event"] for e in csv.DictReader((Path(d) / "06_system" / "events.csv").open())]
             self.assertIn("probe_wait", ev)
             self.assertNotIn("probe_abort", ev)
 
@@ -475,7 +475,6 @@ class ReportScheduleTests(unittest.TestCase):
     def test_report_runs_once_per_slot_in_background(self):
         with tempfile.TemporaryDirectory() as d:
             o = obs.Observer(Path(d), dict(os.environ))
-            (Path(d) / "summary").mkdir()
             calls = []
             with patch.object(obs.subprocess, "Popen", side_effect=lambda *a, **k: calls.append(a[0]) or
                               type("P", (), {"poll": lambda self: None})()):
@@ -486,6 +485,88 @@ class ReportScheduleTests(unittest.TestCase):
                 o.maybe_report(time.time())                        # 同じ区切りでは 1 回だけ
             self.assertEqual(len(calls), 1)
             self.assertIn("--report", calls[0])
+
+
+class NamingTests(unittest.TestCase):
+    def at(self, y, m, d, h=12):
+        import datetime as dt
+        return dt.datetime(y, m, d, h, tzinfo=dt.timezone(dt.timedelta(hours=9))).timestamp()
+
+    def test_same_day_keeps_single_date(self):
+        self.assertEqual(obs.final_name("20261003_running_rainobs_01", "success", self.at(2026, 10, 3, 23)),
+                         "20261003_success_rainobs_01")
+
+    def test_crossing_days_appends_end_date(self):
+        self.assertEqual(obs.final_name("20261002_running_rainobs_04", "success", self.at(2026, 10, 3)),
+                         "20261002-1003_success_rainobs_04")
+        self.assertEqual(obs.final_name("20261002_running_rainobs_04", "fail", self.at(2026, 10, 5)),
+                         "20261002-1005_fail_rainobs_04")
+
+    def test_crossing_year_uses_full_end_date(self):
+        self.assertEqual(obs.final_name("20261231_running_rainobs_01", "success", self.at(2027, 1, 1)),
+                         "20261231-20270101_success_rainobs_01")
+
+    def test_reapplying_is_safe(self):
+        name = "20261002-1003_success_rainobs_04"
+        self.assertEqual(obs.final_name(name, "success", self.at(2026, 10, 3)), name)
+        self.assertEqual(obs.final_name("20261003_success_rainobs_02", "success", self.at(2026, 10, 6)),
+                         "20261003-1006_success_rainobs_02")
+
+    def test_strip_and_lookup_without_end_date(self):
+        sys.path.insert(0, str(SCRIPTS.parent / "results" / "frr" / "tools"))
+        import result_paths
+        for f in (obs._strip_result, result_paths.strip_result):
+            self.assertEqual(f("20261002-1003_success_rainobs_04"), "20261002_rainobs_04")
+            self.assertEqual(f("20261231-20270101_fail_rainobs_01"), "20261231_rainobs_01")
+            self.assertEqual(f("20260925_success_unplug_wcmp_01"), "20260925_unplug_wcmp_01")
+
+
+class LayoutTests(unittest.TestCase):
+    OLD = ["odu_20261002.csv", "ping_20261002.csv", "controller.csv", "state_20261002.csv",
+           "ospf_bfd_20261002.csv", "te_monitor.log", "weather_20261002.csv", "nowcast_20261002.csv",
+           "probes.csv", "events.csv", "check.txt", "status.json", "run.info", "children.log",
+           "probes.log", "judgement.txt"]
+
+    def test_new_observation_has_numbered_folders_and_readme(self):
+        import radwin_obs_layout as lay
+        with tempfile.TemporaryDirectory() as d:
+            obs.Observer(Path(d), dict(os.environ))
+            names = sorted(p.name for p in Path(d).iterdir())
+            self.assertEqual(names, ["01_report", "02_fullload", "03_radio", "04_control",
+                                     "05_weather", "06_system", "README.md"])
+            self.assertTrue(lay.is_new(Path(d)))
+
+    def test_organize_moves_old_flat_folder_and_keeps_every_file(self):
+        import radwin_obs_layout as lay
+        with tempfile.TemporaryDirectory() as d:
+            o = Path(d)
+            for n in self.OLD:
+                (o / n).write_text(n)
+            (o / "summary" / "reports").mkdir(parents=True)
+            (o / "summary" / "latest_report.md").write_text("r")
+            (o / "probes" / "20261002_success_rainobs_wcmp_19" / "frr_observe").mkdir(parents=True)
+            before = sorted(p.read_text() for p in o.rglob("*") if p.is_file())
+            lay.organize(o)
+            lay.organize(o)                                   # 2 回目は何もしない
+            after = sorted(p.read_text() for p in o.rglob("*") if p.is_file() and p.name != "README.md")
+            self.assertEqual(before, after)                   # 消えたファイルも増えたファイルもない
+            self.assertTrue((o / "03_radio" / "odu_20261002.csv").exists())
+            self.assertTrue((o / "04_control" / "controller.csv").exists())
+            self.assertTrue((o / "05_weather" / "nowcast_20261002.csv").exists())
+            self.assertTrue((o / "02_fullload" / "probes.csv").exists())
+            self.assertTrue((o / "02_fullload" / "20261002_success_rainobs_wcmp_19" / "frr_observe").is_dir())
+            self.assertTrue((o / "01_report" / "latest_report.md").exists())
+            self.assertTrue((o / "01_report" / "judgement.txt").exists())
+            self.assertTrue((o / "06_system" / "events.csv").exists())
+            self.assertEqual(sorted(p.name for p in o.iterdir() if p.is_file()), ["README.md"])
+            self.assertEqual([p.name for p in lay.find(o, "odu_*.csv")], ["odu_20261002.csv"])
+
+    def test_find_reads_old_flat_layout_too(self):
+        import radwin_obs_layout as lay
+        with tempfile.TemporaryDirectory() as d:
+            (Path(d) / "odu_20261002.csv").write_text("x")
+            self.assertEqual(len(lay.find(Path(d), "odu_*.csv")), 1)
+            self.assertEqual(lay.sub(Path(d), lay.REPORT), Path(d) / "summary")
 
 
 class HarnessTests(unittest.TestCase):

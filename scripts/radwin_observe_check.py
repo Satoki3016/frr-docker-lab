@@ -16,6 +16,9 @@ import time
 from collections import Counter, defaultdict
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import radwin_obs_layout as lay  # noqa: E402
+
 # 記録ごとの、空白とみなす間隔 [s] (記録の間隔の 3 倍程度)
 GAP_LIMITS = {"odu": 30.0, "state": 30.0, "ospf_bfd": 180.0, "controller": 30.0, "weather": 1800.0,
               "nowcast": 900.0, "ping": 30.0}
@@ -66,7 +69,7 @@ def main() -> int:
 
     # ── 記録の空白 ──
     out.append("■ 記録の空白")
-    odu = read_rows(list(obs.glob("odu_*.csv")))
+    odu = read_rows(lay.find(obs, "odu_*.csv"))
     by_odu = defaultdict(list)
     for r in odu:
         by_odu[r["odu"]].append(float(r["time"]))
@@ -74,23 +77,23 @@ def main() -> int:
         ok &= report_gaps("ODU (R1)", [], GAP_LIMITS["odu"], out)
     for ip in sorted(by_odu):
         ok &= report_gaps(f"ODU {ip} (R1)", by_odu[ip], GAP_LIMITS["odu"], out)
-    state = read_rows(list(obs.glob("state_*.csv")))
+    state = read_rows(lay.find(obs, "state_*.csv"))
     ok &= report_gaps("経路表・HTB (R5)", [float(r["time"]) for r in state], GAP_LIMITS["state"], out)
-    ospf = read_rows(list(obs.glob("ospf_bfd_*.csv")))
+    ospf = read_rows(lay.find(obs, "ospf_bfd_*.csv"))
     ok &= report_gaps("OSPF・BFD (R7)", [float(r["time"]) for r in ospf], GAP_LIMITS["ospf_bfd"], out)
-    ctl = read_rows([obs / "controller.csv"] if (obs / "controller.csv").exists() else [])
+    ctl = read_rows(lay.find(obs, "controller.csv"))
     ok &= report_gaps("動的制御 (R3)", [float(r["time"]) for r in ctl], GAP_LIMITS["controller"], out)
-    wx = read_rows(list(obs.glob("weather_*.csv")))
+    wx = read_rows(lay.find(obs, "weather_*.csv"))
     ok &= report_gaps("気象 (W1)", [float(r["time"]) for r in wx], GAP_LIMITS["weather"], out)
     err = [r for r in wx if r.get("error")]
     if err:
         out.append(f"[注意] 気象の取得に一部失敗: {len(err)}/{len(wx)} 回 (例: {err[0]['error'][:80]})")
-    nc = read_rows(list(obs.glob("nowcast_*.csv")))
+    nc = read_rows(lay.find(obs, "nowcast_*.csv"))
     ok &= report_gaps("降水ナウキャスト", [float(r["time"]) for r in nc], GAP_LIMITS["nowcast"], out)
     err = [r for r in nc if r.get("error") or r.get("mmh_lo") == "unknown"]
     if err:
         out.append(f"[注意] ナウキャストの取得失敗・未知の色: {len(err)}/{len(nc)} 回")
-    pg = read_rows(list(obs.glob("ping_*.csv")))
+    pg = read_rows(lay.find(obs, "ping_*.csv"))
     ok &= report_gaps("無線区間の ping", [float(r["time"]) for r in pg], GAP_LIMITS["ping"], out)
     if pg:
         rtt = sorted(float(r["rtt_ms"]) for r in pg if r["status"] == "ok")
@@ -131,7 +134,7 @@ def main() -> int:
     # ── 部品の再起動 ──
     out.append("")
     out.append("■ 部品の再起動 (events.csv)")
-    ev = read_rows([obs / "events.csv"] if (obs / "events.csv").exists() else [])
+    ev = read_rows(lay.find(obs, "events.csv"))
     exits = Counter(r["detail"].split()[0] for r in ev if r["event"] == "child_exit")
     if not exits:
         out.append("[OK] 再起動なし")
@@ -144,7 +147,7 @@ def main() -> int:
     # ── 全負荷計測 ──
     out.append("")
     out.append("■ 全負荷計測 (probes.csv)")
-    pr = read_rows([]) if not (obs / "probes.csv").exists() else list(csv.DictReader((obs / "probes.csv").open()))
+    pr = [r for f in lay.find(obs, "probes.csv") for r in csv.DictReader(f.open())]
     if not pr:
         out.append("  まだ 1 回も行われていない")
     by_reason = Counter(r["reason"] for r in pr)

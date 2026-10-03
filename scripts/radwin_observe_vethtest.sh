@@ -7,13 +7,13 @@
 #       te_monitor を止めてある (sudo pkill -f frr_te_monitor.sh)。
 # 偽の ODU を使うので、実機 (c2) では radwin_observe.py が拒否する。
 #
-# 確かめること (結果は観測フォルダの events.csv / probes.csv / state_*.csv / check.txt):
+# 確かめること (結果は観測フォルダの 06_system/events.csv・check.txt、02_fullload/probes.csv、04_control/state_*.csv):
 #   V1  2 時間動かして、記録の空白がない
 #   V2  容量低下 (MCS 9 → 3) と無線断で追加の計測が起き、10 分ごとに続き、戻ったら止まる
 #   V3  計測の前後で HTB の整形レートと重みが変わらない
 #   V4  計測のあいだ軽い負荷が止まり、終わると再開する
 #   V5  記録係を強制的に止めると、監督役が起動し直す
-# 操作の時刻は観測フォルダの vethtest_marks.csv に残す。
+# 操作の時刻は観測フォルダの 06_system/vethtest_marks.csv に残す。
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 [ "$(id -u)" -eq 0 ] || { echo "sudo bash $0 として実行してください"; exit 1; }
@@ -31,7 +31,7 @@ python3 "$SCRIPT_DIR/radwin_fake_odu.py" 9 > /dev/null
 env RADWIN_ALLOW_FAKE=1 python3 "$SCRIPT_DIR/radwin_observe.py" start \
     --purpose vethtest --fake-odu-dir /tmp/radwin_fake_odu
 OBS="$(cat /run/radwin/observe.dir)"
-MARKS="$OBS/vethtest_marks.csv"
+MARKS="$OBS/06_system/vethtest_marks.csv"
 echo "time,mark" > "$MARKS"
 mark "開始 (偽の ODU: 9)"
 

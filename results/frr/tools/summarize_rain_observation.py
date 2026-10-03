@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """雨の観測 (radwin_observe.py) の記録を、1 本の時間軸にそろえて集計する。観測中でも何度でも作り直せる。
 
-出力 (<観測フォルダ>/summary/):
+出力 (<観測フォルダ>/01_report/。2026-10-03 より前の形のフォルダでは summary/):
   probes_summary.csv   全負荷計測 1 回につき 1 行
       時刻 (日本時間)・理由・合否
       / AF41〜43 の受信スループット [Gbps]: throughput.csv の毎秒の受信量の平均 (始めの 10 秒と終わりの 5 秒を除く)
@@ -39,6 +39,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from result_paths import result_dir  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
+import radwin_obs_layout as lay  # noqa: E402
 import matplotlib  # noqa: E402
 matplotlib.use("Agg")
 import matplotlib.dates as mdates  # noqa: E402
@@ -68,8 +70,9 @@ CLASSES = [("af41", "AF41 (高)", "#0072B2"), ("af42", "AF42 (中)", "#E69F00"),
 
 # ── 読み込み ─────────────────────────────────────────────────────
 def rows(folder: Path, pattern: str) -> list[dict]:
+    """観測フォルダの直下と 1 段下 (03_radio/ など) から探す。古い形 (直下に全部) も読める。"""
     out = []
-    for f in sorted(glob.glob(str(folder / pattern))):
+    for f in lay.find(folder, pattern):
         with open(f, newline="") as fp:
             out += [r for r in csv.DictReader(fp) if r.get("time") not in (None, "", "time")]
     return out
@@ -135,13 +138,13 @@ def mode(vals) -> str:
 # ── 集計表 ───────────────────────────────────────────────────────
 def probe_rows(obs: Path, ctl, odu, ping, wx, nc) -> list[dict]:
     out = []
-    pcsv = obs / "probes.csv"
-    if not pcsv.exists():
+    found = lay.find(obs, "probes.csv")
+    if not found:
         return out
-    probes = list(csv.DictReader(pcsv.open()))
+    probes = list(csv.DictReader(found[0].open()))
     spans = [(num(p["start"]), num(p["end"])) for p in probes]
     for p in probes:
-        folder = obs / "probes" / p["folder"] / "frr_observe"
+        folder = lay.probe_dir(obs, p["folder"]) / "frr_observe"
         # 計測の時間帯: timebase.txt (t=0) から 120 秒。無ければ probes.csv の開始・終了
         t0, t1 = num(p["start"]), num(p["end"])
         tb = folder / "timebase.txt"
@@ -463,7 +466,7 @@ def main() -> int:
                if (t_from is None or jst_epoch(s["start_jst"].replace(" ", "T")) >= t_from)
                and (t_to is None or jst_epoch(s["start_jst"].replace(" ", "T")) <= t_to)]
 
-    out_dir = obs / "summary"
+    out_dir = lay.sub(obs, lay.REPORT)
     try:
         out_dir.mkdir(exist_ok=True)
         (out_dir / ".write_test").touch()
