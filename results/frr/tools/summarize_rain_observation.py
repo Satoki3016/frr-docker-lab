@@ -107,6 +107,15 @@ def iperf_loss_pct(path: Path) -> float:
     return 100.0 * lost / total if total else float("nan")
 
 
+def iperf_lost(path: Path) -> int | str:
+    """iperf3 の最後の receiver 行の、失ったパケットの数。"""
+    try:
+        m = re.findall(r"\[SUM\].*?\s(\d+)/(\d+) \([^)]*\)\s+receiver", path.read_text(errors="replace"))
+        return int(m[-1][0])
+    except (OSError, IndexError):
+        return ""
+
+
 def steady_gbps(path: Path) -> dict[str, float]:
     """throughput.csv (毎秒の受信量 [bytes/s]) の平均 [Gbps]。始めの 10 秒と終わりの 5 秒を除く。"""
     try:
@@ -133,6 +142,52 @@ def median(vals) -> float:
 def mode(vals) -> str:
     v = [x for x in vals if x not in ("", None)]
     return Counter(v).most_common(1)[0][0] if v else ""
+
+
+# ── 電波の落ち込みの検出 ──────────────────────────────────────────
+HOPS = (("無線1", "192.168.1.31", "192.168.1.32"), ("無線2", "192.168.1.33", "192.168.1.34"))
+DROP_BOTH, DROP_ONE = 4.0, 6.0   # 両端とも 4 dB 以上、かつ片方が 6 dB 以上下がったら「遮られた」
+
+
+def detect_event(odu: list[dict], ctl: list[dict], ping: list[dict], t0: float, t1: float) -> dict:
+    """計測の時間帯 [t0, t1] に、電波が遮られた・切れた時間帯があるかを記録から割り出す。
+
+    人が立つ・窓が濡れるなどで電波が遮られると、その無線区間の両端の受信電力が同時に下がる。
+    .32 だけが約 7 dB 上下する現象 (片方向だけ) と区別するため、両端がそろって下がった読み取りだけを数える。
+    基準は計測の前 5 分の中央値。未接続 (connected=0) も遮られたとみなす。
+    戻り値: 検出した区間の始まり・終わり、最も下がった量、制御の最初の反応までの秒数 など。
+    """
+    out = {"event": 0, "event_hop": "", "event_start_jst": "", "event_len_s": "", "event_drop_db": "",
+           "ctl_first": "", "ctl_delay_s": "", "ping_noanswer": 0}
+    flagged = []
+    for name, a_ip, b_ip in HOPS:
+        pre = {ip: median(num(r["signal_dbm"]) for r in odu if r["odu"] == ip and r["signal_dbm"] != ""
+                          and t0 - 300 <= num(r["time"]) < t0 - 5) for ip in (a_ip, b_ip)}
+        a = sorted((num(r["time"]), r) for r in odu if r["odu"] == a_ip and t0 <= num(r["time"]) <= t1)
+        b = sorted((num(r["time"]), r) for r in odu if r["odu"] == b_ip and t0 <= num(r["time"]) <= t1)
+        for (ta, ra), (tb, rb) in zip(a, b):           # 同じ巡回 (5 秒ごと) の両端の読み取り
+            if abs(ta - tb) > 3:
+                continue
+            down = ra["connected"] != "1" or rb["connected"] != "1"
+            da = pre[a_ip] - num(ra["signal_dbm"]) if ra["signal_dbm"] != "" else 0.0
+            db = pre[b_ip] - num(rb["signal_dbm"]) if rb["signal_dbm"] != "" else 0.0
+            if down or (min(da, db) >= DROP_BOTH and max(da, db) >= DROP_ONE):
+                flagged.append((min(ta, tb), name, 99.0 if down else max(da, db)))
+    pg = [r for r in ping if t0 <= num(r["time"]) <= t1 and r["status"] != "ok"]
+    out["ping_noanswer"] = len(pg)
+    if not flagged:
+        return out
+    start = min(t for t, _, _ in flagged)
+    end = max(t for t, _, _ in flagged) + 5           # 読み取りは 5 秒ごと
+    acts = [r for r in ctl if start - 10 <= num(r["time"]) <= t1
+            and r["action"].split("(")[0] in ("down", "link_lost", "link_down")]
+    out.update(event=1, event_hop=",".join(sorted({n for _, n, _ in flagged})),
+               event_start_jst=fmt(start), event_len_s=round(end - start),
+               event_drop_db=("切断" if max(d for _, _, d in flagged) >= 99 else round(max(d for _, _, d in flagged))))
+    if acts:
+        out["ctl_first"] = acts[0]["action"].split("(")[0]
+        out["ctl_delay_s"] = round(num(acts[0]["time"]) - start, 1)
+    return out
 
 
 # ── 集計表 ───────────────────────────────────────────────────────
@@ -185,6 +240,8 @@ def probe_rows(obs: Path, ctl, odu, ping, wx, nc) -> list[dict]:
         n = min(n, key=lambda x: abs(jst_epoch(x["valid_jst"]) - mid)) if n else {}
         r["nowcast_valid_jst"] = n.get("valid_jst", "")
         r["nowcast_mmh"] = f"{n['mmh_lo']}-{n['mmh_hi']}" if n else ""
+        r.update(detect_event(odu, ctl, ping, t0, t1))
+        r["af41_lost_pkts"] = iperf_lost(folder / "iperf3_af41.log")
         out.append(r)
     return out
 
@@ -426,6 +483,28 @@ def build_report(obs: Path, t0: float, t1: float, ctl, odu, ping, wx, nc, summar
               + f" / 途中で制御の値が変わった回 {sum(s['changed'] == 1 for s in summary)}", ""]
         if g["af41"] and (min(g["af41"]) < 7.9 or max(lo["af41"]) > 0.1):
             warn.append(f"AF41 が守られていない回がある (最小 {min(g['af41']):.3f} Gbps、損失 最大 {max(lo['af41']):.3f}%)")
+
+    # 障害の実験 (fault) と、電波が遮られた回: 通常の輻輳時と比べる
+    base = sorted(s["af41_loss_pct"] for s in summary if not s["reason"].startswith("fault")
+                  and not s.get("event") and s["af41_loss_pct"] == s["af41_loss_pct"])
+    ev = [s for s in summary if s["reason"].startswith("fault") or s.get("event")]
+    if ev:
+        L += ["## 障害を起こした回・電波が遮られた回 (通常の輻輳時との比較)", "",
+              "| 計測の開始 | 理由 | 遮られた区間 | 長さ | 最大の低下 | 制御の最初の反応 | AF41 損失率 | 失ったパケット |",
+              "|---|---|---|---|---|---|---|---|"]
+        for s in ev:
+            react = f"{s['ctl_first']} (+{s['ctl_delay_s']} 秒)" if s.get("ctl_first") else "なし"
+            L.append(f"| {s['start_jst'][5:16]} | {s['reason']} | {s.get('event_hop') or '検出なし'} "
+                     f"{s.get('event_start_jst', '')[11:]} | {s.get('event_len_s', '')} 秒 | "
+                     f"{s.get('event_drop_db', '')}{' dB' if isinstance(s.get('event_drop_db'), (int, float)) else ''} | "
+                     f"{react} | {s['af41_loss_pct']:.4f}% | {s.get('af41_lost_pkts', '')} |")
+        if base:
+            L += ["", f"- 通常の輻輳時 (障害なし {len(base)} 回) の AF41 損失率: 中央値 {st.median(base):.4f}%、"
+                  f"上位 5% {base[int(0.95 * (len(base) - 1))]:.4f}%、最大 {base[-1]:.4f}%"]
+        L.append("")
+        for s in ev:
+            if s["reason"].startswith("fault") and not s.get("event"):
+                warn.append(f"{s['start_jst'][5:16]} の障害の実験で、電波の落ち込みを検出できなかった (障害が起きていない可能性)")
 
     # ping (全負荷計測の時間帯を除く)
     pi = [r for r in ping if not busy(num(r["time"]))]

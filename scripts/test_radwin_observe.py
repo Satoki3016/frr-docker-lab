@@ -487,6 +487,69 @@ class ReportScheduleTests(unittest.TestCase):
             self.assertIn("--report", calls[0])
 
 
+class FaultTests(unittest.TestCase):
+    def test_fault_request_starts_probe_immediately_and_acks(self):
+        with tempfile.TemporaryDirectory() as d:
+            o = obs.Observer(Path(d), dict(os.environ))
+            req, ack = Path(d) / "req.json", Path(d) / "ack.json"
+            started = []
+            with patch.object(obs, "FAULT_REQ", req), patch.object(obs, "FAULT_ACK", ack), \
+                 patch.object(o, "start_probe", side_effect=lambda r: (started.append(r),
+                              setattr(o, "probe_info", {"start": 123.0, "reason": r}))):
+                req.write_text('{"id": "x1", "label": "stand30; rm -rf /"}')
+                o.probe = object()                      # 計測の最中は待つ (依頼は残す)
+                o.check_fault_request(1000.0)
+                self.assertEqual(started, [])
+                self.assertTrue(req.exists())
+                o.probe = None
+                o.check_fault_request(1000.0)
+            self.assertEqual(started, ["fault:stand30rm-rf"])   # 記号は落とす
+            self.assertFalse(req.exists())
+            import json
+            self.assertEqual(json.loads(ack.read_text())["id"], "x1")
+            self.assertEqual(o.sched.last_probe, 1000.0)          # このあとの定期の計測も 5 分あける
+
+
+class EventDetectionTests(unittest.TestCase):
+    def setUp(self):
+        sys.path.insert(0, str(SCRIPTS.parent / "results" / "frr" / "tools"))
+        import summarize_rain_observation as sm
+        self.sm = sm
+
+    def odu(self, t, ip, dbm, conn="1"):
+        return {"time": str(t), "odu": ip, "signal_dbm": str(dbm), "connected": conn}
+
+    def series(self, values):
+        """values: {ip: [(秒, dBm または None=未接続), ...]}。計測の前 5 分は平常値。"""
+        rows = []
+        base = {"192.168.1.31": -60, "192.168.1.32": -59, "192.168.1.33": -56, "192.168.1.34": -57}
+        for ip, b in base.items():
+            for t in range(700, 1000, 5):
+                rows.append(self.odu(t, ip, b))
+            for t, v in values.get(ip, [(t, b) for t in range(1000, 1120, 5)]):
+                rows.append(self.odu(t, ip, b if v == "base" else (0 if v is None else v), "0" if v is None else "1"))
+        return rows
+
+    def test_blockage_of_both_ends_is_detected_with_controller_delay(self):
+        # 2026-10-05 18:16 の実例の形: 無線2 の両端が 1 回の読み取りで同時に下がる
+        hop2 = lambda dip: [(t, dip if t == 1040 else "base") for t in range(1000, 1120, 5)]
+        odu = self.series({"192.168.1.33": hop2(-67), "192.168.1.34": hop2(-64)})
+        ctl = [{"time": "1042", "action": "down"}]
+        r = self.sm.detect_event(odu, ctl, [], 1000, 1120)
+        self.assertEqual((r["event"], r["event_hop"], r["event_len_s"], r["event_drop_db"]), (1, "無線2", 5, 11))
+        self.assertEqual((r["ctl_first"], r["ctl_delay_s"]), ("down", 2.0))
+
+    def test_one_sided_switching_of_32_is_not_an_event(self):
+        # .32 だけが 7 dB 上下する現象は、遮られたのではない
+        odu = self.series({"192.168.1.32": [(t, -52 if t % 20 else -66) for t in range(1000, 1120, 5)]})
+        self.assertEqual(self.sm.detect_event(odu, [], [], 1000, 1120)["event"], 0)
+
+    def test_disconnection_counts_as_event(self):
+        odu = self.series({"192.168.1.34": [(t, None if 1050 <= t <= 1080 else "base") for t in range(1000, 1120, 5)]})
+        r = self.sm.detect_event(odu, [], [], 1000, 1120)
+        self.assertEqual((r["event"], r["event_drop_db"], r["event_len_s"]), (1, "切断", 35))
+
+
 class NamingTests(unittest.TestCase):
     def at(self, y, m, d, h=12):
         import datetime as dt

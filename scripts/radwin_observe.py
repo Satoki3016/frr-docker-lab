@@ -3,6 +3,8 @@
 
 使い方 (どれも 1 行):
     sudo python3 scripts/radwin_observe.py start      # 観測を始める (裏で動き続ける)
+    sudo python3 scripts/radwin_observe.py fault --label stand30   # 障害の実験: すぐに全負荷計測を始め、
+                                                      # 通信が始まったら「今、障害を起こす」と表示する
     sudo python3 scripts/radwin_observe.py status     # 状態を見る
     sudo python3 scripts/radwin_observe.py stop       # 止める (欠測の検査をして結果名を付け替える)
 
@@ -56,6 +58,8 @@ RUN_DIR = Path(os.environ.get("RADWIN_OBSERVE_RUN", "/run/radwin"))
 PID_FILE = RUN_DIR / "observe.pid"
 DIR_FILE = RUN_DIR / "observe.dir"
 FINAL_FILE = RUN_DIR / "observe.final"     # 止めたあとの最終的なフォルダ名 (stop が読む)
+FAULT_REQ = RUN_DIR / "fault_request.json"  # fault コマンド → 観測: すぐに全負荷計測を始めてほしい
+FAULT_ACK = RUN_DIR / "fault_ack.json"      # 観測 → fault コマンド: 始めた (計測の開始時刻)
 LOCK_FILE = Path(os.environ.get("RADWIN_OBSERVE_LOCK", "/run/lock/radwin_observe.lock"))
 
 TICK = 2.0                 # 監督のループの間隔 [s]
@@ -367,6 +371,23 @@ class Observer:
         log.close()
         self.event("report_start", f"直近 {REPORT_HOURS} 時間")
 
+    def check_fault_request(self, now: float) -> None:
+        """fault コマンドの依頼があれば、間隔の決まりを待たずに全負荷計測を始める。
+        計測の最中なら、終わってから始める (依頼はそのまま残す)。"""
+        if self.probe is not None or not FAULT_REQ.exists():
+            return
+        try:
+            req = json.loads(FAULT_REQ.read_text())
+        except (OSError, ValueError):
+            FAULT_REQ.unlink(missing_ok=True)
+            return
+        FAULT_REQ.unlink(missing_ok=True)
+        label = re.sub(r"[^A-Za-z0-9_.-]", "", str(req.get("label", "")))[:40] or "fault"
+        self.start_probe(f"fault:{label}")
+        self.sched.last_probe = now                      # このあとの定期の計測も 5 分あける
+        FAULT_ACK.write_text(json.dumps({"id": req.get("id"), "start": self.probe_info.get("start"),
+                                         "reason": f"fault:{label}"}))
+
     def run(self) -> int:
         self.event("observe_start", str(self.obs))
         last_check_day = time.strftime("%Y%m%d")
@@ -375,6 +396,7 @@ class Observer:
             for t, applied, w1 in self.tail.read():
                 self.sched.feed(t, applied, w1)
             self.poll_probe()
+            self.check_fault_request(time.time())
             reason = self.sched.decide(time.time(), busy=self.probe is not None)
             if reason:
                 self.start_probe(reason)
@@ -646,6 +668,83 @@ def cmd_stop(a) -> int:
     return 0
 
 
+def _wait(cond, timeout: float, step: float = 0.5):
+    end = time.monotonic() + timeout
+    while time.monotonic() < end:
+        v = cond()
+        if v:
+            return v
+        time.sleep(step)
+    return None
+
+
+def cmd_fault(a) -> int:
+    """障害の実験の 1 回 (または --count 回)。人が立つ・窓を濡らすなどの操作は、表示に合わせて人が行う。
+
+    障害を起こした時刻を入力する必要はない。実際に電波が落ちた時刻は、集計スクリプトが
+    受信電力・ping・制御の記録から割り出す (時刻はぴったりでなくてよい)。
+    """
+    if os.geteuid() != 0:
+        sys.exit("sudo python3 scripts/radwin_observe.py fault ... として実行してください")
+    if not _running_pid():
+        sys.exit("[NG] 観測が動いていません。先に start してください")
+    if not re.fullmatch(r"[A-Za-z0-9_.-]{1,40}", a.label):
+        sys.exit("[NG] --label は英数字と _ . - だけ (例 stand30、wet1)")
+    obs = Path(DIR_FILE.read_text().strip())
+    loaddir = lay.sub(obs, lay.FULLLOAD)
+    for i in range(a.count):
+        rid = f"{time.time():.3f}"
+        FAULT_ACK.unlink(missing_ok=True)
+        FAULT_REQ.write_text(json.dumps({"id": rid, "label": a.label}))
+        print(f"[{i + 1}/{a.count}] 全負荷計測を依頼しました ({a.label})。"
+              "ほかの計測の最中なら、終わるまで待ちます (最大 3 分) ...", flush=True)
+        ack = _wait(lambda: FAULT_ACK.exists() and json.loads(FAULT_ACK.read_text()).get("id") == rid
+                    and json.loads(FAULT_ACK.read_text()), 240)
+        if not ack:
+            FAULT_REQ.unlink(missing_ok=True)
+            sys.exit("[NG] 観測が依頼を受け取りませんでした。status で観測の状態を確かめてください")
+        start = ack["start"]
+        # 通信が実際に始まるのは、計測の準備 (約 20 秒) のあと。timebase.txt ができた時刻を合図にする
+        tb = _wait(lambda: next((p for p in loaddir.glob("*_running_*/frr_observe/timebase.txt")
+                                 if p.stat().st_mtime >= start - 1), None), 90)
+        t0 = time.time()
+        if tb is None:
+            print("  (通信の開始を確認できませんでした。開始から約 20 秒後とみなします)")
+        print(f"  {time.strftime('%H:%M:%S')} 通信が始まりました (120 秒間)。")
+        print(f"  ▶ 今から約 20 秒後に障害を起こし ({a.label})、通信の終わり (約 100 秒後) までに元に戻してください。")
+        print("    時刻はぴったりでなくてよい (実際の時刻は記録から割り出す)。", flush=True)
+        for mark in (20, 60, 100):
+            time.sleep(max(0.0, t0 + mark - time.time()))
+            print(f"  {time.strftime('%H:%M:%S')} 通信開始から {mark} 秒"
+                  + (" ← このあたりで障害を起こす" if mark == 20 else " ← これまでに元に戻す" if mark == 100 else ""),
+                  flush=True)
+        done = _wait(lambda: not json.loads((lay.sub(obs, lay.SYSTEM) / "status.json").read_text())
+                     .get("probe_running"), 120, 1.0)
+        rows = list(csv.DictReader((loaddir / "probes.csv").open())) if (loaddir / "probes.csv").exists() else []
+        row = next((r for r in reversed(rows) if r["reason"] == ack["reason"]
+                    and abs(float(r["start"]) - start) < 5), None)
+        if done and row:
+            loss = _af41_loss(lay.probe_dir(obs, row["folder"]) / "frr_observe" / "iperf3_af41.log")
+            print(f"  {time.strftime('%H:%M:%S')} 計測が終わりました: {row['result']} / AF41 の損失率 {loss}")
+            print(f"    結果: {row['folder']}")
+        else:
+            print("  (計測の終わりを確認できませんでした。probes.csv を確かめてください)")
+        if i + 1 < a.count:
+            wait = max(0.0, start + a.every - time.time())
+            print(f"  次の回まで {wait:.0f} 秒待ちます ...", flush=True)
+            time.sleep(wait)
+    return 0
+
+
+def _af41_loss(path: Path) -> str:
+    try:
+        m = re.findall(r"\[SUM\].*?\s(\d+)/(\d+) \([^)]*\)\s+receiver", path.read_text(errors="replace"))
+        lost, total = map(int, m[-1])
+        return f"{100 * lost / total:.4f}% ({lost} パケット)"
+    except (OSError, IndexError, ValueError):
+        return "不明"
+
+
 def cmd_status(a) -> int:
     pid = _running_pid()
     if not pid:
@@ -680,11 +779,16 @@ def main() -> int:
     s.add_argument("--fake-odu-dir", default=None, help="veth 確認専用。偽の ODU の応答を置いたフォルダ")
     sub.add_parser("stop")
     sub.add_parser("status")
+    fa = sub.add_parser("fault", help="障害の実験: すぐに全負荷計測を始め、障害を起こす合図を出す")
+    fa.add_argument("--label", required=True, help="障害の種類 (英数字。例 stand5, stand30, wet1)")
+    fa.add_argument("--count", type=int, default=1, help="続けて行う回数 (窓が乾くまで追うときなど)")
+    fa.add_argument("--every", type=float, default=300, help="--count のときの間隔 [秒] (既定 5 分)")
     d = sub.add_parser("_daemon")
     d.add_argument("obs")
     d.add_argument("--fake-odu-dir", default=None)
     a = ap.parse_args()
-    return {"start": cmd_start, "stop": cmd_stop, "status": cmd_status, "_daemon": cmd_daemon}[a.cmd](a)
+    return {"start": cmd_start, "stop": cmd_stop, "status": cmd_status, "fault": cmd_fault,
+            "_daemon": cmd_daemon}[a.cmd](a)
 
 
 if __name__ == "__main__":
