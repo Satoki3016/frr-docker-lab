@@ -436,7 +436,10 @@ echo "time,node,out_no_routes_per_sec,tx_drop_cr1_per_sec,tx_drop_cr2_per_sec,tx
 LER_INGRESS_PID=$(docker inspect --format '{{.State.Pid}}' LER_Ingress)
 NETDEV_LERI="/proc/${LER_INGRESS_PID}/net/dev"
 SNMP_LERI="/proc/${LER_INGRESS_PID}/net/snmp"
-echo "  [ok] LER_Ingress PID=${LER_INGRESS_PID}"
+# CR1 自身の出口 (cr1-lere、無線区間へ) の HTB の破棄も数える (2026-10-09 追加)。
+# LER_Ingress の出口だけでは、CR1 経路の先で落ちた AF41 の場所が分からなかったため。
+CR1_PID=$(docker inspect --format '{{.State.Pid}}' CR1 2>/dev/null || echo "")
+echo "  [ok] LER_Ingress PID=${LER_INGRESS_PID} / CR1 PID=${CR1_PID:-なし}"
 
 # ── 経路別の送信量モニター ──────────────────────────────────────────
 # 2026-09-17 追加。マルチパスが実際にどの割合で分配したかを記録する。
@@ -473,17 +476,21 @@ echo "  [ok] 経路別モニター PID=$PATH_MONITOR_PID → $PATH_CSV"
     t_start=$(date +%s)
     declare -A prev
 
-    # HTB クラスドロップ (tc -s class show)
+    # HTB クラスドロップ (tc -s class show)。出力は 機器:インタフェース:クラス:累計
     _poll_tc_drops() {
-        for dev in leri-cr1 leri-cr2 leri-cr3; do
-            nsenter -t "$LER_INGRESS_PID" -n -- tc -s class show dev "$dev" 2>/dev/null \
-                | awk -v d="$dev" '
+        local spec node pid dev
+        for spec in "LER_Ingress:$LER_INGRESS_PID:leri-cr1" "LER_Ingress:$LER_INGRESS_PID:leri-cr2" \
+                    "LER_Ingress:$LER_INGRESS_PID:leri-cr3" "CR1:$CR1_PID:cr1-lere"; do
+            IFS=: read -r node pid dev <<< "$spec"
+            [ -n "$pid" ] || continue
+            nsenter -t "$pid" -n -- tc -s class show dev "$dev" 2>/dev/null \
+                | awk -v n="$node" -v d="$dev" '
                     /class htb 1:1/ { cls="AF41" }
                     /class htb 1:2/ { cls="AF42" }
                     /class htb 1:3/ { cls="AF43" }
                     cls && /dropped/ {
                         for (i=1; i<=NF; i++)
-                            if (index($i, "dropped") > 0) { print d ":" cls ":" $(i+1)+0; break }
+                            if (index($i, "dropped") > 0) { print n ":" d ":" cls ":" $(i+1)+0; break }
                         cls=""
                     }
                 '
@@ -510,8 +517,8 @@ echo "  [ok] 経路別モニター PID=$PATH_MONITOR_PID → $PATH_CSV"
     }
 
     # TC drops 初期化
-    while IFS=: read -r iface cls cnt; do
-        prev["tc:${iface}:${cls}"]=${cnt:-0}
+    while IFS=: read -r node iface cls cnt; do
+        prev["tc:${node}:${iface}:${cls}"]=${cnt:-0}
     done < <(_poll_tc_drops)
     # IP/TX drops 初期化
     IFS=: read -r p_cr1 p_cr2 p_cr3 < <(_get_tx_drops)
@@ -523,11 +530,11 @@ echo "  [ok] 経路別モニター PID=$PATH_MONITOR_PID → $PATH_CSV"
         t=$(( $(date +%s) - t_start ))
 
         # HTB クラスドロップ
-        while IFS=: read -r iface cls cnt; do
-            key="tc:${iface}:${cls}"
+        while IFS=: read -r node iface cls cnt; do
+            key="tc:${node}:${iface}:${cls}"
             delta=$(( ${cnt:-0} - ${prev[$key]:-0} ))
             [ "$delta" -lt 0 ] && delta=0
-            echo "$t,LER_Ingress,$iface,$cls,$delta" >> "$HTB_CSV"
+            echo "$t,$node,$iface,$cls,$delta" >> "$HTB_CSV"
             prev[$key]=${cnt:-0}
         done < <(_poll_tc_drops)
 
