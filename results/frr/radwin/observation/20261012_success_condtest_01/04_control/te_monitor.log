@@ -1,0 +1,54 @@
+[00:38:10] === OSPF-SR TE Monitor 起動 (netlink イベント駆動 / OSPF収束ベース動的ラベル版) ===
+[00:38:10]   検知方式: ip monitor link (netlink) / OSPF障害待ち: 6s / OSPF復旧待ち: 15s
+[00:38:10]   ログ: /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/observation/20261012_running_condtest_01/04_control/te_monitor.log
+[00:38:10]   [SID] OSPF動的取得: LER_Egress=16005
+[00:38:10]   [重み] 動的制御の重みを採用: 13:100:100
+[00:38:10] 経路更新 [wcmp]: CR1(w=13) CR2(w=100) CR3(w=100)
+[00:38:10]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[00:38:10] 初期TE経路設定完了
+[00:38:10]   [netlink] nsenter ip monitor link 起動 PID=1077781 (NS pid=1068198)
+[00:38:10] === 監視ループ開始 (netlink + OSPF ポーリング 二重化) ===
+[00:38:40]   [SID] OSPF動的取得: LER_Egress=16005
+[00:39:10]   [SID] OSPF動的取得: LER_Egress=16005
+[00:39:40]   [SID] OSPF動的取得: LER_Egress=16005
+[00:40:10]   [SID] OSPF動的取得: LER_Egress=16005
+[00:40:42]   [SID] OSPF動的取得: LER_Egress=16005
+[00:41:13]   [SID] OSPF動的取得: LER_Egress=16005
+[00:41:45]   [SID] OSPF動的取得: LER_Egress=16005
+[00:42:15]   [SID] OSPF動的取得: LER_Egress=16005
+[00:42:45]   [SID] OSPF動的取得: LER_Egress=16005
+[00:43:15]   [SID] OSPF動的取得: LER_Egress=16005
+[00:43:45]   [SID] OSPF動的取得: LER_Egress=16005
+[00:44:16]   [SID] OSPF動的取得: LER_Egress=16005
+[00:44:34]   [重み] 動的制御なし → 静的値 6:25:25 を使用
+[00:44:34] ⚖  重みの変化を検知 (13:100:100 → 6:25:25, static) → 経路更新
+[00:44:34]   [SID] OSPF動的取得: LER_Egress=16005
+[00:44:35] 経路更新 [wcmp]: CR1(w=6) CR2(w=25) CR3(w=25)
+[00:44:35]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[00:44:46]   [SID] OSPF動的取得: LER_Egress=16005
+[00:45:16]   [SID] OSPF動的取得: LER_Egress=16005
+[00:45:48]   [SID] OSPF動的取得: LER_Egress=16005
+[00:46:18]   [SID] OSPF動的取得: LER_Egress=16005
+[00:46:48]   [SID] OSPF動的取得: LER_Egress=16005
+[00:46:54]   [重み] 動的制御の重みを採用: 13:100:100
+[00:46:54] ⚖  重みの変化を検知 (6:25:25 → 13:100:100, dynamic) → 経路更新
+[00:46:55]   [SID] OSPF動的取得: LER_Egress=16005
+[00:46:55] 経路更新 [wcmp]: CR1(w=13) CR2(w=100) CR3(w=100)
+[00:46:55]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[00:47:19]   [SID] OSPF動的取得: LER_Egress=16005
+[00:49:55] === OSPF-SR TE Monitor 起動 (netlink イベント駆動 / OSPF収束ベース動的ラベル版) ===
+[00:49:55]   検知方式: ip monitor link (netlink) / OSPF障害待ち: 6s / OSPF復旧待ち: 15s
+[00:49:55]   ログ: /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/observation/20261012_running_condtest_01/04_control/te_monitor.log
+[00:49:55]   [SID] OSPF動的取得: LER_Egress=16005
+[00:49:55]   [重み] 動的制御の重みを採用: 13:100:100
+[00:49:55] 経路更新 [wcmp]: CR1(w=13) CR2(w=100) CR3(w=100)
+[00:49:55]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[00:49:55] 初期TE経路設定完了
+[00:49:55]   [netlink] nsenter ip monitor link 起動 PID=1116953 (NS pid=1068198)
+[00:49:55] === 監視ループ開始 (netlink + OSPF ポーリング 二重化) ===
+[00:50:27]   [SID] OSPF動的取得: LER_Egress=16005
+[00:50:36]   [重み] 動的制御なし → 静的値 6:25:25 を使用
+[00:50:36] ⚖  重みの変化を検知 (13:100:100 → 6:25:25, static) → 経路更新
+[00:50:36]   [SID] OSPF動的取得: LER_Egress=16005
+[00:50:36] 経路更新 [wcmp]: CR1(w=6) CR2(w=25) CR3(w=25)
+[00:50:36]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)

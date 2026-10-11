@@ -503,11 +503,74 @@ class FaultTests(unittest.TestCase):
                 self.assertTrue(req.exists())
                 o.probe = None
                 o.check_fault_request(1000.0)
-            self.assertEqual(started, ["fault:stand30rm-rf"])   # 記号は落とす
+            self.assertEqual(started, ["fault:stand30rm-rf@P"])   # 記号は落とす。条件の既定は P
             self.assertFalse(req.exists())
             import json
             self.assertEqual(json.loads(ack.read_text())["id"], "x1")
             self.assertEqual(o.sched.last_probe, 1000.0)          # このあとの定期の計測も 5 分あける
+
+
+class ConditionTests(unittest.TestCase):
+    def make(self, d):
+        env = dict(os.environ, CR1_BW="2160M", WCMP_W1="6", WCMP_W2="25", WCMP_W3="25")
+        o = obs.Observer(Path(d), env)
+        o.children = {n: obs.Child(n, ["sleep", "30"], Path(d) / "c.log", env)
+                      for n in ("controller", "te_monitor", "odu_logger", "load_client")}
+        o.supervise()
+        return o
+
+    def run_cond(self, cond):
+        with tempfile.TemporaryDirectory() as d:
+            o = self.make(d)
+            calls = []
+            with patch.object(obs.time, "sleep"), \
+                 patch.object(o, "_apply_static", side_effect=lambda routes: calls.append(routes) or 0):
+                o.enter_condition(cond)
+                stopped = {n: c.paused and c.proc is None for n, c in o.children.items()}
+                o.leave_condition()
+                o.supervise()                            # 止めた部品を起動し直す
+                alive = {n: c.alive() for n, c in o.children.items()}
+                restarts = {n: c.restarts for n, c in o.children.items()}
+                for c in o.children.values():
+                    c.stop()
+            ev = [e["event"] for e in csv.DictReader((Path(d) / "06_system" / "events.csv").open())]
+            return stopped, calls, alive, restarts, ev, o
+
+    def test_S_stops_controller_only_and_fixes_htb(self):
+        stopped, calls, alive, restarts, ev, o = self.run_cond("S")
+        self.assertEqual({n for n, v in stopped.items() if v}, {"controller"})
+        self.assertEqual(calls, [False])                 # 経路表は te_monitor が固定の重みへ書き直す
+        self.assertTrue(all(alive.values()))
+        self.assertEqual(set(restarts.values()), {0})    # 止めたのはこちら。再起動に数えない
+        self.assertIn("condition_enter", ev)
+        self.assertIn("condition_leave", ev)
+        self.assertEqual(o.condition, "P")
+
+    def test_N_also_stops_te_monitor_and_fixes_routes(self):
+        stopped, calls, alive, restarts, ev, _ = self.run_cond("N")
+        self.assertEqual({n for n, v in stopped.items() if v}, {"controller", "te_monitor"})
+        self.assertEqual(calls, [True])
+        self.assertTrue(all(alive.values()))
+
+    def test_static_values_come_from_lab_config(self):
+        with tempfile.TemporaryDirectory() as d:
+            o = self.make(d)
+            self.assertEqual(o._static(), (2160, (6, 25, 25)))
+            for c in o.children.values():
+                c.stop()
+
+    def test_fault_request_with_condition_records_reason(self):
+        with tempfile.TemporaryDirectory() as d:
+            o = obs.Observer(Path(d), dict(os.environ))
+            req, ack = Path(d) / "req.json", Path(d) / "ack.json"
+            seen = []
+            with patch.object(obs, "FAULT_REQ", req), patch.object(obs, "FAULT_ACK", ack), \
+                 patch.object(o, "enter_condition", side_effect=lambda c: seen.append(("enter", c))), \
+                 patch.object(o, "start_probe", side_effect=lambda r: (seen.append(("probe", r)),
+                              setattr(o, "probe_info", {"start": 1.0, "reason": r}))):
+                req.write_text('{"id": "a", "label": "stand30", "condition": "N"}')
+                o.check_fault_request(10.0)
+            self.assertEqual(seen, [("enter", "N"), ("probe", "fault:stand30@N")])
 
 
 class EventDetectionTests(unittest.TestCase):

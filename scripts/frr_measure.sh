@@ -489,8 +489,14 @@ echo "  [ok] 経路別モニター PID=$PATH_MONITOR_PID → $PATH_CSV"
                     /class htb 1:2/ { cls="AF42" }
                     /class htb 1:3/ { cls="AF43" }
                     cls && /dropped/ {
+                        # 数値に変換せず、数字だけを取り出して文字列のまま出す。
+                        # mawk は 2^31 を超える数を print で "2.15092e+09" と出し、
+                        # bash の算術がそこで失敗して監視が止まっていた (2026-10-09 06:45〜)。
                         for (i=1; i<=NF; i++)
-                            if (index($i, "dropped") > 0) { print n ":" d ":" cls ":" $(i+1)+0; break }
+                            if (index($i, "dropped") > 0) {
+                                v = $(i+1); gsub(/[^0-9]/, "", v)
+                                print n ":" d ":" cls ":" (v == "" ? 0 : v); break
+                            }
                         cls=""
                     }
                 '
@@ -508,11 +514,12 @@ echo "  [ok] 経路別モニター PID=$PATH_MONITOR_PID → $PATH_CSV"
     }
 
     # /proc/net/snmp から OutNoRoutes を取得
+    # 1 行目の Ip: が項目名、2 行目の Ip: が値。項目名の列の番号で値を取る
+    # (以前は値の行で項目名を探していたため、常に空 = 0 になっていた)
     _get_out_no_routes() {
         awk '
-            /^Ip:/ && NR%2==0 {
-                for(i=1;i<=NF;i++) if($i=="OutNoRoutes"){print $(i); exit}
-            }
+            /^Ip:/ { if (!c) { for (i=1; i<=NF; i++) if ($i=="OutNoRoutes") c=i; next }
+                     print $c; exit }
         ' "$SNMP_LERI" 2>/dev/null || echo 0
     }
 

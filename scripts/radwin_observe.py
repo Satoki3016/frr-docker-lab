@@ -5,6 +5,11 @@
     sudo python3 scripts/radwin_observe.py start      # 観測を始める (裏で動き続ける)
     sudo python3 scripts/radwin_observe.py fault --label stand30   # 障害の実験: すぐに全負荷計測を始め、
                                                       # 通信が始まったら「今、障害を起こす」と表示する
+    sudo python3 scripts/radwin_observe.py fault --label stand30 --condition S   # 比較の条件で 1 回だけ計測
+        P: 今の方式 (優先制御 + 迂回 + 動的制御)
+        S: 動的制御なし (その回だけ制御を止め、整形レート CR1_BW=2160M・重み 6:25:25 に固定。迂回はあり)
+        N: 迂回も動的制御もなし (S に加えて te_monitor も止め、経路表を 6:25:25 に固定)
+        計測が終わると P に戻す。障害を起こさない基準は --label none で測る
     sudo python3 scripts/radwin_observe.py status     # 状態を見る
     sudo python3 scripts/radwin_observe.py stop       # 止める (欠測の検査をして結果名を付け替える)
 
@@ -260,6 +265,7 @@ class Observer:
         self.probe_info: dict = {}
         self.probe_count = 0
         self.report: subprocess.Popen | None = None
+        self.condition = "P"                             # 実行中の計測の条件 (P / S / N)
         self.report_slot = self._report_slot(time.time())   # 起動直後は作らない (次の区切りから)
 
     # 記録
@@ -345,6 +351,7 @@ class Observer:
                        + [wx.get(k, "") for k in PROBE_WEATHER])
         self.event("probe_end", f"{self.probe_info['reason']} code={code} {result}")
         self.probe = None
+        self.leave_condition()
         self.probe_count += 1
         load = self.children["load_client"]
         load.paused = False                              # 次の見張りで起動し直される
@@ -383,10 +390,55 @@ class Observer:
             return
         FAULT_REQ.unlink(missing_ok=True)
         label = re.sub(r"[^A-Za-z0-9_.-]", "", str(req.get("label", "")))[:40] or "fault"
-        self.start_probe(f"fault:{label}")
+        cond = req.get("condition", "P") if req.get("condition") in ("P", "S", "N") else "P"
+        reason = f"fault:{label}@{cond}"
+        if cond != "P":
+            self.enter_condition(cond)
+        self.start_probe(reason)
         self.sched.last_probe = now                      # このあとの定期の計測も 5 分あける
         FAULT_ACK.write_text(json.dumps({"id": req.get("id"), "start": self.probe_info.get("start"),
-                                         "reason": f"fault:{label}"}))
+                                         "reason": reason}))
+
+    # ── 比較の条件 (S・N) ─────────────────────────────────────────
+    def _static(self) -> tuple[int, tuple[int, int, int]]:
+        """設定 (lab_config_c2.sh) の固定値: CR1 の整形レート [Mbps] と重み。"""
+        m = re.fullmatch(r"(\d+)([MG])", self.env.get("CR1_BW", "2160M").strip(), re.I)
+        mbps = int(m.group(1)) * (1000 if m.group(2).upper() == "G" else 1) if m else 2160
+        w = tuple(int(self.env.get(k, d)) for k, d in (("WCMP_W1", 6), ("WCMP_W2", 25), ("WCMP_W3", 25)))
+        return mbps, w
+
+    def _apply_static(self, routes: bool) -> int:
+        """整形レート (と経路表) を固定値に書く。radwin_wcmp_controller の関数をそのまま使う。"""
+        mbps, w = self._static()
+        code = (f"import sys; sys.path.insert(0, {str(SCRIPTS)!r}); import radwin_wcmp_controller as c; "
+                f"ok = c.apply_htb({mbps}); "
+                + (f"_, ok2 = c.apply_weights({w}, c.get_label()); ok = ok and ok2; " if routes else "")
+                + "sys.exit(0 if ok else 1)")
+        return subprocess.run([sys.executable, "-c", code], env=self.env, capture_output=True).returncode
+
+    def enter_condition(self, cond: str) -> None:
+        """S: 制御を止める (止まると重みファイルが消え、te_monitor が固定の重みに戻す) + 整形レートを固定値に。
+        N: さらに te_monitor も止め、経路表も固定値に書く (迂回しない)。"""
+        stop = ["controller"] + (["te_monitor"] if cond == "N" else [])
+        for name in stop:
+            c = self.children[name]
+            c.paused = True
+            c.stop()
+            c.proc = None                                # 止めたのはこちら。再起動の回数に数えない
+        time.sleep(4)                                    # te_monitor が固定の重みへ書き直すのを待つ (S)
+        rc = self._apply_static(routes=(cond == "N"))
+        mbps, w = self._static()
+        self.condition = cond
+        self.event("condition_enter", f"{cond} 停止={','.join(stop)} 整形={mbps}M 重み={w} code={rc}")
+
+    def leave_condition(self) -> None:
+        """P に戻す。止めた部品を再開すると、制御は起動時に容量を測り直して整形レートと重みを書く。"""
+        if self.condition == "P":
+            return
+        for name in ("te_monitor", "controller"):
+            self.children[name].paused = False           # 次の見張りで起動し直される
+        self.event("condition_leave", f"{self.condition} → P")
+        self.condition = "P"
 
     def run(self) -> int:
         self.event("observe_start", str(self.obs))
@@ -695,8 +747,8 @@ def cmd_fault(a) -> int:
     for i in range(a.count):
         rid = f"{time.time():.3f}"
         FAULT_ACK.unlink(missing_ok=True)
-        FAULT_REQ.write_text(json.dumps({"id": rid, "label": a.label}))
-        print(f"[{i + 1}/{a.count}] 全負荷計測を依頼しました ({a.label})。"
+        FAULT_REQ.write_text(json.dumps({"id": rid, "label": a.label, "condition": a.condition}))
+        print(f"[{i + 1}/{a.count}] 全負荷計測を依頼しました ({a.label}、条件 {a.condition})。"
               "ほかの計測の最中なら、終わるまで待ちます (最大 3 分) ...", flush=True)
         ack = _wait(lambda: FAULT_ACK.exists() and json.loads(FAULT_ACK.read_text()).get("id") == rid
                     and json.loads(FAULT_ACK.read_text()), 240)
@@ -711,13 +763,16 @@ def cmd_fault(a) -> int:
         if tb is None:
             print("  (通信の開始を確認できませんでした。開始から約 20 秒後とみなします)")
         print(f"  {time.strftime('%H:%M:%S')} 通信が始まりました (120 秒間)。")
-        print(f"  ▶ 今から約 20 秒後に障害を起こし ({a.label})、通信の終わり (約 100 秒後) までに元に戻してください。")
-        print("    時刻はぴったりでなくてよい (実際の時刻は記録から割り出す)。", flush=True)
+        if a.label == "none":
+            print("  ▶ 基準の計測です。障害は起こさず、窓と三脚に近づかないでください。", flush=True)
+        else:
+            print(f"  ▶ 今から約 20 秒後に障害を起こし ({a.label})、通信の終わり (約 100 秒後) までに元に戻してください。")
+            print("    時刻はぴったりでなくてよい (実際の時刻は記録から割り出す)。", flush=True)
         for mark in (20, 60, 100):
             time.sleep(max(0.0, t0 + mark - time.time()))
-            print(f"  {time.strftime('%H:%M:%S')} 通信開始から {mark} 秒"
-                  + (" ← このあたりで障害を起こす" if mark == 20 else " ← これまでに元に戻す" if mark == 100 else ""),
-                  flush=True)
+            hint = "" if a.label == "none" else (" ← このあたりで障害を起こす" if mark == 20
+                                                  else " ← これまでに元に戻す" if mark == 100 else "")
+            print(f"  {time.strftime('%H:%M:%S')} 通信開始から {mark} 秒{hint}", flush=True)
         done = _wait(lambda: not json.loads((lay.sub(obs, lay.SYSTEM) / "status.json").read_text())
                      .get("probe_running"), 120, 1.0)
         rows = list(csv.DictReader((loaddir / "probes.csv").open())) if (loaddir / "probes.csv").exists() else []
@@ -783,6 +838,8 @@ def main() -> int:
     fa.add_argument("--label", required=True, help="障害の種類 (英数字。例 stand5, stand30, wet1)")
     fa.add_argument("--count", type=int, default=1, help="続けて行う回数 (窓が乾くまで追うときなど)")
     fa.add_argument("--every", type=float, default=300, help="--count のときの間隔 [秒] (既定 5 分)")
+    fa.add_argument("--condition", choices=["P", "S", "N"], default="P",
+                    help="P 今の方式 / S 動的制御なし / N 迂回も動的制御もなし (その回だけ)")
     d = sub.add_parser("_daemon")
     d.add_argument("obs")
     d.add_argument("--fake-odu-dir", default=None)

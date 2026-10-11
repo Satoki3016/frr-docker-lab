@@ -1,0 +1,38 @@
+time,event,detail
+1791733090.395,observe_start,/home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/observation/20261012_running_condtest_01
+1791733090.396,child_start,te_monitor pid=1077484
+1791733090.396,child_start,controller pid=1077485
+1791733090.397,child_start,odu_logger pid=1077486
+1791733090.397,child_start,state_logger pid=1077488
+1791733090.398,child_start,load_server pid=1077490
+1791733090.399,child_start,weather_logger pid=1077491
+1791733090.399,child_start,nowcast_logger pid=1077492
+1791733090.400,child_start,ping_logger pid=1077493
+1791733092.402,load_pause,全負荷計測のため軽い負荷を止める
+1791733095.405,probe_start,start
+1791733227.013,probe_end,start code=0 success
+1791733227.013,load_resume,
+1791733229.018,child_start,load_client pid=1087234
+1791733297.136,load_pause,全負荷計測のため軽い負荷を止める
+1791733300.141,probe_start,fault:none@P
+1791733431.761,probe_end,fault:none@P code=0 success
+1791733431.761,load_resume,
+1791733433.766,child_start,load_client pid=1099121
+1791733477.920,condition_enter,"S 停止=controller 整形=2160M 重み=(6, 25, 25) code=0"
+1791733477.921,load_pause,全負荷計測のため軽い負荷を止める
+1791733480.926,probe_start,fault:none@S
+1791733612.470,probe_end,fault:none@S code=0 success
+1791733612.470,condition_leave,S → P
+1791733612.470,load_resume,
+1791733614.474,child_start,controller pid=1110253
+1791733614.475,child_start,load_client pid=1110254
+1791733658.662,condition_enter,"N 停止=controller,te_monitor 整形=2160M 重み=(6, 25, 25) code=0"
+1791733658.663,load_pause,全負荷計測のため軽い負荷を止める
+1791733661.666,probe_start,fault:none@N
+1791733793.174,probe_end,fault:none@N code=0 success
+1791733793.174,condition_leave,N → P
+1791733793.174,load_resume,
+1791733795.178,child_start,te_monitor pid=1116720
+1791733795.179,child_start,controller pid=1116721
+1791733795.180,child_start,load_client pid=1116723
+1791733834.247,observe_stop,
