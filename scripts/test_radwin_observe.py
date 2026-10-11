@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import csv
 import os
+import re
 from pathlib import Path
 import subprocess
 import sys
@@ -739,10 +740,10 @@ class PPrimeTests(unittest.TestCase):
         calls = []
         ctl = self.ctl
         with patch.object(ctl, "apply_htb", side_effect=lambda m: calls.append(("htb", m)) or True), \
-             patch.object(ctl, "publish_weights", side_effect=lambda w, m: calls.append(("publish", w[0]))), \
+             patch.object(ctl, "publish_weights", side_effect=lambda w, m, af41_w1=None: calls.append(("publish", w[0]))), \
              patch.object(ctl, "notify_te_monitor", side_effect=lambda: calls.append(("notify",)) or True), \
-             patch.object(ctl, "wait_route_w1", side_effect=lambda w1: calls.append(("wait", w1)) or 0.3), \
-             patch.object(ctl, "apply_route", side_effect=lambda m, l: calls.append(("route", m)) or ((0, 0, 0), True)), \
+             patch.object(ctl, "wait_routes", side_effect=lambda e: calls.append(("wait", e[41])) or 0.3), \
+             patch.object(ctl, "apply_route", side_effect=lambda m, l, a=None: calls.append(("route", m)) or ((0, 0, 0), True)), \
              patch.object(ctl, "te_monitor_owns_routes", return_value=(owner == "te_monitor")):
             ww, ok, who = self.make()._apply_capacity(target)
         return calls, ww, ok, who
@@ -821,3 +822,115 @@ class PPrimeTests(unittest.TestCase):
             self.assertEqual(o.children["controller"].restarts, 0)
             for c in o.children.values():
                 c.stop()
+
+
+class Af41GuardTests(unittest.TestCase):
+    """条件 P3: CR1 に乗る AF41 が溢れる確率が閾値を超える容量では、AF41 の表だけ CR1 を外す。"""
+
+    def setUp(self):
+        import radwin_wcmp_controller as ctl
+        self.ctl = ctl
+
+    def test_cap_is_rate_minus_lower_class_guarantees(self):
+        self.assertAlmostEqual(self.ctl.af41_cap(1171), 1171 * 67 / 70)
+
+    def test_risk_matches_binomial(self):
+        ctl = self.ctl
+        # MCS 9 (整形 1171M・重み 13): 8 本まで収まり、9 本以上は 1.54% (実機の基準計測の 1.6% と一致)
+        self.assertAlmostEqual(ctl.af41_overflow_risk(1171, ctl.weights_for(1171)), 0.0154, places=4)
+        # MCS 1 (180M・重み 2): 1 本まで。2 本以上は 13%
+        self.assertAlmostEqual(ctl.af41_overflow_risk(180, ctl.weights_for(180)), 0.1325, places=4)
+        self.assertEqual(ctl.af41_overflow_risk(180, (0, 100, 100)), 0.0)
+
+    def test_guard_keeps_cr1_at_normal_capacity_and_removes_when_small(self):
+        ctl = self.ctl
+        for mbps, want in ((2162, 24), (1171, 13), (1081, 12), (450, 0), (360, 0), (180, 0)):
+            self.assertEqual(ctl.af41_w1(mbps, ctl.weights_for(mbps), 0.05), want, mbps)
+        self.assertIsNone(ctl.af41_w1(180, ctl.weights_for(180), None))   # 判定しない条件
+
+    def run_p3(self, current, target):
+        ctl, calls = self.ctl, []
+        args = ctl.parse_args(["--pprime", "--af41-guard", "0.05"])
+        c = ctl.Controller(args, "16005", csv.writer(open(os.devnull, "w")))
+        c.current = current
+        with patch.object(ctl, "apply_htb", side_effect=lambda m: calls.append(("htb", m)) or True), \
+             patch.object(ctl, "publish_weights",
+                          side_effect=lambda w, m, af41_w1=None: calls.append(("publish", w[0], af41_w1))), \
+             patch.object(ctl, "notify_te_monitor", return_value=True), \
+             patch.object(ctl, "wait_routes", side_effect=lambda e: calls.append(("wait", e)) or 0.3), \
+             patch.object(ctl, "te_monitor_owns_routes", return_value=True):
+            c._apply_capacity(target)
+        return calls
+
+    def test_p3_removes_af41_before_narrowing_htb(self):
+        self.assertEqual(self.run_p3(1171, 180),
+                         [("publish", 2, 0), ("wait", {41: 0, 42: 2}), ("htb", 180)])
+
+    def test_p3_restores_af41_after_widening_htb(self):
+        self.assertEqual(self.run_p3(180, 1171),
+                         [("htb", 1171), ("publish", 13, 13), ("wait", {41: 13, 42: 13})])
+
+    def test_publish_writes_af41_line_only_when_given(self):
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "w.env"
+            with patch.object(self.ctl, "WEIGHTS_FILE", str(f)):
+                self.ctl.publish_weights((2, 100, 100), 180, af41_w1=0)
+                self.assertIn("W1_AF41=0\n", f.read_text())
+                self.ctl.publish_weights((2, 100, 100), 180)
+                self.assertNotIn("W1_AF41", f.read_text())
+
+    def test_apply_weights_drops_cr1_only_from_table_41(self):
+        cmds = []
+        with patch.object(self.ctl, "sh", side_effect=lambda c: cmds.append(c) or (0, "")):
+            self.ctl.apply_weights((2, 100, 100), "16005", af41_w1=0)
+        by_table = {c[c.index("table") + 1]: " ".join(c) for c in cmds}
+        self.assertNotIn("leri-cr1", by_table["41"])
+        self.assertIn("leri-cr1 weight 2", by_table["42"])
+        self.assertIn("leri-cr1 weight 2", by_table["43"])
+
+    def load_weights_in_bash(self, content):
+        text = (SCRIPTS / "frr_te_monitor.sh").read_text()
+        func = re.search(r"^_load_weights\(\) \{.*?^\}", text, re.S | re.M).group(0)
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "w.env"
+            if content is not None:
+                f.write_text(content.replace("NOW", str(int(time.time()))))
+            script = (f'log() {{ :; }}; WEIGHTS_FILE={f}; WEIGHTS_MAX_AGE=30; WCMP_W1=6; WCMP_W2=25; WCMP_W3=25\n'
+                      f'{func}\n_load_weights; echo "$_dw1 $_dw1a"')
+            return subprocess.run(["bash", "-c", script], capture_output=True, text=True).stdout.split()
+
+    def test_te_monitor_reads_af41_weight(self):
+        self.assertEqual(self.load_weights_in_bash("TS=NOW\nW1=2\nW2=100\nW3=100\nW1_AF41=0\n"), ["2", "0"])
+        self.assertEqual(self.load_weights_in_bash("TS=NOW\nW1=13\nW2=100\nW3=100\n"), ["13", "13"])
+        self.assertEqual(self.load_weights_in_bash("TS=1\nW1=2\nW2=100\nW3=100\nW1_AF41=0\n"), ["6", "6"])  # 古い
+        self.assertEqual(self.load_weights_in_bash(None), ["6", "6"])
+
+    def test_te_monitor_keeps_af41_route_when_wired_paths_are_down(self):
+        text = (SCRIPTS / "frr_te_monitor.sh").read_text()
+        self.assertIn('if [ -z "$_nh41" ] && [ -n "$_nh" ]; then', text)
+
+    def test_observer_condition_p3(self):
+        import radwin_observe as ob
+        self.assertIn("P3", ob.CONDITIONS)
+        self.assertEqual(ob.PPRIME_ARGS["P3"][-2:], ["--af41-guard", "0.05"])
+
+
+class ShortProbeTests(unittest.TestCase):
+    """veth の確認を短くする設定 (--probe-seconds / --no-start-probe)。"""
+
+    def test_probe_seconds_read_from_run_info(self):
+        with tempfile.TemporaryDirectory() as d:
+            (Path(d) / "06_system").mkdir()
+            self.assertEqual(obs._probe_seconds(Path(d)), 120)               # run.info なし → 既定
+            (Path(d) / "06_system" / "run.info").write_text("git=x\nprobe_seconds=60\nperiod=900\n")
+            self.assertEqual(obs._probe_seconds(Path(d)), 60)
+
+    def test_start_rejects_short_probe_on_real_machine(self):
+        text = (SCRIPTS / "radwin_observe.py").read_text()
+        self.assertIn('(a.probe_seconds != PROBE_SECONDS or a.no_start_probe) and not a.fake_odu_dir', text)
+
+    def test_pprimetest_uses_short_probe(self):
+        text = (SCRIPTS / "radwin_observe_pprimetest.sh").read_text()
+        self.assertIn("--probe-seconds 60 --no-start-probe", text)
+        self.assertNotIn("sleep 200", text)
+

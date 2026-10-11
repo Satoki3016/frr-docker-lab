@@ -50,16 +50,19 @@ WEIGHTS_FILE="${RADWIN_WEIGHTS_FILE:-/run/radwin/weights.env}"
 # 間隔 2s ≈ 15s) より長くすること。短いと、無線断で SSH が詰まっている間に
 # 静的値へ戻り、外したはずの CR1 を経路に戻してしまう (2026-09-25 実機で発生)。
 WEIGHTS_MAX_AGE="${RADWIN_WEIGHTS_MAX_AGE:-30}"
-_dw1=""; _dw2=""; _dw3=""; _dw_src=""; _applied_sig=""
+# W1_AF41 (任意) は AF41 の表 (table 41) だけの CR1 の重み。0 なら AF41 だけ CR1 を外す
+# (制御の条件 P3: CR1 の容量が小さく、AF41 が溢れる確率が高いとき)。無ければ W1 と同じ。
+_dw1=""; _dw2=""; _dw3=""; _dw1a=""; _dw_src=""; _applied_sig=""
 
 _load_weights() {
     local src="static" w1="${WCMP_W1:-1}" w2="${WCMP_W2:-10}" w3="${WCMP_W3:-10}"
-    local TS="" W1="" W2="" W3="" line age
+    local w1a="" TS="" W1="" W2="" W3="" W1_AF41="" line age
     if [ -r "$WEIGHTS_FILE" ]; then
         src="stale"
         while IFS= read -r line || [ -n "$line" ]; do
-            [[ "$line" =~ ^(TS|W1|W2|W3)=([0-9]+)$ ]] || continue
+            [[ "$line" =~ ^(TS|W1|W2|W3|W1_AF41)=([0-9]+)$ ]] || continue
             case "${BASH_REMATCH[1]}" in
+                W1_AF41) W1_AF41="${BASH_REMATCH[2]}" ;;
                 TS) TS="${BASH_REMATCH[2]}" ;;
                 W1) W1="${BASH_REMATCH[2]}" ;;
                 W2) W2="${BASH_REMATCH[2]}" ;;
@@ -73,6 +76,9 @@ _load_weights() {
                && (( 10#$W2 >= 1 && 10#$W2 <= 255 )) \
                && (( 10#$W3 >= 1 && 10#$W3 <= 255 )); then
                 src="dynamic"; w1=$((10#$W1)); w2=$((10#$W2)); w3=$((10#$W3))
+                if [ -n "$W1_AF41" ] && (( 10#$W1_AF41 <= 255 )); then
+                    w1a=$((10#$W1_AF41))
+                fi
             fi
         fi
     fi
@@ -83,7 +89,7 @@ _load_weights() {
             static)  log "  [重み] 動的制御なし → 静的値 ${w1}:${w2}:${w3} を使用" ;;
         esac
     fi
-    _dw1=$w1; _dw2=$w2; _dw3=$w3; _dw_src=$src
+    _dw1=$w1; _dw2=$w2; _dw3=$w3; _dw1a=${w1a:-$w1}; _dw_src=$src
     return 0
 }
 
@@ -212,6 +218,13 @@ _best_cr_via() {
     echo ""
 }
 
+# 重みの比較と記録に使う表記。AF41 の CR1 が別の重みのときだけ「 AF41=n」を付ける
+_weights_sig() {
+    local sig="${_dw1}:${_dw2}:${_dw3}"
+    [ "$_dw1a" != "$_dw1" ] && sig="${sig} AF41=${_dw1a}"
+    echo "$sig"
+}
+
 update_tables() {
     refresh_labels
 
@@ -257,24 +270,35 @@ update_tables() {
     # これが「無線が劣化/断したら有線側へ流す」機構の本体。
     local _mode="${ROUTE_MODE:-primary}"
     if [ "$_mode" = "ecmp" ] || [ "$_mode" = "wcmp" ]; then
-        local _w1=1 _w2=1 _w3=1
+        local _w1=1 _w2=1 _w3=1 _w1a=1
         if [ "$_mode" = "wcmp" ]; then
             _load_weights
-            _w1=$_dw1; _w2=$_dw2; _w3=$_dw3
-            _applied_sig="${_w1}:${_w2}:${_w3}"
+            _w1=$_dw1; _w2=$_dw2; _w3=$_dw3; _w1a=$_dw1a
+            _applied_sig="$(_weights_sig)"
+        else
+            _w1a=$_w1
         fi
         local _ws=("$_w1" "$_w2" "$_w3")
-        local _nh="" _up=""
+        local _nh="" _nh41="" _up=""
         for i in 0 1 2; do
             [ "${state[$i]}" -eq 0 ] || continue
+            local _vd="${cr_vias[$i]}" _wa="${_ws[$i]}"
+            [ "$i" -eq 0 ] && _wa=$_w1a
+            # AF41 の表 (table 41)。CR1 だけ W1_AF41 で別に決められる
+            [ "$_wa" -gt 0 ] && _nh41="${_nh41} nexthop encap mpls ${lbl} via ${_vd% *} dev ${_vd#* } weight ${_wa}"
             [ "${_ws[$i]}" -gt 0 ] || { _up="${_up} ${cr_names[$i]}(w=0:除外)"; continue; }
-            local _vd="${cr_vias[$i]}"
             _nh="${_nh} nexthop encap mpls ${lbl} via ${_vd% *} dev ${_vd#* } weight ${_ws[$i]}"
             _up="${_up} ${cr_names[$i]}(w=${_ws[$i]})"
         done
+        # 有線が両方 down で AF41 の行き先が無くなるときは、外すより CR1 に流すほうがよい
+        if [ -z "$_nh41" ] && [ -n "$_nh" ]; then
+            _nh41=$_nh; _w1a=$_w1
+        fi
+        [ "$_w1a" != "$_w1" ] && [ "${state[0]}" -eq 0 ] && _up="${_up} / AF41 は CR1(w=${_w1a}$([ "$_w1a" -eq 0 ] && echo ':除外'))"
         if [ -n "$_nh" ]; then
             docker exec LER_Ingress bash -c "
-                for tbl in 41 42 43; do
+                ip route replace table 41 10.20.0.0/16${_nh41} 2>/dev/null || true
+                for tbl in 42 43; do
                     ip route replace table \$tbl 10.20.0.0/16${_nh} 2>/dev/null || true
                 done
             " 2>/dev/null || true
@@ -460,8 +484,8 @@ while true; do
     # OSPF の確認 (vtysh、約 0.5〜1 秒) より先に行い、重みの反映を遅らせない。
     if [ "${ROUTE_MODE:-primary}" = "wcmp" ]; then
         _load_weights
-        if [ "${_dw1}:${_dw2}:${_dw3}" != "$_applied_sig" ]; then
-            log "⚖  重みの変化を検知 (${_applied_sig:-未設定} → ${_dw1}:${_dw2}:${_dw3}, ${_dw_src}) → 経路更新"
+        if [ "$(_weights_sig)" != "$_applied_sig" ]; then
+            log "⚖  重みの変化を検知 (${_applied_sig:-未設定} → $(_weights_sig), ${_dw_src}) → 経路更新"
             update_tables
         fi
     fi

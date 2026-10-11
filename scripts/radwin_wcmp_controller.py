@@ -131,17 +131,63 @@ def weights_for(mbps: int) -> tuple[int, int, int]:
     return w1, 100, 100
 
 
-def apply_route(mbps: int, label: str = "16005") -> tuple[tuple[int, int, int], bool]:
-    return apply_weights(weights_for(mbps), label)
+# ── AF41 の振り分けの判定 (条件 P3) ──────────────────────────────────
+# 経路の振り分けはフロー単位のハッシュなので、CR1 に乗る AF41 のフロー数は重みどおりにならず
+# ばらつく (二項分布)。CR1 の容量が小さいと、少し多めに乗っただけで AF41 が HTB で溢れ、
+# 容量が落ちている間ずっと落ち続ける (2026-10-12 veth: 重み 2 で 3 本残り 0.71%)。
+# そこで「溢れる確率」が閾値を超える容量では、AF41 の表 (table 41) だけ CR1 を外す。
+# AF42 / AF43 は CR1 を使い続けるので、無線の容量は無駄にならない。
+AF41_FLOWS = int(os.environ.get("RADWIN_AF41_FLOWS", "64"))        # iperf3 -P (lab_config_c2.sh)
+FLOW_MBPS = float(os.environ.get("RADWIN_FLOW_MBPS", "125"))       # iperf3 -b 125000K
 
 
-def apply_weights(w: tuple[int, int, int], label: str = "16005") -> tuple[tuple[int, int, int], bool]:
-    """経路表に重みを書く。重み 0 の経路は nexthop から外す (Linux は weight 0 を受け付けない)。"""
+def af41_cap(mbps: float) -> float:
+    """CR1 で AF41 が使える上限 [Mbps]。整形レートから AF42 / AF43 の保証 rate を引いた残り (C × 67/70)。"""
+    return mbps * (1 - (WRR[1] + WRR[2]) / sum(WRR) / GUARANTEE_DIV)
+
+
+def af41_overflow_risk(mbps: float, w: tuple[int, int, int]) -> float:
+    """CR1 に乗る AF41 のフローが上限を超える確率。
+
+    各フローが CR1 に乗る確率 q = w1 / (w1 + w2 + w3)、乗る本数 X は二項分布 B(AF41_FLOWS, q)。
+    上限に収まる本数 k = floor(上限 / 1 本の速さ)。溢れる確率 = P(X > k)。
+    """
+    from math import comb
+    if w[0] <= 0:
+        return 0.0
+    q = w[0] / sum(w)
+    k = int(af41_cap(mbps) // FLOW_MBPS)
+    if k >= AF41_FLOWS:
+        return 0.0
+    return max(0.0, 1 - sum(comb(AF41_FLOWS, i) * q ** i * (1 - q) ** (AF41_FLOWS - i) for i in range(k + 1)))
+
+
+def _a41(w: int | None) -> dict:
+    """AF41 の表の重みを渡す引数。判定しない条件 (None) では何も渡さない (P / P2 と同じ呼び出し)。"""
+    return {} if w is None else {"af41_w1": w}
+
+
+def af41_w1(mbps: float, w: tuple[int, int, int], limit: float | None) -> int | None:
+    """AF41 の表の CR1 の重み。判定しない (limit が None) なら None (= 全クラス同じ重み)。"""
+    if limit is None:
+        return None
+    return 0 if af41_overflow_risk(mbps, w) > limit else w[0]
+
+
+def apply_route(mbps: int, label: str = "16005", af41_w1: int | None = None) -> tuple[tuple[int, int, int], bool]:
+    return apply_weights(weights_for(mbps), label, af41_w1)
+
+
+def apply_weights(w: tuple[int, int, int], label: str = "16005",
+                  af41_w1: int | None = None) -> tuple[tuple[int, int, int], bool]:
+    """経路表に重みを書く。重み 0 の経路は nexthop から外す (Linux は weight 0 を受け付けない)。
+    af41_w1 を渡すと、table 41 (AF41) の CR1 だけその重みにする。"""
     ok = True
     for tbl in TABLES:
         cmd = ["ip", "netns", "exec", "LER_Ingress", "ip", "route", "replace",
                "table", str(tbl), "10.20.0.0/16"]
-        for (via, dev), wt in zip(NEXTHOPS, w):
+        ws = (af41_w1, *w[1:]) if tbl == 41 and af41_w1 is not None else w
+        for (via, dev), wt in zip(NEXTHOPS, ws):
             if wt <= 0:
                 continue
             cmd += ["nexthop", "encap", "mpls", label, "via", via,
@@ -175,20 +221,20 @@ def notify_te_monitor() -> bool:
         return False
 
 
-def route_w1() -> int | None:
-    """table 41 の CR1 (leri-cr1) の重み。CR1 が経路に無ければ 0、読めなければ None。"""
-    code, out = sh(["ip", "netns", "exec", "LER_Ingress", "ip", "route", "show", "table", "41"])
+def route_w1(table: int = 41) -> int | None:
+    """経路表の CR1 (leri-cr1) の重み。CR1 が経路に無ければ 0、読めなければ None。"""
+    code, out = sh(["ip", "netns", "exec", "LER_Ingress", "ip", "route", "show", "table", str(table)])
     if code != 0:
         return None
     m = re.search(r"dev leri-cr1(?: weight (\d+))?", out)
     return (int(m.group(1)) if m.group(1) else 1) if m else 0
 
 
-def wait_route_w1(w1: int, timeout: float = 2.0, step: float = 0.1) -> float | None:
-    """経路表の CR1 の重みが w1 になるまで待つ。かかった秒数、時間切れなら None。"""
+def wait_routes(expect: dict[int, int], timeout: float = 2.0, step: float = 0.1) -> float | None:
+    """経路表の CR1 の重みが {表: 重み} のとおりになるまで待つ。かかった秒数、時間切れなら None。"""
     t0 = time.monotonic()
     while time.monotonic() - t0 < timeout:
-        if route_w1() == w1:
+        if all(route_w1(t) == w for t, w in expect.items()):
             return time.monotonic() - t0
         time.sleep(step)
     return None
@@ -239,7 +285,7 @@ def te_monitor_owns_routes() -> bool:
 _publish_warned = False
 
 
-def publish_weights(w: tuple[int, int, int], mbps: int) -> None:
+def publish_weights(w: tuple[int, int, int], mbps: int, af41_w1: int | None = None) -> None:
     """適用中の重みを te_monitor に公開する。
 
     毎ポーリングで書き直す (TS が生存信号を兼ねる)。te_monitor は TS が古ければ
@@ -252,7 +298,8 @@ def publish_weights(w: tuple[int, int, int], mbps: int) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         tmp = path.with_name("." + path.name + ".tmp")
         tmp.write_text(f"TS={int(time.time())}\nW1={w[0]}\nW2={w[1]}\nW3={w[2]}\n"
-                       f"CR1_BW_MBPS={mbps}\n")
+                       f"CR1_BW_MBPS={mbps}\n"
+                       + (f"W1_AF41={af41_w1}\n" if af41_w1 is not None else ""))
         os.replace(tmp, path)
     except OSError as e:
         if not _publish_warned:
@@ -454,8 +501,12 @@ class Controller:
         ok_h = apply_htb(target)
         if te_monitor_owns_routes():
             return weights_for(target), ok_h, "te_monitor"
-        ww, ok_r = apply_route(target, self.label)
+        ww, ok_r = apply_route(target, self.label, **_a41(self._af41_w1(target)))
         return ww, ok_h and ok_r, "self"
+
+    def _af41_w1(self, mbps: int) -> int | None:
+        """P3: AF41 の表の CR1 の重み (外すなら 0)。判定しない条件では None。"""
+        return af41_w1(mbps, weights_for(mbps), getattr(self.args, "af41_guard", None))
 
     def _apply_capacity_ordered(self, target: int) -> tuple[tuple[int, int, int], bool, str]:
         """P′: 下げるときは経路が先、上げるときは HTB が先。
@@ -464,15 +515,20 @@ class Controller:
         その間、CR1 に振り分けられたままの AF41 が、絞った HTB で溢れていた (2026-10-05 18:16)。
         """
         ww = weights_for(target)
+        a1 = self._af41_w1(target)
         owner = "te_monitor" if te_monitor_owns_routes() else "self"
+        if a1 is not None and (a1 == 0) != (self._af41_w1(self.current) == 0):
+            print(f"  [P3] AF41 の CR1 を{'外す' if a1 == 0 else '戻す'} "
+                  f"(溢れる確率 {af41_overflow_risk(target, ww):.1%}、閾値 {self.args.af41_guard:.1%})")
 
         def route() -> bool:
             if owner == "self":
-                return apply_route(target, self.label)[1]
-            publish_weights(ww, target)
+                return apply_route(target, self.label, **_a41(a1))[1]
+            publish_weights(ww, target, **_a41(a1))
             notify_te_monitor()
-            took = wait_route_w1(ww[0])
-            print(f"  [P′] 経路の重み {ww[0]} の反映 "
+            expect = {41: ww[0]} if a1 is None else {41: a1, 42: ww[0]}
+            took = wait_routes(expect)
+            print(f"  [P′] 経路の重み {ww[0]}{'' if a1 is None else f' (AF41 {a1})'} の反映 "
                   + (f"{took:.2f} 秒" if took is not None else "を確認できず (2 秒で打ち切り)"))
             return True                            # 反映の確認は記録用。確認できなくても HTB は進める
 
@@ -504,7 +560,7 @@ class Controller:
         if self.link_down:
             publish_weights(LINK_DOWN_WEIGHTS, 0)
         elif self.current is not None:
-            publish_weights(weights_for(self.current), self.current)
+            publish_weights(weights_for(self.current), self.current, **_a41(self._af41_w1(self.current)))
 
     # ── 記録 ────────────────────────────────────────────────────────
     def _write(self, h1: dict, h2: dict, est, target, applied, w1, action) -> None:
@@ -529,6 +585,9 @@ def parse_args(argv=None):
                     help="改良版 P′: 容量を下げるときは経路の重みを先に変えてから HTB を絞る")
     ap.add_argument("--efficiency-table", default=None,
                     help="MCS ごとの効率の表 (JSON)。容量 = 小さいほうの区間の PHY × その MCS の効率")
+    ap.add_argument("--af41-guard", type=float, default=None, metavar="RISK",
+                    help="P3: CR1 に乗る AF41 が溢れる確率がこれを超える容量では、AF41 だけ CR1 から外す "
+                         "(例 0.05。MCS 8 以上 (整形 1081M〜) は 1.5%% 以下で外れず、MCS 3 以下で外れる)")
     a = ap.parse_args(argv)
     a.eff_table = load_efficiency(a.efficiency_table)
     return a

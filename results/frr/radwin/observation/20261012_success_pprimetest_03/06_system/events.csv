@@ -1,0 +1,102 @@
+time,event,detail
+1791740174.276,observe_start,/home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/observation/20261012_running_pprimetest_03
+1791740174.277,child_start,te_monitor pid=1473029
+1791740174.278,child_start,controller pid=1473030
+1791740174.278,child_start,odu_logger pid=1473031
+1791740174.278,child_start,state_logger pid=1473033
+1791740174.279,child_start,load_server pid=1473035
+1791740174.279,child_start,weather_logger pid=1473036
+1791740174.280,child_start,nowcast_logger pid=1473037
+1791740174.280,child_start,ping_logger pid=1473038
+1791740178.288,child_start,load_client pid=1473415
+1791740200.337,child_start,controller pid=1474174
+1791740208.345,condition_enter,P2 制御を --pprime --efficiency-table /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/scripts/radwin_mcs_efficiency.json で起動し直した
+1791740208.346,load_pause,全負荷計測のため軽い負荷を止める
+1791740211.350,probe_start,fault:degrade@P2
+1791740282.879,probe_end,fault:degrade@P2 code=0 success
+1791740282.896,child_start,controller pid=1480698
+1791740282.896,condition_leave,P2 → P
+1791740282.896,load_resume,
+1791740284.901,child_start,load_client pid=1480788
+1791740320.979,child_start,controller pid=1482123
+1791740328.987,condition_enter,P3 制御を --pprime --efficiency-table /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/scripts/radwin_mcs_efficiency.json --af41-guard 0.05 で起動し直した
+1791740328.991,load_pause,全負荷計測のため軽い負荷を止める
+1791740331.995,probe_start,fault:degrade@P3
+1791740403.536,probe_end,fault:degrade@P3 code=0 success
+1791740403.553,child_start,controller pid=1488725
+1791740403.553,condition_leave,P3 → P
+1791740403.554,load_resume,
+1791740405.558,child_start,load_client pid=1488814
+1791740441.637,child_start,controller pid=1490171
+1791740449.645,condition_enter,P2 制御を --pprime --efficiency-table /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/scripts/radwin_mcs_efficiency.json で起動し直した
+1791740449.649,load_pause,全負荷計測のため軽い負荷を止める
+1791740452.653,probe_start,fault:degrade@P2
+1791740524.151,probe_end,fault:degrade@P2 code=0 success
+1791740524.168,child_start,controller pid=1496786
+1791740524.168,condition_leave,P2 → P
+1791740524.168,load_resume,
+1791740526.173,child_start,load_client pid=1496872
+1791740562.252,child_start,controller pid=1498216
+1791740570.255,condition_enter,P3 制御を --pprime --efficiency-table /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/scripts/radwin_mcs_efficiency.json --af41-guard 0.05 で起動し直した
+1791740570.256,load_pause,全負荷計測のため軽い負荷を止める
+1791740573.261,probe_start,fault:degrade@P3
+1791740644.901,probe_end,fault:degrade@P3 code=0 success
+1791740644.918,child_start,controller pid=1504796
+1791740644.918,condition_leave,P3 → P
+1791740644.918,load_resume,
+1791740646.922,child_start,load_client pid=1504881
+1791740683.001,child_start,controller pid=1506209
+1791740691.010,condition_enter,P2 制御を --pprime --efficiency-table /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/scripts/radwin_mcs_efficiency.json で起動し直した
+1791740691.011,load_pause,全負荷計測のため軽い負荷を止める
+1791740694.015,probe_start,fault:degrade@P2
+1791740765.676,probe_end,fault:degrade@P2 code=0 success
+1791740765.693,child_start,controller pid=1512743
+1791740765.693,condition_leave,P2 → P
+1791740765.693,load_resume,
+1791740767.698,child_start,load_client pid=1512831
+1791740803.776,child_start,controller pid=1514176
+1791740811.784,condition_enter,P3 制御を --pprime --efficiency-table /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/scripts/radwin_mcs_efficiency.json --af41-guard 0.05 で起動し直した
+1791740811.785,load_pause,全負荷計測のため軽い負荷を止める
+1791740814.790,probe_start,fault:degrade@P3
+1791740886.255,probe_end,fault:degrade@P3 code=0 success
+1791740886.272,child_start,controller pid=1520739
+1791740886.272,condition_leave,P3 → P
+1791740886.272,load_resume,
+1791740888.276,child_start,load_client pid=1520824
+1791740924.358,child_start,controller pid=1522176
+1791740932.366,condition_enter,P2 制御を --pprime --efficiency-table /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/scripts/radwin_mcs_efficiency.json で起動し直した
+1791740932.368,load_pause,全負荷計測のため軽い負荷を止める
+1791740935.373,probe_start,fault:degrade@P2
+1791741006.946,probe_end,fault:degrade@P2 code=0 success
+1791741006.962,child_start,controller pid=1528732
+1791741006.962,condition_leave,P2 → P
+1791741006.962,load_resume,
+1791741008.967,child_start,load_client pid=1528820
+1791741045.049,child_start,controller pid=1530156
+1791741053.057,condition_enter,P3 制御を --pprime --efficiency-table /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/scripts/radwin_mcs_efficiency.json --af41-guard 0.05 で起動し直した
+1791741053.058,load_pause,全負荷計測のため軽い負荷を止める
+1791741056.063,probe_start,fault:degrade@P3
+1791741127.557,probe_end,fault:degrade@P3 code=0 success
+1791741127.574,child_start,controller pid=1536833
+1791741127.574,condition_leave,P3 → P
+1791741127.574,load_resume,
+1791741129.579,child_start,load_client pid=1536920
+1791741165.659,child_start,controller pid=1538271
+1791741173.664,condition_enter,P2 制御を --pprime --efficiency-table /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/scripts/radwin_mcs_efficiency.json で起動し直した
+1791741173.665,load_pause,全負荷計測のため軽い負荷を止める
+1791741176.670,probe_start,fault:degrade@P2
+1791741248.107,probe_end,fault:degrade@P2 code=0 success
+1791741248.124,child_start,controller pid=1544869
+1791741248.124,condition_leave,P2 → P
+1791741248.124,load_resume,
+1791741250.129,child_start,load_client pid=1544957
+1791741286.209,child_start,controller pid=1546292
+1791741294.218,condition_enter,P3 制御を --pprime --efficiency-table /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/scripts/radwin_mcs_efficiency.json --af41-guard 0.05 で起動し直した
+1791741294.221,load_pause,全負荷計測のため軽い負荷を止める
+1791741297.226,probe_start,fault:degrade@P3
+1791741368.855,probe_end,fault:degrade@P3 code=0 success
+1791741368.872,child_start,controller pid=1552843
+1791741368.872,condition_leave,P3 → P
+1791741368.872,load_resume,
+1791741370.877,child_start,load_client pid=1552996
+1791741405.937,observe_stop,

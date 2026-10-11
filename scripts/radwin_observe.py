@@ -11,6 +11,8 @@
         N: 迂回も動的制御もなし (S に加えて te_monitor も止め、経路表を 6:25:25 に固定)
         P2: 改良版 P′ (その回だけ制御を --pprime --efficiency-table で起動し直す。
             容量を下げるときに経路を先に変える + MCS ごとの効率で容量を見積もる)
+        P3: P2 + AF41 の振り分けの判定 (--af41-guard 0.05。CR1 の容量が小さく、乗った AF41 が
+            溢れる確率が 5% を超えるときは、AF41 だけ CR1 から外す。AF42 / AF43 は CR1 を使い続ける)
         計測が終わると P に戻す。障害を起こさない基準は --label none で測る
     sudo python3 scripts/radwin_observe.py status     # 状態を見る
     sudo python3 scripts/radwin_observe.py stop       # 止める (欠測の検査をして結果名を付け替える)
@@ -57,6 +59,10 @@ import time
 from pathlib import Path
 
 SCRIPTS = Path(__file__).resolve().parent
+# 比較の条件。P2 / P3 は制御をこの引数を足して起動し直す
+CONDITIONS = ("P", "P2", "P3", "S", "N")
+_PPRIME = ["--pprime", "--efficiency-table", str(SCRIPTS / "radwin_mcs_efficiency.json")]
+PPRIME_ARGS = {"P2": _PPRIME, "P3": _PPRIME + ["--af41-guard", "0.05"]}
 sys.path.insert(0, str(SCRIPTS))
 import radwin_obs_layout as lay  # noqa: E402
 LAB = SCRIPTS.parent
@@ -392,7 +398,7 @@ class Observer:
             return
         FAULT_REQ.unlink(missing_ok=True)
         label = re.sub(r"[^A-Za-z0-9_.-]", "", str(req.get("label", "")))[:40] or "fault"
-        cond = req.get("condition", "P") if req.get("condition") in ("P", "P2", "S", "N") else "P"
+        cond = req.get("condition", "P") if req.get("condition") in CONDITIONS else "P"
         reason = f"fault:{label}@{cond}"
         if cond != "P":
             self.enter_condition(cond)
@@ -419,23 +425,23 @@ class Observer:
         return subprocess.run([sys.executable, "-c", code], env=self.env, capture_output=True).returncode
 
     def enter_condition(self, cond: str) -> None:
-        if cond == "P2":
-            return self._enter_pprime()
+        if cond in PPRIME_ARGS:
+            return self._enter_pprime(cond)
         self._enter_static(cond)
 
-    def _enter_pprime(self) -> None:
-        """P2: 制御を改良版の設定で起動し直す。起動時に容量を測り直し、整形レートと重みを書く。"""
+    def _enter_pprime(self, cond: str = "P2") -> None:
+        """P2 / P3: 制御を改良版の設定で起動し直す。起動時に容量を測り直し、整形レートと重みを書く。"""
         c = self.children["controller"]
         c.paused = True
         c.stop(sig=signal.SIGUSR2)                       # 重みファイルを残して止める (引き継ぎ)
         c.proc = None
         self._controller_argv = list(c.argv)
-        c.argv = c.argv + ["--pprime", "--efficiency-table", str(SCRIPTS / "radwin_mcs_efficiency.json")]
+        c.argv = c.argv + PPRIME_ARGS[cond]
         c.paused = False
         self.supervise()                                 # すぐ起動する
         time.sleep(8)                                    # 起動して最初の適用 (init) が済むのを待つ
-        self.condition = "P2"
-        self.event("condition_enter", "P2 制御を --pprime --efficiency-table で起動し直した")
+        self.condition = cond
+        self.event("condition_enter", f"{cond} 制御を {' '.join(PPRIME_ARGS[cond])} で起動し直した")
 
     def _enter_static(self, cond: str) -> None:
         """S: 制御を止める (止まると重みファイルが消え、te_monitor が固定の重みに戻す) + 整形レートを固定値に。
@@ -456,7 +462,7 @@ class Observer:
         """P に戻す。止めた部品を再開すると、制御は起動時に容量を測り直して整形レートと重みを書く。"""
         if self.condition == "P":
             return
-        if self.condition == "P2":                       # 元の設定の制御に戻す
+        if self.condition in PPRIME_ARGS:                # 元の設定の制御に戻す
             c = self.children["controller"]
             c.paused = True
             c.stop(sig=signal.SIGUSR2)                   # 重みファイルを残して止める (引き継ぎ)
@@ -635,6 +641,11 @@ def cmd_start(a) -> int:
         sys.exit(f"[NG] {LOAD_PORT} 番の iperf3 (手動の負荷や radwin_live_monitor.py) が動いています。止めてから始めてください")
     if a.fake_odu_dir and _cr1_lere_is_physical():
         sys.exit("[NG] cr1-lere が物理 NIC です (実機の構成)。偽の ODU は veth でしか使えません")
+    # 計測の長さと最初の基準の計測は、実機の観測では変えない (回どうしを比べられなくなる)
+    if (a.probe_seconds != PROBE_SECONDS or a.no_start_probe) and not a.fake_odu_dir:
+        sys.exit("[NG] --probe-seconds と --no-start-probe は veth での確認 (--fake-odu-dir) 専用です")
+    if a.probe_seconds < 40:
+        sys.exit("[NG] --probe-seconds は 40 秒以上にしてください")
     env = lab_env(a.fake_odu_dir)
     # 既知の状態から始める (経路 3 本・HTB・重み 6:25:25)。そのあと前提を確認する
     for step in (["prepare"], ["check"]):
@@ -656,11 +667,13 @@ def cmd_start(a) -> int:
                          capture_output=True, text=True).stdout.strip()
     (obs / lay.SYSTEM / "run.info").write_text(
         f"started_at={time.strftime('%Y-%m-%dT%H:%M:%S%z')}\ngit={rev}\n"
-        f"fake_odu_dir={a.fake_odu_dir or ''}\nprobe_seconds={PROBE_SECONDS}\nperiod={PERIOD:.0f}\nload={LOAD_RATE}\n")
+        f"fake_odu_dir={a.fake_odu_dir or ''}\nprobe_seconds={a.probe_seconds}\nperiod={PERIOD:.0f}\nload={LOAD_RATE}\n")
     RUN_DIR.mkdir(parents=True, exist_ok=True)
     log = (obs / lay.SYSTEM / "supervisor.log").open("a")
     proc = subprocess.Popen([sys.executable, "-u", __file__, "_daemon", str(obs)]
-                            + (["--fake-odu-dir", a.fake_odu_dir] if a.fake_odu_dir else []),
+                            + (["--fake-odu-dir", a.fake_odu_dir] if a.fake_odu_dir else [])
+                            + ["--probe-seconds", str(a.probe_seconds)]
+                            + (["--no-start-probe"] if a.no_start_probe else []),
                             stdout=log, stderr=subprocess.STDOUT, env=env, start_new_session=True)
     PID_FILE.write_text(str(proc.pid))
     DIR_FILE.write_text(str(obs))
@@ -674,6 +687,8 @@ def cmd_start(a) -> int:
 
 
 def cmd_daemon(a) -> int:
+    global PROBE_SECONDS
+    PROBE_SECONDS = a.probe_seconds
     obs = Path(a.obs)
     LOCK_FILE.parent.mkdir(parents=True, exist_ok=True)
     # 既にあれば読み取りで開く。/run/lock は sticky で fs.protected_regular=2 のため、
@@ -688,6 +703,8 @@ def cmd_daemon(a) -> int:
         print("[NG] 別の観測が動いています", flush=True)
         return 1
     ob = Observer(obs, dict(os.environ))
+    if a.no_start_probe:
+        ob.sched.pending = None                          # 最初の基準の計測をしない (veth の確認用)
     signal.signal(signal.SIGTERM, lambda *_: setattr(ob, "stop_flag", True))
     signal.signal(signal.SIGINT, lambda *_: setattr(ob, "stop_flag", True))
     rc = 1
@@ -790,7 +807,7 @@ def cmd_fault(a) -> int:
         t0 = time.time()
         if tb is None:
             print("  (通信の開始を確認できませんでした。開始から約 20 秒後とみなします)")
-        print(f"  {time.strftime('%H:%M:%S')} 通信が始まりました (120 秒間)。")
+        print(f"  {time.strftime('%H:%M:%S')} 通信が始まりました ({_probe_seconds(obs)} 秒間)。")
         if a.label == "none":
             print("  ▶ 基準の計測です。障害は起こさず、窓と三脚に近づかないでください。", flush=True)
         else:
@@ -817,6 +834,15 @@ def cmd_fault(a) -> int:
             print(f"  次の回まで {wait:.0f} 秒待ちます ...", flush=True)
             time.sleep(wait)
     return 0
+
+
+def _probe_seconds(obs: Path) -> int:
+    """この観測の全負荷計測の長さ (run.info)。読めなければ既定値。"""
+    try:
+        m = re.search(r"^probe_seconds=(\d+)$", (lay.sub(obs, lay.SYSTEM) / "run.info").read_text(), re.M)
+        return int(m.group(1)) if m else PROBE_SECONDS
+    except OSError:
+        return PROBE_SECONDS
 
 
 def _af41_loss(path: Path) -> str:
@@ -860,17 +886,24 @@ def main() -> int:
     s.add_argument("--root", type=Path, default=OBS_ROOT)
     s.add_argument("--dir", default=None, help="保存先を直接指定 (確認用)")
     s.add_argument("--fake-odu-dir", default=None, help="veth 確認専用。偽の ODU の応答を置いたフォルダ")
+    s.add_argument("--probe-seconds", type=int, default=PROBE_SECONDS,
+                   help=f"全負荷計測の長さ [秒] (既定 {PROBE_SECONDS})。veth 確認専用")
+    s.add_argument("--no-start-probe", action="store_true",
+                   help="観測の始めの基準の計測をしない。veth 確認専用")
     sub.add_parser("stop")
     sub.add_parser("status")
     fa = sub.add_parser("fault", help="障害の実験: すぐに全負荷計測を始め、障害を起こす合図を出す")
     fa.add_argument("--label", required=True, help="障害の種類 (英数字。例 stand5, stand30, wet1)")
     fa.add_argument("--count", type=int, default=1, help="続けて行う回数 (窓が乾くまで追うときなど)")
     fa.add_argument("--every", type=float, default=300, help="--count のときの間隔 [秒] (既定 5 分)")
-    fa.add_argument("--condition", choices=["P", "P2", "S", "N"], default="P",
-                    help="P 今の方式 / P2 改良版 P′ / S 動的制御なし / N 迂回も動的制御もなし (その回だけ)")
+    fa.add_argument("--condition", choices=list(CONDITIONS), default="P",
+                    help="P 今の方式 / P2 改良版 P′ / P3 P′ + AF41 の振り分けの判定 / "
+                         "S 動的制御なし / N 迂回も動的制御もなし (その回だけ)")
     d = sub.add_parser("_daemon")
     d.add_argument("obs")
     d.add_argument("--fake-odu-dir", default=None)
+    d.add_argument("--probe-seconds", type=int, default=PROBE_SECONDS)
+    d.add_argument("--no-start-probe", action="store_true")
     a = ap.parse_args()
     return {"start": cmd_start, "stop": cmd_stop, "status": cmd_status, "fault": cmd_fault,
             "_daemon": cmd_daemon}[a.cmd](a)
