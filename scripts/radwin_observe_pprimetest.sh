@@ -1,5 +1,5 @@
 #!/bin/bash
-# 改良版 P′ (条件 P2) と今の方式 (P) を、veth で同じ「容量の低下」を起こして比べる。約 17 分。
+# 改良版 P′ (条件 P2) と今の方式 (P) を、veth で同じ「容量の低下」を起こして比べる。約 14 分。
 #
 #   sudo bash scripts/radwin_observe_pprimetest.sh            # P と P2 を比べる
 #   sudo bash scripts/radwin_observe_pprimetest.sh P2 P3      # P2 と P3 (AF41 の振り分けの判定) を比べる

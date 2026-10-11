@@ -807,12 +807,16 @@ class PPrimeTests(unittest.TestCase):
 
     def test_observer_P2_restarts_controller_with_options_and_restores(self):
         with tempfile.TemporaryDirectory() as d:
-            o = obs.Observer(Path(d), dict(os.environ))
-            o.children = {n: obs.Child(n, ["sleep", "30"], Path(d) / "c.log", dict(os.environ))
-                          for n in ("controller", "te_monitor")}
+            env = dict(os.environ, RADWIN_WEIGHTS_FILE=str(Path(d) / "w.env"))
+            o = obs.Observer(Path(d), env)
+            # 偽の制御: 起動すると重みファイルを書き (最初の適用の代わり)、そのまま待つ。足された引数は無視される
+            fake = ["bash", "-c", 'sleep 0.3; touch "$RADWIN_WEIGHTS_FILE"; sleep 30', "ctl"]
+            o.children = {n: obs.Child(n, fake, Path(d) / "c.log", env) for n in ("controller", "te_monitor")}
             o.supervise()
+            t = time.time()
+            o.enter_condition("P2")
+            self.assertLess(time.time() - t, 5)            # 重みファイルが書かれたら待つのをやめる
             with patch.object(obs.time, "sleep"):
-                o.enter_condition("P2")
                 self.assertIn("--pprime", o.children["controller"].argv)
                 self.assertTrue(o.children["controller"].alive())
                 o.leave_condition()
@@ -927,7 +931,7 @@ class ShortProbeTests(unittest.TestCase):
 
     def test_start_rejects_short_probe_on_real_machine(self):
         text = (SCRIPTS / "radwin_observe.py").read_text()
-        self.assertIn('(a.probe_seconds != PROBE_SECONDS or a.no_start_probe) and not a.fake_odu_dir', text)
+        self.assertIn('if a.probe_seconds != PROBE_SECONDS and not a.fake_odu_dir:', text)
 
     def test_pprimetest_uses_short_probe(self):
         text = (SCRIPTS / "radwin_observe_pprimetest.sh").read_text()

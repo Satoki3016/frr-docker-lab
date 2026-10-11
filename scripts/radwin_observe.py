@@ -6,6 +6,7 @@
     sudo python3 scripts/radwin_observe.py fault --label stand30   # 障害の実験: すぐに全負荷計測を始め、
                                                       # 通信が始まったら「今、障害を起こす」と表示する
     sudo python3 scripts/radwin_observe.py fault --label stand30 --condition S   # 比較の条件で 1 回だけ計測
+    sudo python3 scripts/radwin_observe.py fault --label none --condition P,P2,P3,S,N   # 条件を続けて測る
         P: 今の方式 (優先制御 + 迂回 + 動的制御)
         S: 動的制御なし (その回だけ制御を止め、整形レート CR1_BW=2160M・重み 6:25:25 に固定。迂回はあり)
         N: 迂回も動的制御もなし (S に加えて te_monitor も止め、経路表を 6:25:25 に固定)
@@ -438,8 +439,18 @@ class Observer:
         self._controller_argv = list(c.argv)
         c.argv = c.argv + PPRIME_ARGS[cond]
         c.paused = False
+        t = time.time()
         self.supervise()                                 # すぐ起動する
-        time.sleep(8)                                    # 起動して最初の適用 (init) が済むのを待つ
+        # 起動して最初の適用 (init) が済むのを待つ。済むと重みファイルが書き直される
+        # (以前は 8 秒の決め打ち。ふつう 2〜4 秒で済む)。15 秒で打ち切る
+        wf = Path(self.env.get("RADWIN_WEIGHTS_FILE", "/run/radwin/weights.env"))
+        while time.time() - t < 15:
+            try:
+                if wf.stat().st_mtime > t:
+                    break
+            except OSError:
+                pass
+            time.sleep(0.5)
         self.condition = cond
         self.event("condition_enter", f"{cond} 制御を {' '.join(PPRIME_ARGS[cond])} で起動し直した")
 
@@ -642,8 +653,8 @@ def cmd_start(a) -> int:
     if a.fake_odu_dir and _cr1_lere_is_physical():
         sys.exit("[NG] cr1-lere が物理 NIC です (実機の構成)。偽の ODU は veth でしか使えません")
     # 計測の長さと最初の基準の計測は、実機の観測では変えない (回どうしを比べられなくなる)
-    if (a.probe_seconds != PROBE_SECONDS or a.no_start_probe) and not a.fake_odu_dir:
-        sys.exit("[NG] --probe-seconds と --no-start-probe は veth での確認 (--fake-odu-dir) 専用です")
+    if a.probe_seconds != PROBE_SECONDS and not a.fake_odu_dir:
+        sys.exit("[NG] --probe-seconds は veth での確認 (--fake-odu-dir) 専用です")
     if a.probe_seconds < 40:
         sys.exit("[NG] --probe-seconds は 40 秒以上にしてください")
     env = lab_env(a.fake_odu_dir)
@@ -787,13 +798,19 @@ def cmd_fault(a) -> int:
         sys.exit("[NG] 観測が動いていません。先に start してください")
     if not re.fullmatch(r"[A-Za-z0-9_.-]{1,40}", a.label):
         sys.exit("[NG] --label は英数字と _ . - だけ (例 stand30、wet1)")
+    conds = [c.strip() for c in a.condition.split(",") if c.strip()]
+    bad = [c for c in conds if c not in CONDITIONS]
+    if not conds or bad:
+        sys.exit(f"[NG] --condition は {', '.join(CONDITIONS)} をコンマで並べる (例 P2,P3): {', '.join(bad)}")
     obs = Path(DIR_FILE.read_text().strip())
     loaddir = lay.sub(obs, lay.FULLLOAD)
-    for i in range(a.count):
+    length = _probe_seconds(obs)
+    runs = [c for _ in range(a.count) for c in conds]   # 例 --count 2 --condition P2,P3 → P2 P3 P2 P3
+    for i, cond in enumerate(runs):
         rid = f"{time.time():.3f}"
         FAULT_ACK.unlink(missing_ok=True)
-        FAULT_REQ.write_text(json.dumps({"id": rid, "label": a.label, "condition": a.condition}))
-        print(f"[{i + 1}/{a.count}] 全負荷計測を依頼しました ({a.label}、条件 {a.condition})。"
+        FAULT_REQ.write_text(json.dumps({"id": rid, "label": a.label, "condition": cond}))
+        print(f"[{i + 1}/{len(runs)}] 全負荷計測を依頼しました ({a.label}、条件 {cond})。"
               "ほかの計測の最中なら、終わるまで待ちます (最大 3 分) ...", flush=True)
         ack = _wait(lambda: FAULT_ACK.exists() and json.loads(FAULT_ACK.read_text()).get("id") == rid
                     and json.loads(FAULT_ACK.read_text()), 240)
@@ -807,16 +824,19 @@ def cmd_fault(a) -> int:
         t0 = time.time()
         if tb is None:
             print("  (通信の開始を確認できませんでした。開始から約 20 秒後とみなします)")
-        print(f"  {time.strftime('%H:%M:%S')} 通信が始まりました ({_probe_seconds(obs)} 秒間)。")
+        print(f"  {time.strftime('%H:%M:%S')} 通信が始まりました ({length} 秒間)。")
         if a.label == "none":
             print("  ▶ 基準の計測です。障害は起こさず、窓と三脚に近づかないでください。", flush=True)
         else:
-            print(f"  ▶ 今から約 20 秒後に障害を起こし ({a.label})、通信の終わり (約 100 秒後) までに元に戻してください。")
+            print(f"  ▶ 今から約 20 秒後に障害を起こし ({a.label})、通信の終わり (約 {length - 20} 秒後) までに元に戻してください。")
             print("    時刻はぴったりでなくてよい (実際の時刻は記録から割り出す)。", flush=True)
-        for mark in (20, 60, 100):
+        # 合図は計測の長さに合わせる (120 秒なら 20・60・100 秒)。以前は 100 秒の決め打ちで、
+        # 60 秒の計測のあとも約 40 秒むだに待っていた
+        last = length - 20
+        for mark in (20, length // 2, last):
             time.sleep(max(0.0, t0 + mark - time.time()))
             hint = "" if a.label == "none" else (" ← このあたりで障害を起こす" if mark == 20
-                                                  else " ← これまでに元に戻す" if mark == 100 else "")
+                                                  else " ← これまでに元に戻す" if mark == last else "")
             print(f"  {time.strftime('%H:%M:%S')} 通信開始から {mark} 秒{hint}", flush=True)
         done = _wait(lambda: not json.loads((lay.sub(obs, lay.SYSTEM) / "status.json").read_text())
                      .get("probe_running"), 120, 1.0)
@@ -829,10 +849,11 @@ def cmd_fault(a) -> int:
             print(f"    結果: {row['folder']}")
         else:
             print("  (計測の終わりを確認できませんでした。probes.csv を確かめてください)")
-        if i + 1 < a.count:
+        if i + 1 < len(runs):
             wait = max(0.0, start + a.every - time.time())
-            print(f"  次の回まで {wait:.0f} 秒待ちます ...", flush=True)
-            time.sleep(wait)
+            if wait > 0:
+                print(f"  次の回まで {wait:.0f} 秒待ちます ...", flush=True)
+                time.sleep(wait)
     return 0
 
 
@@ -889,16 +910,18 @@ def main() -> int:
     s.add_argument("--probe-seconds", type=int, default=PROBE_SECONDS,
                    help=f"全負荷計測の長さ [秒] (既定 {PROBE_SECONDS})。veth 確認専用")
     s.add_argument("--no-start-probe", action="store_true",
-                   help="観測の始めの基準の計測をしない。veth 確認専用")
+                   help="観測の始めの基準の計測をしない (障害の実験の日など、基準を fault --label none で測るとき)")
     sub.add_parser("stop")
     sub.add_parser("status")
     fa = sub.add_parser("fault", help="障害の実験: すぐに全負荷計測を始め、障害を起こす合図を出す")
     fa.add_argument("--label", required=True, help="障害の種類 (英数字。例 stand5, stand30, wet1)")
     fa.add_argument("--count", type=int, default=1, help="続けて行う回数 (窓が乾くまで追うときなど)")
-    fa.add_argument("--every", type=float, default=300, help="--count のときの間隔 [秒] (既定 5 分)")
-    fa.add_argument("--condition", choices=list(CONDITIONS), default="P",
+    fa.add_argument("--every", type=float, default=0,
+                    help="回の始まりどうしの間隔 [秒]。既定 0 = 前の回が終わったらすぐ (窓が乾くのを追うときは 300 など)")
+    fa.add_argument("--condition", default="P",
                     help="P 今の方式 / P2 改良版 P′ / P3 P′ + AF41 の振り分けの判定 / "
-                         "S 動的制御なし / N 迂回も動的制御もなし (その回だけ)")
+                         "S 動的制御なし / N 迂回も動的制御もなし (その回だけ)。"
+                         "コンマで並べると続けて測る (例 P2,P3。--count 2 なら P2 P3 P2 P3)")
     d = sub.add_parser("_daemon")
     d.add_argument("obs")
     d.add_argument("--fake-odu-dir", default=None)
