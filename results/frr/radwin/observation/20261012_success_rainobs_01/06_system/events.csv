@@ -1,0 +1,47 @@
+time,event,detail
+1791734036.031,observe_start,/home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/observation/20261012_running_rainobs_01
+1791734036.032,child_start,te_monitor pid=1129158
+1791734036.032,child_start,controller pid=1129159
+1791734036.033,child_start,odu_logger pid=1129160
+1791734036.033,child_start,state_logger pid=1129162
+1791734036.034,child_start,load_server pid=1129163
+1791734036.034,child_start,weather_logger pid=1129165
+1791734036.035,child_start,nowcast_logger pid=1129166
+1791734036.036,child_start,ping_logger pid=1129167
+1791734038.039,load_pause,全負荷計測のため軽い負荷を止める
+1791734041.043,probe_start,start
+1791734172.653,probe_end,start code=0 success
+1791734172.653,load_resume,
+1791734172.654,load_pause,全負荷計測のため軽い負荷を止める
+1791734175.658,probe_start,fault:none@P
+1791734307.231,probe_end,fault:none@P code=0 success
+1791734307.231,load_resume,
+1791734309.236,child_start,load_client pid=1149280
+1791734365.418,condition_enter,"S 停止=controller 整形=2160M 重み=(6, 25, 25) code=0"
+1791734365.419,load_pause,全負荷計測のため軽い負荷を止める
+1791734368.424,probe_start,fault:none@S
+1791734500.095,probe_end,fault:none@S code=0 success
+1791734500.095,condition_leave,S → P
+1791734500.095,load_resume,
+1791734502.099,child_start,controller pid=1161287
+1791734502.100,child_start,load_client pid=1161288
+1791734528.241,condition_enter,"N 停止=controller,te_monitor 整形=2160M 重み=(6, 25, 25) code=0"
+1791734528.244,load_pause,全負荷計測のため軽い負荷を止める
+1791734531.249,probe_start,fault:none@N
+1791734662.807,probe_end,fault:none@N code=0 success
+1791734662.808,condition_leave,N → P
+1791734662.808,load_resume,
+1791734664.812,child_start,te_monitor pid=1167516
+1791734664.813,child_start,controller pid=1167517
+1791734664.814,child_start,load_client pid=1167519
+1791734825.089,load_pause,全負荷計測のため軽い負荷を止める
+1791734828.093,probe_start,periodic
+1791734959.623,probe_end,periodic code=0 success
+1791734959.623,load_resume,
+1791734961.628,child_start,load_client pid=1184584
+1791735300.214,load_pause,全負荷計測のため軽い負荷を止める
+1791735303.217,probe_start,periodic
+1791735434.852,probe_end,periodic code=0 success
+1791735434.852,load_resume,
+1791735436.857,child_start,load_client pid=1208247
+1791735945.256,observe_stop,

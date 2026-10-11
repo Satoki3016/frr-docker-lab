@@ -390,11 +390,18 @@ exec 3<>"$MONITOR_FIFO"
 TE_PID_FILE="${RADWIN_TE_PID_FILE:-/run/radwin/te_monitor.pid}"
 mkdir -p "$(dirname "$TE_PID_FILE")" 2>/dev/null && echo $$ > "$TE_PID_FILE" 2>/dev/null \
     || log "  [warn] pidfile を書けない: $TE_PID_FILE (動的制御は経路を自分で書く)"
+# 改良版の制御 (P′) が重みを書いた直後に、この FIFO へ 1 行書いて、下の read -t の待ち
+# (最大 2 秒) をその場で終わらせるための案内 (2026-10-12 追加)。シグナルでは bash 5.1 の
+# read -t は中断されない (trap は動くが read は時間切れまで待ち続ける) ため、この方法にした。
+# P の制御は書かないので、P の動きは変わらない。
+TE_KICK_FILE="$(dirname "$TE_PID_FILE")/te_monitor.kick"
+echo "$MONITOR_FIFO" > "$TE_KICK_FILE" 2>/dev/null || true
 
 _cleanup() {
     rm -f "$MONITOR_FIFO"; kill "$MONITOR_PID" 2>/dev/null || true
     # 後から起動した別の te_monitor の pidfile は消さない
     [ "$(cat "$TE_PID_FILE" 2>/dev/null)" = "$$" ] && rm -f "$TE_PID_FILE"
+    [ "$(cat "$TE_KICK_FILE" 2>/dev/null)" = "$MONITOR_FIFO" ] && rm -f "$TE_KICK_FILE"
     return 0
 }
 # INT/TERM では必ず終了させる。以前は trap _cleanup INT TERM としていたため
@@ -447,12 +454,10 @@ while true; do
         fi
     fi
 
-    # OSPF 隣接ポーリング: netem/iptables 障害 (operstate 変化なし) を補完検知
-    check_ospf_neighbors
-
-    # 動的制御の重みの変化を反映する (約2秒周期)。
+    # 動的制御の重みの変化を反映する (約2秒周期。P′ が FIFO に 1 行書いたときはすぐ)。
     # 比べるのは実際に使う重みだけ。TS は毎回進むので、ファイル全体を
     # 比べると2秒ごとに経路を作り直してしまう。
+    # OSPF の確認 (vtysh、約 0.5〜1 秒) より先に行い、重みの反映を遅らせない。
     if [ "${ROUTE_MODE:-primary}" = "wcmp" ]; then
         _load_weights
         if [ "${_dw1}:${_dw2}:${_dw3}" != "$_applied_sig" ]; then
@@ -460,6 +465,9 @@ while true; do
             update_tables
         fi
     fi
+
+    # OSPF 隣接ポーリング: netem/iptables 障害 (operstate 変化なし) を補完検知
+    check_ospf_neighbors
 
     # ip monitor プロセスが終了していたら再起動
     if ! kill -0 "$MONITOR_PID" 2>/dev/null; then

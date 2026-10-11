@@ -9,6 +9,8 @@
         P: 今の方式 (優先制御 + 迂回 + 動的制御)
         S: 動的制御なし (その回だけ制御を止め、整形レート CR1_BW=2160M・重み 6:25:25 に固定。迂回はあり)
         N: 迂回も動的制御もなし (S に加えて te_monitor も止め、経路表を 6:25:25 に固定)
+        P2: 改良版 P′ (その回だけ制御を --pprime --efficiency-table で起動し直す。
+            容量を下げるときに経路を先に変える + MCS ごとの効率で容量を見積もる)
         計測が終わると P に戻す。障害を起こさない基準は --label none で測る
     sudo python3 scripts/radwin_observe.py status     # 状態を見る
     sudo python3 scripts/radwin_observe.py stop       # 止める (欠測の検査をして結果名を付け替える)
@@ -206,10 +208,10 @@ class Child:
         out.close()
         self.started = time.monotonic()
 
-    def stop(self, wait: float = 10.0) -> None:
+    def stop(self, wait: float = 10.0, sig: int = signal.SIGTERM) -> None:
         if not self.alive():
             return
-        _killpg(self.proc, signal.SIGTERM)
+        _killpg(self.proc, sig)
         try:
             self.proc.wait(timeout=wait)
         except subprocess.TimeoutExpired:
@@ -390,7 +392,7 @@ class Observer:
             return
         FAULT_REQ.unlink(missing_ok=True)
         label = re.sub(r"[^A-Za-z0-9_.-]", "", str(req.get("label", "")))[:40] or "fault"
-        cond = req.get("condition", "P") if req.get("condition") in ("P", "S", "N") else "P"
+        cond = req.get("condition", "P") if req.get("condition") in ("P", "P2", "S", "N") else "P"
         reason = f"fault:{label}@{cond}"
         if cond != "P":
             self.enter_condition(cond)
@@ -417,6 +419,25 @@ class Observer:
         return subprocess.run([sys.executable, "-c", code], env=self.env, capture_output=True).returncode
 
     def enter_condition(self, cond: str) -> None:
+        if cond == "P2":
+            return self._enter_pprime()
+        self._enter_static(cond)
+
+    def _enter_pprime(self) -> None:
+        """P2: 制御を改良版の設定で起動し直す。起動時に容量を測り直し、整形レートと重みを書く。"""
+        c = self.children["controller"]
+        c.paused = True
+        c.stop(sig=signal.SIGUSR2)                       # 重みファイルを残して止める (引き継ぎ)
+        c.proc = None
+        self._controller_argv = list(c.argv)
+        c.argv = c.argv + ["--pprime", "--efficiency-table", str(SCRIPTS / "radwin_mcs_efficiency.json")]
+        c.paused = False
+        self.supervise()                                 # すぐ起動する
+        time.sleep(8)                                    # 起動して最初の適用 (init) が済むのを待つ
+        self.condition = "P2"
+        self.event("condition_enter", "P2 制御を --pprime --efficiency-table で起動し直した")
+
+    def _enter_static(self, cond: str) -> None:
         """S: 制御を止める (止まると重みファイルが消え、te_monitor が固定の重みに戻す) + 整形レートを固定値に。
         N: さらに te_monitor も止め、経路表も固定値に書く (迂回しない)。"""
         stop = ["controller"] + (["te_monitor"] if cond == "N" else [])
@@ -435,8 +456,15 @@ class Observer:
         """P に戻す。止めた部品を再開すると、制御は起動時に容量を測り直して整形レートと重みを書く。"""
         if self.condition == "P":
             return
+        if self.condition == "P2":                       # 元の設定の制御に戻す
+            c = self.children["controller"]
+            c.paused = True
+            c.stop(sig=signal.SIGUSR2)                   # 重みファイルを残して止める (引き継ぎ)
+            c.proc = None
+            c.argv = getattr(self, "_controller_argv", c.argv)
         for name in ("te_monitor", "controller"):
-            self.children[name].paused = False           # 次の見張りで起動し直される
+            self.children[name].paused = False
+        self.supervise()                                 # 次の見張りを待たずに起動し直す
         self.event("condition_leave", f"{self.condition} → P")
         self.condition = "P"
 
@@ -838,8 +866,8 @@ def main() -> int:
     fa.add_argument("--label", required=True, help="障害の種類 (英数字。例 stand5, stand30, wet1)")
     fa.add_argument("--count", type=int, default=1, help="続けて行う回数 (窓が乾くまで追うときなど)")
     fa.add_argument("--every", type=float, default=300, help="--count のときの間隔 [秒] (既定 5 分)")
-    fa.add_argument("--condition", choices=["P", "S", "N"], default="P",
-                    help="P 今の方式 / S 動的制御なし / N 迂回も動的制御もなし (その回だけ)")
+    fa.add_argument("--condition", choices=["P", "P2", "S", "N"], default="P",
+                    help="P 今の方式 / P2 改良版 P′ / S 動的制御なし / N 迂回も動的制御もなし (その回だけ)")
     d = sub.add_parser("_daemon")
     d.add_argument("obs")
     d.add_argument("--fake-odu-dir", default=None)

@@ -211,7 +211,7 @@ def probe_rows(obs: Path, ctl, odu, ping, wx, nc) -> list[dict]:
         r = {"start_jst": fmt(t0), "reason": p["reason"], "result": p["result"], "folder": p["folder"]}
         # 比較の条件 (P 今の方式 / S 動的制御なし / N 迂回も動的制御もなし) と障害の種類。
         # 理由の欄が "fault:<種類>@<条件>"。定期・低下時などの計測は P、種類は理由そのもの
-        m = re.fullmatch(r"fault:([^@]+)@([PSN])", p["reason"])
+        m = re.fullmatch(r"fault:([^@]+)@(P2|P|S|N)", p["reason"])
         r["condition"], r["label"] = (m.group(2), m.group(1)) if m else ("P", p["reason"])
         thr = steady_gbps(folder / "throughput.csv")
         for key, _, _ in CLASSES:
@@ -516,7 +516,7 @@ def build_report(obs: Path, t0: float, t1: float, ctl, odu, ping, wx, nc, summar
         for s in summary:
             key = (s["condition"], "通常 (定期)" if s["label"] == "periodic" else s["label"])
             groups.setdefault(key, []).append(s)
-        L += ["## 条件ごとの比較 (P 今の方式 / S 動的制御なし / N 迂回も動的制御もなし)", "",
+        L += ["## 条件ごとの比較 (P 今の方式 / P2 改良版 P′ / S 動的制御なし / N 迂回も動的制御もなし)", "",
               "| 条件 | 障害の種類 | 回数 | AF41 損失率 中央値 | 最大 | 失ったパケット 中央値 |", "|---|---|---|---|---|---|"]
         for (cond, label), g in sorted(groups.items()):
             loss = [x["af41_loss_pct"] for x in g if x["af41_loss_pct"] == x["af41_loss_pct"]]

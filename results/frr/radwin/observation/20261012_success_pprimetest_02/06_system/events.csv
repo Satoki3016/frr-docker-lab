@@ -1,0 +1,86 @@
+time,event,detail
+1791737662.787,observe_start,/home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/observation/20261012_running_pprimetest_02
+1791737662.787,child_start,te_monitor pid=1329838
+1791737662.788,child_start,controller pid=1329839
+1791737662.788,child_start,odu_logger pid=1329840
+1791737662.789,child_start,state_logger pid=1329841
+1791737662.789,child_start,load_server pid=1329843
+1791737662.790,child_start,weather_logger pid=1329845
+1791737662.790,child_start,nowcast_logger pid=1329846
+1791737662.791,child_start,ping_logger pid=1329847
+1791737664.794,load_pause,全負荷計測のため軽い負荷を止める
+1791737667.797,probe_start,start
+1791737799.462,probe_end,start code=0 success
+1791737799.462,load_resume,
+1791737801.467,child_start,load_client pid=1339665
+1791737869.586,load_pause,全負荷計測のため軽い負荷を止める
+1791737872.591,probe_start,fault:degrade@P
+1791738004.447,probe_end,fault:degrade@P code=0 success
+1791738004.447,load_resume,
+1791738006.451,child_start,load_client pid=1351875
+1791738036.512,child_start,controller pid=1353044
+1791738044.520,condition_enter,P2 制御を --pprime --efficiency-table で起動し直した
+1791738044.521,load_pause,全負荷計測のため軽い負荷を止める
+1791738047.525,probe_start,fault:degrade@P2
+1791738179.102,probe_end,fault:degrade@P2 code=0 success
+1791738179.118,child_start,controller pid=1363009
+1791738179.118,condition_leave,P2 → P
+1791738179.119,load_resume,
+1791738181.123,child_start,load_client pid=1363094
+1791738211.175,load_pause,全負荷計測のため軽い負荷を止める
+1791738214.180,probe_start,fault:degrade@P
+1791738346.052,probe_end,fault:degrade@P code=0 success
+1791738346.052,load_resume,
+1791738348.057,child_start,load_client pid=1374021
+1791738378.118,child_start,controller pid=1375067
+1791738386.127,condition_enter,P2 制御を --pprime --efficiency-table で起動し直した
+1791738386.128,load_pause,全負荷計測のため軽い負荷を止める
+1791738389.133,probe_start,fault:degrade@P2
+1791738520.720,probe_end,fault:degrade@P2 code=0 success
+1791738520.737,child_start,controller pid=1385266
+1791738520.737,condition_leave,P2 → P
+1791738520.737,load_resume,
+1791738522.741,child_start,load_client pid=1385358
+1791738552.795,load_pause,全負荷計測のため軽い負荷を止める
+1791738555.800,probe_start,fault:degrade@P
+1791738687.452,probe_end,fault:degrade@P code=0 success
+1791738687.452,load_resume,
+1791738689.457,child_start,load_client pid=1396266
+1791738719.525,child_start,controller pid=1397310
+1791738727.532,condition_enter,P2 制御を --pprime --efficiency-table で起動し直した
+1791738727.534,load_pause,全負荷計測のため軽い負荷を止める
+1791738730.539,probe_start,fault:degrade@P2
+1791738862.118,probe_end,fault:degrade@P2 code=0 success
+1791738862.135,child_start,controller pid=1407428
+1791738862.135,condition_leave,P2 → P
+1791738862.135,load_resume,
+1791738864.140,child_start,load_client pid=1407513
+1791738894.195,load_pause,全負荷計測のため軽い負荷を止める
+1791738897.197,probe_start,fault:degrade@P
+1791739028.921,probe_end,fault:degrade@P code=0 success
+1791739028.921,load_resume,
+1791739030.925,child_start,load_client pid=1418469
+1791739060.998,child_start,controller pid=1419641
+1791739069.006,condition_enter,P2 制御を --pprime --efficiency-table で起動し直した
+1791739069.008,load_pause,全負荷計測のため軽い負荷を止める
+1791739072.012,probe_start,fault:degrade@P2
+1791739203.567,probe_end,fault:degrade@P2 code=0 success
+1791739203.583,child_start,controller pid=1429714
+1791739203.584,condition_leave,P2 → P
+1791739203.584,load_resume,
+1791739205.588,child_start,load_client pid=1429803
+1791739235.644,load_pause,全負荷計測のため軽い負荷を止める
+1791739238.649,probe_start,fault:degrade@P
+1791739370.338,probe_end,fault:degrade@P code=0 success
+1791739370.338,load_resume,
+1791739372.342,child_start,load_client pid=1440681
+1791739402.413,child_start,controller pid=1441731
+1791739410.420,condition_enter,P2 制御を --pprime --efficiency-table で起動し直した
+1791739410.421,load_pause,全負荷計測のため軽い負荷を止める
+1791739413.426,probe_start,fault:degrade@P2
+1791739545.091,probe_end,fault:degrade@P2 code=0 success
+1791739545.108,child_start,controller pid=1451908
+1791739545.109,condition_leave,P2 → P
+1791739545.109,load_resume,
+1791739547.113,child_start,load_client pid=1451994
+1791739576.168,observe_stop,

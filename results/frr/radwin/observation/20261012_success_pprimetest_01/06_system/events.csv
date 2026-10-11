@@ -1,0 +1,58 @@
+time,event,detail
+1791736006.639,observe_start,/home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/observation/20261012_running_pprimetest_01
+1791736006.640,child_start,te_monitor pid=1244843
+1791736006.640,child_start,controller pid=1244844
+1791736006.640,child_start,odu_logger pid=1244845
+1791736006.641,child_start,state_logger pid=1244846
+1791736006.641,child_start,load_server pid=1244848
+1791736006.642,child_start,weather_logger pid=1244850
+1791736006.642,child_start,nowcast_logger pid=1244851
+1791736006.643,child_start,ping_logger pid=1244852
+1791736008.646,load_pause,全負荷計測のため軽い負荷を止める
+1791736011.650,probe_start,start
+1791736143.207,probe_end,start code=0 success
+1791736143.207,load_resume,
+1791736145.211,child_start,load_client pid=1254652
+1791736213.333,load_pause,全負荷計測のため軽い負荷を止める
+1791736216.337,probe_start,fault:degrade@P
+1791736347.900,probe_end,fault:degrade@P code=0 success
+1791736347.900,load_resume,
+1791736349.905,child_start,load_client pid=1266830
+1791736379.967,child_start,controller pid=1267982
+1791736387.972,condition_enter,P2 制御を --pprime --efficiency-table で起動し直した
+1791736387.974,load_pause,全負荷計測のため軽い負荷を止める
+1791736390.978,probe_start,fault:degrade@P2
+1791736522.517,probe_end,fault:degrade@P2 code=0 success
+1791736522.532,condition_leave,P2 → P
+1791736522.533,load_resume,
+1791736524.537,child_start,controller pid=1278441
+1791736524.538,child_start,load_client pid=1278442
+1791736554.592,load_pause,全負荷計測のため軽い負荷を止める
+1791736557.597,probe_start,fault:degrade@P
+1791736689.128,probe_end,fault:degrade@P code=0 success
+1791736689.128,load_resume,
+1791736691.133,child_start,load_client pid=1289551
+1791736721.195,child_start,controller pid=1290662
+1791736729.204,condition_enter,P2 制御を --pprime --efficiency-table で起動し直した
+1791736729.205,load_pause,全負荷計測のため軽い負荷を止める
+1791736732.209,probe_start,fault:degrade@P2
+1791736864.067,probe_end,fault:degrade@P2 code=0 success
+1791736864.083,condition_leave,P2 → P
+1791736864.083,load_resume,
+1791736866.087,child_start,controller pid=1300981
+1791736866.089,child_start,load_client pid=1300982
+1791736896.144,load_pause,全負荷計測のため軽い負荷を止める
+1791736899.149,probe_start,fault:degrade@P
+1791737030.832,probe_end,fault:degrade@P code=0 success
+1791737030.832,load_resume,
+1791737032.837,child_start,load_client pid=1311943
+1791737062.908,child_start,controller pid=1312998
+1791737070.916,condition_enter,P2 制御を --pprime --efficiency-table で起動し直した
+1791737070.917,load_pause,全負荷計測のため軽い負荷を止める
+1791737073.922,probe_start,fault:degrade@P2
+1791737205.629,probe_end,fault:degrade@P2 code=0 success
+1791737205.645,condition_leave,P2 → P
+1791737205.645,load_resume,
+1791737207.650,child_start,controller pid=1323271
+1791737207.651,child_start,load_client pid=1323272
+1791737236.202,observe_stop,

@@ -720,3 +720,104 @@ class HarnessTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class PPrimeTests(unittest.TestCase):
+    """改良版 P′ (radwin_wcmp_controller.py --pprime --efficiency-table)。"""
+
+    def setUp(self):
+        import radwin_wcmp_controller as ctl
+        self.ctl = ctl
+
+    def make(self, current=1171):
+        args = self.ctl.parse_args(["--pprime"])
+        c = self.ctl.Controller(args, "16005", csv.writer(open(os.devnull, "w")))
+        c.current = current
+        return c
+
+    def run_apply(self, target, owner="te_monitor"):
+        calls = []
+        ctl = self.ctl
+        with patch.object(ctl, "apply_htb", side_effect=lambda m: calls.append(("htb", m)) or True), \
+             patch.object(ctl, "publish_weights", side_effect=lambda w, m: calls.append(("publish", w[0]))), \
+             patch.object(ctl, "notify_te_monitor", side_effect=lambda: calls.append(("notify",)) or True), \
+             patch.object(ctl, "wait_route_w1", side_effect=lambda w1: calls.append(("wait", w1)) or 0.3), \
+             patch.object(ctl, "apply_route", side_effect=lambda m, l: calls.append(("route", m)) or ((0, 0, 0), True)), \
+             patch.object(ctl, "te_monitor_owns_routes", return_value=(owner == "te_monitor")):
+            ww, ok, who = self.make()._apply_capacity(target)
+        return calls, ww, ok, who
+
+    def test_decrease_changes_route_before_htb(self):
+        calls, ww, ok, who = self.run_apply(450)
+        self.assertEqual(calls, [("publish", 5), ("notify",), ("wait", 5), ("htb", 450)])
+        self.assertEqual((ww, ok, who), ((5, 100, 100), True, "te_monitor"))
+
+    def test_increase_widens_htb_before_route(self):
+        calls, _, _, _ = self.run_apply(1441)
+        self.assertEqual(calls, [("htb", 1441), ("publish", 16), ("notify",), ("wait", 16)])
+
+    def test_self_owner_writes_route_first_when_decreasing(self):
+        calls, _, _, who = self.run_apply(450, owner="self")
+        self.assertEqual(calls, [("route", 450), ("htb", 450)])
+        self.assertEqual(who, "self")
+
+    def test_plain_P_keeps_old_order(self):
+        args = self.ctl.parse_args([])
+        c = self.ctl.Controller(args, "16005", csv.writer(open(os.devnull, "w")))
+        c.current = 1171
+        calls = []
+        with patch.object(self.ctl, "apply_htb", side_effect=lambda m: calls.append("htb") or True), \
+             patch.object(self.ctl, "notify_te_monitor", side_effect=lambda: calls.append("notify")), \
+             patch.object(self.ctl, "te_monitor_owns_routes", return_value=True):
+            c._apply_capacity(450)
+        self.assertEqual(calls, ["htb"])                   # P は知らせない (重みは次の読み込みで変わる)
+
+    def test_capacity_from_efficiency_table(self):
+        hops = [{"connected": True, "tx_phy_mbps": 4620.0, "tx_mcs": 12},
+                {"connected": True, "tx_phy_mbps": 2502.5, "tx_mcs": 9}]
+        self.assertAlmostEqual(self.ctl.chain_capacity(hops, {12: 0.568}), 2502.5 * 0.52)   # 表にない MCS は 0.52
+        self.assertAlmostEqual(self.ctl.chain_capacity(hops, {12: 0.568, 9: 0.86}), 2502.5 * 0.86)
+        self.assertAlmostEqual(self.ctl.chain_capacity(hops, {9: 0.95, 12: 0.4}), 4620 * 0.4)    # 小さいほうの区間
+
+    def test_efficiency_file_skips_notes(self):
+        t = self.ctl.load_efficiency(str(SCRIPTS / "radwin_mcs_efficiency.json"))
+        self.assertEqual(t, {12: 0.568})
+
+    def test_notify_writes_one_line_to_fifo(self):
+        with tempfile.TemporaryDirectory() as d:
+            fifo, kick = Path(d) / "fifo", Path(d) / "te_monitor.kick"
+            os.mkfifo(fifo)
+            kick.write_text(str(fifo))
+            rd = os.open(fifo, os.O_RDONLY | os.O_NONBLOCK)
+            try:
+                with patch.object(self.ctl, "TE_KICK_FILE", str(kick)):
+                    self.assertTrue(self.ctl.notify_te_monitor())
+                self.assertEqual(os.read(rd, 100), b"KICK\n")
+            finally:
+                os.close(rd)
+            with patch.object(self.ctl, "TE_KICK_FILE", str(Path(d) / "missing")):
+                self.assertFalse(self.ctl.notify_te_monitor())   # 無くても例外にしない
+
+    def test_te_monitor_publishes_fifo_and_checks_weights_before_ospf(self):
+        text = (SCRIPTS / "frr_te_monitor.sh").read_text()
+        self.assertIn('echo "$MONITOR_FIFO" > "$TE_KICK_FILE"', text)
+        loop = text.split("while true; do", 1)[1]
+        self.assertLess(loop.index("_load_weights"), loop.index("check_ospf_neighbors"))
+
+    def test_observer_P2_restarts_controller_with_options_and_restores(self):
+        with tempfile.TemporaryDirectory() as d:
+            o = obs.Observer(Path(d), dict(os.environ))
+            o.children = {n: obs.Child(n, ["sleep", "30"], Path(d) / "c.log", dict(os.environ))
+                          for n in ("controller", "te_monitor")}
+            o.supervise()
+            with patch.object(obs.time, "sleep"):
+                o.enter_condition("P2")
+                self.assertIn("--pprime", o.children["controller"].argv)
+                self.assertTrue(o.children["controller"].alive())
+                o.leave_condition()
+                o.supervise()
+            self.assertNotIn("--pprime", o.children["controller"].argv)
+            self.assertTrue(o.children["controller"].alive())
+            self.assertEqual(o.children["controller"].restarts, 0)
+            for c in o.children.values():
+                c.stop()

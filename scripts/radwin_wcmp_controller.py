@@ -18,6 +18,10 @@ ODU の telemetry (MCS / PHY レート) から無線チェーンの実効容量�
     sudo python3 scripts/radwin_wcmp_controller.py --once      # 1回だけ評価
     sudo python3 scripts/radwin_wcmp_controller.py --dry-run   # 変更せず判断だけ表示
     sudo python3 scripts/radwin_wcmp_controller.py --check     # 前提確認のみ (SSHなし)
+    sudo python3 scripts/radwin_wcmp_controller.py --pprime --efficiency-table scripts/radwin_mcs_efficiency.json
+        改良版 P′ (2026-10-12): (1) 容量を下げるときは、経路の重みを先に変えてから HTB を絞る
+        (te_monitor の FIFO に 1 行書いて知らせ、経路表が変わったのを確かめてから)。上げるときは HTB が先。
+        (2) 容量の見積もりの効率を、MCS ごとの実測値の表から読む (表にない MCS は 0.52)。
 
 実験用の入口と保存手順: docs/radwin_experiment.md
 """
@@ -149,6 +153,66 @@ def apply_weights(w: tuple[int, int, int], label: str = "16005") -> tuple[tuple[
     return w, ok
 
 
+# ── P′ (改良版) の部品 ─────────────────────────────────────────────
+TE_KICK_FILE = os.environ.get("RADWIN_TE_KICK_FILE", str(Path(TE_PID_FILE).parent / "te_monitor.kick"))
+
+
+def notify_te_monitor() -> bool:
+    """te_monitor が待っている FIFO に 1 行書き、重みファイルをすぐ読み直させる (待ち 最大 2 秒をなくす)。
+
+    シグナルは使わない: bash 5.1 の read -t は、trap があってもシグナルで中断されない。
+    FIFO の場所は te_monitor が te_monitor.kick に書いている。書けなくても制御は止めない。
+    """
+    try:
+        fifo = Path(TE_KICK_FILE).read_text().strip()
+        fd = os.open(fifo, os.O_WRONLY | os.O_NONBLOCK)
+        try:
+            os.write(fd, b"KICK\n")
+        finally:
+            os.close(fd)
+        return True
+    except (OSError, ValueError):
+        return False
+
+
+def route_w1() -> int | None:
+    """table 41 の CR1 (leri-cr1) の重み。CR1 が経路に無ければ 0、読めなければ None。"""
+    code, out = sh(["ip", "netns", "exec", "LER_Ingress", "ip", "route", "show", "table", "41"])
+    if code != 0:
+        return None
+    m = re.search(r"dev leri-cr1(?: weight (\d+))?", out)
+    return (int(m.group(1)) if m.group(1) else 1) if m else 0
+
+
+def wait_route_w1(w1: int, timeout: float = 2.0, step: float = 0.1) -> float | None:
+    """経路表の CR1 の重みが w1 になるまで待つ。かかった秒数、時間切れなら None。"""
+    t0 = time.monotonic()
+    while time.monotonic() - t0 < timeout:
+        if route_w1() == w1:
+            return time.monotonic() - t0
+        time.sleep(step)
+    return None
+
+
+def load_efficiency(path: str | None) -> dict[int, float]:
+    """MCS ごとの効率の表 (JSON: {"9": 0.86, "12": 0.568, ...})。無ければ空 (= 全部 0.52)。"""
+    if not path:
+        return {}
+    import json
+    try:
+        return {int(k): float(v) for k, v in json.loads(Path(path).read_text()).items()
+                if not str(k).startswith("_")}
+    except (OSError, ValueError) as e:
+        print(f"  [WARN] 効率の表を読めません ({path}): {e} → 0.52 を使う")
+        return {}
+
+
+def chain_capacity(hops: list[dict], table: dict[int, float], default: float = 0.52) -> float:
+    """2 区間それぞれの PHY × (その MCS の効率) の小さいほう [Mbps]。"""
+    caps = [h["tx_phy_mbps"] * table.get(h.get("tx_mcs"), default) for h in hops if h.get("connected")]
+    return min(caps) if caps else 0.0
+
+
 def te_monitor_owns_routes() -> bool:
     """経路表を te_monitor に任せるべきか。"""
     if ROUTE_OWNER == "self":
@@ -194,6 +258,16 @@ def publish_weights(w: tuple[int, int, int], mbps: int) -> None:
         if not _publish_warned:
             print(f"  [WARN] 重みファイルを書けません ({WEIGHTS_FILE}): {e}")
             _publish_warned = True
+
+
+_handing_over = False
+
+
+def _handover(*_) -> None:
+    global _handing_over
+    _handing_over = True
+    print("後継の制御に引き継ぐため停止します (重みファイルは残す)")
+    sys.exit(0)
 
 
 def clear_weights() -> None:
@@ -280,6 +354,8 @@ class Controller:
 
     # ── 1回の観測 ────────────────────────────────────────────────────
     def step(self, d: dict) -> None:
+        if getattr(self.args, "eff_table", None) and d.get("ok"):
+            d = dict(d, chain_mbps=round(chain_capacity(d["hops"], self.args.eff_table), 1))
         hops = d["hops"]
         h1 = hops[0] if hops[0].get("connected") else {}
         h2 = hops[1] if len(hops) > 1 and hops[1].get("connected") else {}
@@ -373,17 +449,49 @@ class Controller:
         """
         if self.args.dry_run:
             return weights_for(target), True, "-"
+        if getattr(self.args, "pprime", False) and self.current is not None:
+            return self._apply_capacity_ordered(target)
         ok_h = apply_htb(target)
         if te_monitor_owns_routes():
             return weights_for(target), ok_h, "te_monitor"
         ww, ok_r = apply_route(target, self.label)
         return ww, ok_h and ok_r, "self"
 
+    def _apply_capacity_ordered(self, target: int) -> tuple[tuple[int, int, int], bool, str]:
+        """P′: 下げるときは経路が先、上げるときは HTB が先。
+
+        P は HTB を先に絞り、経路の重みは te_monitor が次に読んだとき (最大約 2 秒後) に変わる。
+        その間、CR1 に振り分けられたままの AF41 が、絞った HTB で溢れていた (2026-10-05 18:16)。
+        """
+        ww = weights_for(target)
+        owner = "te_monitor" if te_monitor_owns_routes() else "self"
+
+        def route() -> bool:
+            if owner == "self":
+                return apply_route(target, self.label)[1]
+            publish_weights(ww, target)
+            notify_te_monitor()
+            took = wait_route_w1(ww[0])
+            print(f"  [P′] 経路の重み {ww[0]} の反映 "
+                  + (f"{took:.2f} 秒" if took is not None else "を確認できず (2 秒で打ち切り)"))
+            return True                            # 反映の確認は記録用。確認できなくても HTB は進める
+
+        if target < self.current:
+            ok_r = route()
+            ok_h = apply_htb(target)
+        else:
+            ok_h = apply_htb(target)
+            ok_r = route()
+        return ww, ok_h and ok_r, owner
+
     def _remove_cr1(self) -> tuple[bool, str]:
         """CR1 を経路から外す。(成否, 経路を書いた主体) を返す。"""
         if self.args.dry_run:
             return True, "-"
         if te_monitor_owns_routes():
+            if getattr(self.args, "pprime", False):   # P′: 次の読み込みを待たずに知らせる
+                publish_weights(LINK_DOWN_WEIGHTS, 0)
+                notify_te_monitor()
             return True, "te_monitor"          # _publish で重み 0 が伝わる
         _, ok = apply_weights(LINK_DOWN_WEIGHTS, self.label)
         return ok, "self"
@@ -417,7 +525,13 @@ def parse_args(argv=None):
     ap.add_argument("--threshold", type=float, default=THRESHOLD)
     ap.add_argument("--initial", type=int, default=None,
                     help="現在の CR1_BW [Mbps]。省略時は最初の観測値を採用")
-    return ap.parse_args(argv)
+    ap.add_argument("--pprime", action="store_true",
+                    help="改良版 P′: 容量を下げるときは経路の重みを先に変えてから HTB を絞る")
+    ap.add_argument("--efficiency-table", default=None,
+                    help="MCS ごとの効率の表 (JSON)。容量 = 小さいほうの区間の PHY × その MCS の効率")
+    a = ap.parse_args(argv)
+    a.eff_table = load_efficiency(a.efficiency_table)
+    return a
 
 
 def main() -> int:
@@ -436,6 +550,10 @@ def main() -> int:
     # frr_measure.sh は SIGTERM で止める。既定の SIGTERM は finally を通らずに
     # 終了し、重みファイルが残る。SystemExit に変えて後始末を確実に行う。
     signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
+    # SIGUSR2 は「すぐ後継の制御が起動する」停止 (観測の条件の切り替え)。重みファイルを
+    # 残し、後継が書き直すまで te_monitor に今の重みを使わせる (消すと約 2 秒間、
+    # 固定の重みに戻ってしまう。2026-10-12 veth で確認)。古くなれば te_monitor が捨てる。
+    signal.signal(signal.SIGUSR2, _handover)
 
     label = get_label()
     print(f"MPLS ラベル: {label}")
@@ -463,7 +581,7 @@ def main() -> int:
         print("\n停止しました")
     finally:
         log.close()
-        if not args.dry_run:
+        if not args.dry_run and not _handing_over:
             clear_weights()
     return 0
 
