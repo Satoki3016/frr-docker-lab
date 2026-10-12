@@ -1,0 +1,31 @@
+[16:16:17] === OSPF-SR TE Monitor 起動 (netlink イベント駆動 / OSPF収束ベース動的ラベル版) ===
+[16:16:17]   検知方式: ip monitor link (netlink) / OSPF障害待ち: 6s / OSPF復旧待ち: 15s
+[16:16:17]   ログ: /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/observation/20261012_running_rainobs_03/04_control/te_monitor.log
+[16:16:17]   [SID] OSPF動的取得: LER_Egress=16005 / 経路のラベル CR1 16005 CR2 15002 CR3 15002
+[16:16:17]   [重み] 動的制御なし → 静的値 6:25:25 を使用
+[16:16:17] 経路更新 [wcmp]: CR1(w=6) CR2(w=25) CR3(w=25)
+[16:16:17]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[16:16:17] 初期TE経路設定完了
+[16:16:17]   [netlink] nsenter ip monitor link 起動 PID=3917232 (NS pid=3706731)
+[16:16:17] === 監視ループ開始 (netlink + OSPF ポーリング 二重化) ===
+[16:16:28]   [重み] 動的制御の重みを採用: 0:100:100
+[16:16:28] ⚖  重みの変化を検知 (6:25:25 → 0:100:100, dynamic) → 経路更新
+[16:16:28]   [SID] OSPF動的取得: LER_Egress=16005 / 経路のラベル CR1 16005 CR2 15002 CR3 15002
+[16:16:28] 経路更新 [wcmp]: CR1(w=0:除外) CR2(w=100) CR3(w=100)
+[16:16:28]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[16:16:47]   [SID] OSPF動的取得: LER_Egress=16005 / 経路のラベル CR1 16005 CR2 15002 CR3 15002
+[16:17:17]   [SID] OSPF動的取得: LER_Egress=16005 / 経路のラベル CR1 16005 CR2 15002 CR3 15002
+[16:17:47]   [SID] OSPF動的取得: LER_Egress=16005 / 経路のラベル CR1 16005 CR2 15002 CR3 15002
+[16:18:17]   [SID] OSPF動的取得: LER_Egress=16005 / 経路のラベル CR1 16005 CR2 15002 CR3 15002
+[16:18:47]   [SID] OSPF動的取得: LER_Egress=16005 / 経路のラベル CR1 16005 CR2 15002 CR3 15002
+[16:19:19]   [SID] OSPF動的取得: LER_Egress=16005 / 経路のラベル CR1 16005 CR2 15002 CR3 15002
+[16:19:51]   [SID] OSPF動的取得: LER_Egress=16005 / 経路のラベル CR1 16005 CR2 15002 CR3 15002
+[16:20:20]   [SID] OSPF動的取得: LER_Egress=16005 / 経路のラベル CR1 16005 CR2 15002 CR3 15002
+[16:20:52]   [SID] OSPF動的取得: LER_Egress=16005 / 経路のラベル CR1 16005 CR2 15002 CR3 15002
+[16:21:24]   [SID] OSPF動的取得: LER_Egress=16005 / 経路のラベル CR1 16005 CR2 15002 CR3 15002
+[16:21:53]   [重み] 動的制御なし → 静的値 6:25:25 を使用
+[16:21:53] ⚖  重みの変化を検知 (0:100:100 → 6:25:25, static) → 経路更新
+[16:21:53]   [SID] OSPF動的取得: LER_Egress=16005 / 経路のラベル CR1 16005 CR2 15002 CR3 15002
+[16:21:53] 経路更新 [wcmp]: CR1(w=6) CR2(w=25) CR3(w=25)
+[16:21:53]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[16:21:54]   [SID] OSPF動的取得: LER_Egress=16005 / 経路のラベル CR1 16005 CR2 15002 CR3 15002

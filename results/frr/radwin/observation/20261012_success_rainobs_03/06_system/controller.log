@@ -1,0 +1,14 @@
+=== 事前確認 ===
+  [OK] LER_Ingress/leri-cr1 に HTB qdisc あり
+  [OK] CR1/cr1-lere に HTB qdisc あり
+  [OK] table 41 は 3 本の nexthop (マルチパス)
+  [OK] fib_multipath_hash_policy = 1 (L3+L4ハッシュ)
+
+MPLS ラベル: 16005
+制御ループ開始 (間隔 2.0s / 閾値 ±10% / 上げは 3 回連続確認)
+ログ: /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/observation/20261012_running_rainobs_03/04_control/controller.csv
+
+
+[16:16:23] link_lost(1/2) 無線の状態を読めない (もう1回続けば CR1 を外す)
+
+[16:16:26] link_down 無線断を2回連続で確認 → CR1 を経路から外す (重み 0:100:100, 経路=te_monitor)

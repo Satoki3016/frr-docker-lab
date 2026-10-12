@@ -1,0 +1,246 @@
+1791792767.739076 LER_Egress 4 10.0.1.0/30 nhid 91 proto ospf metric 20 
+1791792767.739083 LER_Egress M 16002 proto ospf 
+1791792767.739215 LER_Egress 4 	nexthop via 10.0.6.1 dev lere-cr3 weight 1 
+1791792767.739227 LER_Egress M 	nexthop as to 16002 via inet 10.0.4.1 dev lere-cr2 
+1791792767.739272 LER_Egress M 	nexthop as to 16002 via inet 10.0.6.1 dev lere-cr3 
+1791792767.739282 LER_Egress 4 	nexthop via 10.0.4.1 dev lere-cr2 weight 1 
+1791792767.739292 LER_Egress M 16001 proto ospf 
+1791792767.739353 LER_Egress M 	nexthop as to 16001 via inet 10.0.4.1 dev lere-cr2 
+1791792767.739351 LER_Egress 4 10.10.1.0/30 nhid 91 proto ospf metric 20 
+1791792767.739423 LER_Egress M 	nexthop as to 16001 via inet 10.0.6.1 dev lere-cr3 
+1791792767.739453 LER_Egress M Deleted 15031 via inet 10.0.2.1 dev lere-cr1 proto ospf 
+1791792767.739499 LER_Egress M Deleted 15030 via inet 10.0.2.1 dev lere-cr1 proto ospf 
+1791792767.739515 LER_Egress 4 	nexthop via 10.0.6.1 dev lere-cr3 weight 1 
+1791792767.739581 LER_Egress 4 	nexthop via 10.0.4.1 dev lere-cr2 weight 1 
+1791792767.739701 LER_Egress 4 10.10.2.0/30 nhid 91 proto ospf metric 20 
+1791792767.739775 LER_Egress 4 	nexthop via 10.0.6.1 dev lere-cr3 weight 1 
+1791792767.739835 LER_Egress 4 	nexthop via 10.0.4.1 dev lere-cr2 weight 1 
+1791792767.739864 LER_Egress 4 10.10.3.0/30 nhid 91 proto ospf metric 20 
+1791792767.739934 CR3 4 192.168.0.2 nhid 31  encap mpls  16002 via 10.0.5.1 dev cr3-leri proto ospf metric 20 
+1791792767.739963 CR2 M 16002 as to 16002 via inet 10.0.3.1 dev cr2-leri proto ospf 
+1791792767.739979 LER_Egress 4 	nexthop via 10.0.6.1 dev lere-cr3 weight 1 
+1791792767.739940 CR2 4 192.168.0.2 nhid 34  encap mpls  16002 via 10.0.3.1 dev cr2-leri proto ospf metric 20 
+1791792767.740091 LER_Egress 4 	nexthop via 10.0.4.1 dev lere-cr2 weight 1 
+1791792767.740098 CR3 M 16002 as to 16002 via inet 10.0.5.1 dev cr3-leri proto ospf 
+1791792767.740137 LER_Egress 4 192.168.0.1 nhid 92 proto ospf metric 20 
+1791792767.740173 LER_Egress 4 	nexthop  encap mpls  16001 via 10.0.6.1 dev lere-cr3 weight 1 
+1791792767.740204 LER_Egress 4 	nexthop  encap mpls  16001 via 10.0.4.1 dev lere-cr2 weight 1 
+1791792767.740250 LER_Egress 4 192.168.0.2 nhid 93 proto ospf metric 20 
+1791792767.740289 LER_Egress 4 	nexthop  encap mpls  16002 via 10.0.4.1 dev lere-cr2 weight 1 
+1791792767.740344 LER_Egress 4 	nexthop  encap mpls  16002 via 10.0.6.1 dev lere-cr3 weight 1 
+1791792767.740514 LER_Ingress 4 10.0.4.0/30 nhid 184 via 10.0.3.2 dev leri-cr2 proto ospf metric 20 
+1791792767.740597 LER_Ingress M 16004 as to 16004 via inet 10.0.5.2 dev leri-cr3 proto ospf 
+1791792767.740652 LER_Ingress 4 10.0.6.0/30 nhid 185 via 10.0.5.2 dev leri-cr3 proto ospf metric 20 
+1791792767.740690 LER_Ingress M 16005 proto ospf 
+1791792767.740700 LER_Ingress 4 10.20.1.0/30 nhid 186 proto ospf metric 20 
+1791792767.740734 LER_Ingress M 	nexthop as to 16005 via inet 10.0.3.2 dev leri-cr2 
+1791792767.740759 LER_Ingress 4 	nexthop via 10.0.3.2 dev leri-cr2 weight 1 
+1791792767.740790 LER_Ingress 4 	nexthop via 10.0.5.2 dev leri-cr3 weight 1 
+1791792767.740810 LER_Ingress 4 10.20.2.0/30 nhid 186 proto ospf metric 20 
+1791792767.740753 CR1 4 10.0.3.0/30 nhid 33 via 10.0.1.1 dev cr1-leri proto ospf metric 20 
+1791792767.740803 LER_Ingress M 	nexthop as to 16005 via inet 10.0.5.2 dev leri-cr3 
+1791792767.740840 LER_Ingress 4 	nexthop via 10.0.3.2 dev leri-cr2 weight 1 
+1791792767.740871 LER_Ingress 4 	nexthop via 10.0.5.2 dev leri-cr3 weight 1 
+1791792767.740871 CR1 4 10.0.4.0/30 nhid 33 via 10.0.1.1 dev cr1-leri proto ospf metric 20 
+1791792767.740887 LER_Ingress M 16003 as to 16003 via inet 10.0.3.2 dev leri-cr2 proto ospf 
+1791792767.740921 LER_Ingress 4 10.20.3.0/30 nhid 186 proto ospf metric 20 
+1791792767.740952 CR1 4 10.0.5.0/30 nhid 33 via 10.0.1.1 dev cr1-leri proto ospf metric 20 
+1791792767.740957 LER_Ingress 4 	nexthop via 10.0.3.2 dev leri-cr2 weight 1 
+1791792767.740989 LER_Ingress 4 	nexthop via 10.0.5.2 dev leri-cr3 weight 1 
+1791792767.740976 CR1 M 16004 as to 16004 via inet 10.0.1.1 dev cr1-leri proto ospf 
+1791792767.741010 CR1 4 10.0.6.0/30 nhid 33 via 10.0.1.1 dev cr1-leri proto ospf metric 20 
+1791792767.741039 LER_Ingress 4 192.168.0.3 nhid 187  encap mpls  16003 via 10.0.3.2 dev leri-cr2 proto ospf metric 20 
+1791792767.741047 CR1 M 16005 as to 16005 via inet 10.0.1.1 dev cr1-leri proto ospf 
+1791792767.741101 LER_Ingress 4 192.168.0.4 nhid 188  encap mpls  16004 via 10.0.5.2 dev leri-cr3 proto ospf metric 20 
+1791792767.741098 CR1 4 10.20.1.0/30 nhid 33 via 10.0.1.1 dev cr1-leri proto ospf metric 20 
+1791792767.741134 LER_Ingress 4 192.168.0.5 nhid 189 proto ospf metric 20 
+1791792767.741136 CR1 M 16003 as to 16003 via inet 10.0.1.1 dev cr1-leri proto ospf 
+1791792767.741174 LER_Ingress 4 	nexthop  encap mpls  16005 via 10.0.3.2 dev leri-cr2 weight 1 
+1791792767.741177 CR1 4 10.20.2.0/30 nhid 33 via 10.0.1.1 dev cr1-leri proto ospf metric 20 
+1791792767.741212 LER_Ingress 4 	nexthop  encap mpls  16005 via 10.0.5.2 dev leri-cr3 weight 1 
+1791792767.741247 CR1 4 10.20.3.0/30 nhid 33 via 10.0.1.1 dev cr1-leri proto ospf metric 20 
+1791792767.741389 CR1 4 192.168.0.3 nhid 43  encap mpls  16003 via 10.0.1.1 dev cr1-leri proto ospf metric 20 
+1791792767.741526 CR1 4 192.168.0.4 nhid 44  encap mpls  16004 via 10.0.1.1 dev cr1-leri proto ospf metric 20 
+1791792767.741653 CR1 4 192.168.0.5 nhid 45  encap mpls  16005 via 10.0.1.1 dev cr1-leri proto ospf metric 20 
+1791792768.358072 CR1 M Deleted 15047 via inet 10.0.2.2 dev cr1-lere proto ospf 
+1791792768.358211 CR1 M 15049 via inet 10.0.2.2 dev cr1-lere proto ospf 
+1791792768.358262 CR1 M Deleted 15046 via inet 10.0.2.2 dev cr1-lere proto ospf 
+1791792768.358297 CR1 M 15048 via inet 10.0.2.2 dev cr1-lere proto ospf 
+1791792768.358446 LER_Ingress M Deleted 16004 as to 16004 via inet 10.0.5.2 dev leri-cr3 proto ospf 
+1791792768.358536 LER_Ingress M Deleted 16002 as to 16002 via inet 10.0.1.2 dev leri-cr1 proto ospf 
+1791792768.358583 LER_Ingress M Deleted 16005 proto ospf 
+1791792768.358660 LER_Ingress M 	nexthop as to 16005 via inet 10.0.3.2 dev leri-cr2 
+1791792768.358762 CR3 M Deleted 16002 as to 16002 via inet 10.0.5.1 dev cr3-leri proto ospf 
+1791792768.358791 LER_Ingress M 	nexthop as to 16005 via inet 10.0.5.2 dev leri-cr3 
+1791792768.358846 LER_Ingress M Deleted 16003 as to 16003 via inet 10.0.3.2 dev leri-cr2 proto ospf 
+1791792768.358844 CR2 M Deleted 16004 as to 16004 via inet 10.0.4.2 dev cr2-lere proto ospf 
+1791792768.358858 CR3 M Deleted 16001 as to 16001 via inet 10.0.5.1 dev cr3-leri proto ospf 
+1791792768.358930 CR3 M Deleted 16005 as to 16005 via inet 10.0.6.2 dev cr3-lere proto ospf 
+1791792768.358938 CR2 M Deleted 16002 as to 16002 via inet 10.0.3.1 dev cr2-leri proto ospf 
+1791792768.358989 CR3 M Deleted 16003 as to 16003 via inet 10.0.6.2 dev cr3-lere proto ospf 
+1791792768.358995 CR2 M Deleted 16001 as to 16001 via inet 10.0.3.1 dev cr2-leri proto ospf 
+1791792768.359041 CR2 M Deleted 16005 as to 16005 via inet 10.0.4.2 dev cr2-lere proto ospf 
+1791792768.359419 LER_Egress M Deleted 16004 as to 16004 via inet 10.0.6.1 dev lere-cr3 proto ospf 
+1791792768.359530 LER_Egress M Deleted 16002 proto ospf 
+1791792768.359590 LER_Egress M 	nexthop as to 16002 via inet 10.0.4.1 dev lere-cr2 
+1791792768.359627 LER_Egress M 	nexthop as to 16002 via inet 10.0.6.1 dev lere-cr3 
+1791792768.359679 LER_Egress M Deleted 16001 proto ospf 
+1791792768.359722 LER_Egress M 	nexthop as to 16001 via inet 10.0.4.1 dev lere-cr2 
+1791792768.359780 LER_Egress M 	nexthop as to 16001 via inet 10.0.6.1 dev lere-cr3 
+1791792768.359822 LER_Egress M Deleted 16003 as to 16003 via inet 10.0.4.1 dev lere-cr2 proto ospf 
+1791792768.368839 CR3 M 16002 as to 16002 via inet 10.0.5.1 dev cr3-leri proto ospf 
+1791792768.368822 LER_Ingress M 16004 as to 16004 via inet 10.0.5.2 dev leri-cr3 proto ospf 
+1791792768.368860 CR2 M 16004 as to 16004 via inet 10.0.4.2 dev cr2-lere proto ospf 
+1791792768.368938 LER_Ingress M 16002 as to 16002 via inet 10.0.1.2 dev leri-cr1 proto ospf 
+1791792768.368944 CR3 M 16001 as to 16001 via inet 10.0.5.1 dev cr3-leri proto ospf 
+1791792768.368945 CR2 M 16002 as to 16002 via inet 10.0.3.1 dev cr2-leri proto ospf 
+1791792768.369017 CR2 M 16001 as to 16001 via inet 10.0.3.1 dev cr2-leri proto ospf 
+1791792768.369036 LER_Ingress M 16005 proto ospf 
+1791792768.369071 CR2 M 16005 as to 16005 via inet 10.0.4.2 dev cr2-lere proto ospf 
+1791792768.369078 CR3 M 16005 as to 16005 via inet 10.0.6.2 dev cr3-lere proto ospf 
+1791792768.369087 LER_Ingress M 	nexthop as to 16005 via inet 10.0.3.2 dev leri-cr2 
+1791792768.369147 LER_Ingress M 	nexthop as to 16005 via inet 10.0.5.2 dev leri-cr3 
+1791792768.369181 LER_Ingress M 16003 as to 16003 via inet 10.0.3.2 dev leri-cr2 proto ospf 
+1791792768.369177 CR3 M 16003 as to 16003 via inet 10.0.6.2 dev cr3-lere proto ospf 
+1791792768.369493 LER_Egress M 16004 as to 16004 via inet 10.0.6.1 dev lere-cr3 proto ospf 
+1791792768.369577 LER_Egress M 16002 proto ospf 
+1791792768.369647 LER_Egress M 	nexthop as to 16002 via inet 10.0.4.1 dev lere-cr2 
+1791792768.369695 LER_Egress M 	nexthop as to 16002 via inet 10.0.6.1 dev lere-cr3 
+1791792768.369722 LER_Egress M 16001 proto ospf 
+1791792768.369750 LER_Egress M 	nexthop as to 16001 via inet 10.0.4.1 dev lere-cr2 
+1791792768.369789 LER_Egress M 	nexthop as to 16001 via inet 10.0.6.1 dev lere-cr3 
+1791792768.369814 LER_Egress M 16003 as to 16003 via inet 10.0.4.1 dev lere-cr2 proto ospf 
+1791792769.550657 LER_Ingress 4 10.20.0.0/16 table rt_af41 
+1791792769.550767 LER_Ingress 4 	nexthop  encap mpls  15002 via 10.0.3.2 dev leri-cr2 weight 100 
+1791792769.550815 LER_Ingress 4 	nexthop  encap mpls  15002 via 10.0.5.2 dev leri-cr3 weight 100 
+1791792769.552627 LER_Ingress 4 10.20.0.0/16 table rt_af42 
+1791792769.552762 LER_Ingress 4 	nexthop  encap mpls  15002 via 10.0.3.2 dev leri-cr2 weight 100 
+1791792769.552810 LER_Ingress 4 	nexthop  encap mpls  15002 via 10.0.5.2 dev leri-cr3 weight 100 
+1791792769.554976 LER_Ingress 4 10.20.0.0/16 table rt_af43 
+1791792769.555043 LER_Ingress 4 	nexthop  encap mpls  15002 via 10.0.3.2 dev leri-cr2 weight 100 
+1791792769.555107 LER_Ingress 4 	nexthop  encap mpls  15002 via 10.0.5.2 dev leri-cr3 weight 100 
+1791792770.363205 CR1 M Deleted 15049 via inet 10.0.2.2 dev cr1-lere proto ospf 
+1791792770.363289 LER_Ingress M Deleted 16004 as to 16004 via inet 10.0.5.2 dev leri-cr3 proto ospf 
+1791792770.363368 LER_Ingress M Deleted 16002 as to 16002 via inet 10.0.1.2 dev leri-cr1 proto ospf 
+1791792770.363363 CR1 M 15051 via inet 10.0.2.2 dev cr1-lere proto ospf 
+1791792770.363399 LER_Ingress M Deleted 16005 proto ospf 
+1791792770.363424 CR1 M Deleted 15048 via inet 10.0.2.2 dev cr1-lere proto ospf 
+1791792770.363467 LER_Ingress M 	nexthop as to 16005 via inet 10.0.3.2 dev leri-cr2 
+1791792770.363481 CR1 M 15050 via inet 10.0.2.2 dev cr1-lere proto ospf 
+1791792770.363533 LER_Ingress M 	nexthop as to 16005 via inet 10.0.5.2 dev leri-cr3 
+1791792770.363592 CR2 M Deleted 16004 as to 16004 via inet 10.0.4.2 dev cr2-lere proto ospf 
+1791792770.363610 LER_Ingress M Deleted 16003 as to 16003 via inet 10.0.3.2 dev leri-cr2 proto ospf 
+1791792770.363668 CR2 M Deleted 16002 as to 16002 via inet 10.0.3.1 dev cr2-leri proto ospf 
+1791792770.363711 CR2 M Deleted 16001 as to 16001 via inet 10.0.3.1 dev cr2-leri proto ospf 
+1791792770.363776 CR2 M Deleted 16005 as to 16005 via inet 10.0.4.2 dev cr2-lere proto ospf 
+1791792770.363787 CR3 M Deleted 16002 as to 16002 via inet 10.0.5.1 dev cr3-leri proto ospf 
+1791792770.363861 CR3 M Deleted 16001 as to 16001 via inet 10.0.5.1 dev cr3-leri proto ospf 
+1791792770.363975 CR3 M Deleted 16005 as to 16005 via inet 10.0.6.2 dev cr3-lere proto ospf 
+1791792770.364030 LER_Egress M 15033 via inet 10.0.2.1 dev lere-cr1 proto ospf 
+1791792770.364056 CR3 M Deleted 16003 as to 16003 via inet 10.0.6.2 dev cr3-lere proto ospf 
+1791792770.364099 LER_Egress M 15032 via inet 10.0.2.1 dev lere-cr1 proto ospf 
+1791792770.373433 LER_Ingress M 16004 as to 16004 via inet 10.0.5.2 dev leri-cr3 proto ospf 
+1791792770.373537 LER_Ingress M 16002 as to 16002 via inet 10.0.1.2 dev leri-cr1 proto ospf 
+1791792770.373562 LER_Ingress M 16005 proto ospf 
+1791792770.373617 LER_Ingress M 	nexthop as to 16005 via inet 10.0.3.2 dev leri-cr2 
+1791792770.373651 CR2 M 16004 as to 16004 via inet 10.0.4.2 dev cr2-lere proto ospf 
+1791792770.373672 LER_Ingress M 	nexthop as to 16005 via inet 10.0.5.2 dev leri-cr3 
+1791792770.373755 CR2 M 16002 as to 16002 via inet 10.0.3.1 dev cr2-leri proto ospf 
+1791792770.373759 LER_Ingress M 16003 as to 16003 via inet 10.0.3.2 dev leri-cr2 proto ospf 
+1791792770.373815 CR2 M 16001 as to 16001 via inet 10.0.3.1 dev cr2-leri proto ospf 
+1791792770.373819 CR3 M 16002 as to 16002 via inet 10.0.5.1 dev cr3-leri proto ospf 
+1791792770.373865 CR2 M 16005 as to 16005 via inet 10.0.4.2 dev cr2-lere proto ospf 
+1791792770.373890 CR3 M 16001 as to 16001 via inet 10.0.5.1 dev cr3-leri proto ospf 
+1791792770.373941 CR3 M 16005 as to 16005 via inet 10.0.6.2 dev cr3-lere proto ospf 
+1791792770.373975 CR3 M 16003 as to 16003 via inet 10.0.6.2 dev cr3-lere proto ospf 
+1791792770.413552 CR1 4 10.0.3.0/30 nhid 23 via 10.0.2.2 dev cr1-lere proto ospf metric 20 
+1791792770.413592 CR1 M 16004 as to 16004 via inet 10.0.2.2 dev cr1-lere proto ospf 
+1791792770.413686 CR1 4 10.0.4.0/30 nhid 23 via 10.0.2.2 dev cr1-lere proto ospf metric 20 
+1791792770.413697 CR1 M 16005 as to 16005 via inet 10.0.2.2 dev cr1-lere proto ospf 
+1791792770.413743 CR1 M 16003 as to 16003 via inet 10.0.2.2 dev cr1-lere proto ospf 
+1791792770.413742 CR1 4 10.0.5.0/30 nhid 23 via 10.0.2.2 dev cr1-lere proto ospf metric 20 
+1791792770.413792 CR1 4 10.0.6.0/30 nhid 23 via 10.0.2.2 dev cr1-lere proto ospf metric 20 
+1791792770.413822 CR1 4 10.20.1.0/30 nhid 23 via 10.0.2.2 dev cr1-lere proto ospf metric 20 
+1791792770.413853 CR1 4 10.20.2.0/30 nhid 23 via 10.0.2.2 dev cr1-lere proto ospf metric 20 
+1791792770.413890 CR1 4 10.20.3.0/30 nhid 23 via 10.0.2.2 dev cr1-lere proto ospf metric 20 
+1791792770.413941 CR1 4 192.168.0.3 nhid 38  encap mpls  16003 via 10.0.2.2 dev cr1-lere proto ospf metric 20 
+1791792770.414005 CR1 4 192.168.0.4 nhid 29  encap mpls  16004 via 10.0.2.2 dev cr1-lere proto ospf metric 20 
+1791792770.414056 CR1 4 192.168.0.5 nhid 24  encap mpls  16005 via 10.0.2.2 dev cr1-lere proto ospf metric 20 
+1791792770.414110 CR2 4 192.168.0.2 nhid 41 proto ospf metric 20 
+1791792770.414150 CR2 M 16002 proto ospf 
+1791792770.414216 CR2 4 	nexthop  encap mpls  16002 via 10.0.3.1 dev cr2-leri weight 1 
+1791792770.414228 CR2 M 	nexthop as to 16002 via inet 10.0.3.1 dev cr2-leri 
+1791792770.414257 CR2 M 	nexthop as to 16002 via inet 10.0.4.2 dev cr2-lere 
+1791792770.414262 CR2 4 	nexthop  encap mpls  16002 via 10.0.4.2 dev cr2-lere weight 1 
+1791792770.414314 LER_Ingress 4 10.0.4.0/30 nhid 56 via 10.0.1.2 dev leri-cr1 proto ospf metric 20 
+1791792770.414371 LER_Ingress 4 10.0.6.0/30 nhid 56 via 10.0.1.2 dev leri-cr1 proto ospf metric 20 
+1791792770.414369 CR3 4 192.168.0.2 nhid 40 proto ospf metric 20 
+1791792770.414392 LER_Ingress M 16004 as to 16004 via inet 10.0.1.2 dev leri-cr1 proto ospf 
+1791792770.414420 CR3 4 	nexthop  encap mpls  16002 via 10.0.5.1 dev cr3-leri weight 1 
+1791792770.414425 LER_Ingress 4 10.20.1.0/30 nhid 56 via 10.0.1.2 dev leri-cr1 proto ospf metric 20 
+1791792770.414452 CR3 4 	nexthop  encap mpls  16002 via 10.0.6.2 dev cr3-lere weight 1 
+1791792770.414461 LER_Ingress M 16005 as to 16005 via inet 10.0.1.2 dev leri-cr1 proto ospf 
+1791792770.414476 LER_Ingress 4 10.20.2.0/30 nhid 56 via 10.0.1.2 dev leri-cr1 proto ospf metric 20 
+1791792770.414477 CR3 M 16002 proto ospf 
+1791792770.414509 LER_Ingress 4 10.20.3.0/30 nhid 56 via 10.0.1.2 dev leri-cr1 proto ospf metric 20 
+1791792770.414513 LER_Ingress M 16003 as to 16003 via inet 10.0.1.2 dev leri-cr1 proto ospf 
+1791792770.414559 LER_Ingress 4 192.168.0.3 nhid 72  encap mpls  16003 via 10.0.1.2 dev leri-cr1 proto ospf metric 20 
+1791792770.414575 CR3 M 	nexthop as to 16002 via inet 10.0.5.1 dev cr3-leri 
+1791792770.414606 LER_Ingress 4 192.168.0.4 nhid 73  encap mpls  16004 via 10.0.1.2 dev leri-cr1 proto ospf metric 20 
+1791792770.414637 CR3 M 	nexthop as to 16002 via inet 10.0.6.2 dev cr3-lere 
+1791792770.414674 LER_Ingress 4 192.168.0.5 nhid 74  encap mpls  16005 via 10.0.1.2 dev leri-cr1 proto ospf metric 20 
+1791792770.414723 LER_Egress 4 10.0.1.0/30 nhid 74 via 10.0.2.1 dev lere-cr1 proto ospf metric 20 
+1791792770.414768 LER_Egress 4 10.10.1.0/30 nhid 76 proto ospf metric 20 
+1791792770.414803 LER_Egress 4 	nexthop via 10.0.6.1 dev lere-cr3 weight 1 
+1791792770.414838 LER_Egress 4 	nexthop via 10.0.2.1 dev lere-cr1 weight 1 
+1791792770.414883 LER_Egress 4 	nexthop via 10.0.4.1 dev lere-cr2 weight 1 
+1791792770.414901 LER_Egress M 16002 as to 16002 via inet 10.0.2.1 dev lere-cr1 proto ospf 
+1791792770.414951 LER_Egress 4 10.10.2.0/30 nhid 76 proto ospf metric 20 
+1791792770.414994 LER_Egress 4 	nexthop via 10.0.6.1 dev lere-cr3 weight 1 
+1791792770.414997 LER_Egress M 16001 proto ospf 
+1791792770.415019 LER_Egress 4 	nexthop via 10.0.2.1 dev lere-cr1 weight 1 
+1791792770.415053 LER_Egress 4 	nexthop via 10.0.4.1 dev lere-cr2 weight 1 
+1791792770.415073 LER_Egress M 	nexthop as to 16001 via inet 10.0.4.1 dev lere-cr2 
+1791792770.415091 LER_Egress 4 10.10.3.0/30 nhid 76 proto ospf metric 20 
+1791792770.415118 LER_Egress 4 	nexthop via 10.0.6.1 dev lere-cr3 weight 1 
+1791792770.415142 LER_Egress 4 	nexthop via 10.0.2.1 dev lere-cr1 weight 1 
+1791792770.415113 LER_Egress M 	nexthop as to 16001 via inet 10.0.6.1 dev lere-cr3 
+1791792770.415161 LER_Egress 4 	nexthop via 10.0.4.1 dev lere-cr2 weight 1 
+1791792770.415191 LER_Egress 4 192.168.0.1 nhid 77 proto ospf metric 20 
+1791792770.415187 LER_Egress M 	nexthop as to 16001 via inet 10.0.2.1 dev lere-cr1 
+1791792770.415216 LER_Egress 4 	nexthop  encap mpls  16001 via 10.0.6.1 dev lere-cr3 weight 1 
+1791792770.415244 LER_Egress 4 	nexthop  encap mpls  16001 via 10.0.2.1 dev lere-cr1 weight 1 
+1791792770.415292 LER_Egress 4 	nexthop  encap mpls  16001 via 10.0.4.1 dev lere-cr2 weight 1 
+1791792770.415328 LER_Egress 4 192.168.0.2 nhid 80  encap mpls  16002 via 10.0.2.1 dev lere-cr1 proto ospf metric 20 
+1791792784.079832 LER_Ingress 4 10.20.0.0/16 table rt_af42 
+1791792784.080024 LER_Ingress 4 	nexthop  encap mpls  16005 via 10.0.1.2 dev leri-cr1 weight 4 
+1791792784.080087 LER_Ingress 4 	nexthop  encap mpls  15002 via 10.0.3.2 dev leri-cr2 weight 100 
+1791792784.080130 LER_Ingress 4 	nexthop  encap mpls  15002 via 10.0.5.2 dev leri-cr3 weight 100 
+1791792784.081459 LER_Ingress 4 10.20.0.0/16 table rt_af43 
+1791792784.081579 LER_Ingress 4 	nexthop  encap mpls  16005 via 10.0.1.2 dev leri-cr1 weight 4 
+1791792784.081686 LER_Ingress 4 	nexthop  encap mpls  15002 via 10.0.3.2 dev leri-cr2 weight 100 
+1791792784.081810 LER_Ingress 4 	nexthop  encap mpls  15002 via 10.0.5.2 dev leri-cr3 weight 100 
+1791792836.934158 LER_Ingress 4 10.20.0.0/16 table rt_af41 
+1791792836.934318 LER_Ingress 4 	nexthop  encap mpls  16005 via 10.0.1.2 dev leri-cr1 weight 8 
+1791792836.934395 LER_Ingress 4 	nexthop  encap mpls  15002 via 10.0.3.2 dev leri-cr2 weight 100 
+1791792836.934461 LER_Ingress 4 	nexthop  encap mpls  15002 via 10.0.5.2 dev leri-cr3 weight 100 
+1791792836.936672 LER_Ingress 4 10.20.0.0/16 table rt_af42 
+1791792836.936749 LER_Ingress 4 	nexthop  encap mpls  16005 via 10.0.1.2 dev leri-cr1 weight 8 
+1791792836.936793 LER_Ingress 4 	nexthop  encap mpls  15002 via 10.0.3.2 dev leri-cr2 weight 100 
+1791792836.936856 LER_Ingress 4 	nexthop  encap mpls  15002 via 10.0.5.2 dev leri-cr3 weight 100 
+1791792836.938820 LER_Ingress 4 10.20.0.0/16 table rt_af43 
+1791792836.938930 LER_Ingress 4 	nexthop  encap mpls  16005 via 10.0.1.2 dev leri-cr1 weight 8 
+1791792836.938985 LER_Ingress 4 	nexthop  encap mpls  15002 via 10.0.3.2 dev leri-cr2 weight 100 
+1791792836.939048 LER_Ingress 4 	nexthop  encap mpls  15002 via 10.0.5.2 dev leri-cr3 weight 100 
+1791792842.973992 LER_Ingress 4 10.20.0.0/16 table rt_af41 
+1791792842.974161 LER_Ingress 4 	nexthop  encap mpls  16005 via 10.0.1.2 dev leri-cr1 weight 13 
+1791792842.974269 LER_Ingress 4 	nexthop  encap mpls  15002 via 10.0.3.2 dev leri-cr2 weight 100 
+1791792842.974317 LER_Ingress 4 	nexthop  encap mpls  15002 via 10.0.5.2 dev leri-cr3 weight 100 
+1791792842.976310 LER_Ingress 4 10.20.0.0/16 table rt_af42 
+1791792842.976449 LER_Ingress 4 	nexthop  encap mpls  16005 via 10.0.1.2 dev leri-cr1 weight 13 
+1791792842.976526 LER_Ingress 4 	nexthop  encap mpls  15002 via 10.0.3.2 dev leri-cr2 weight 100 
+1791792842.976620 LER_Ingress 4 	nexthop  encap mpls  15002 via 10.0.5.2 dev leri-cr3 weight 100 
+1791792842.978687 LER_Ingress 4 10.20.0.0/16 table rt_af43 
+1791792842.978771 LER_Ingress 4 	nexthop  encap mpls  16005 via 10.0.1.2 dev leri-cr1 weight 13 
+1791792842.978910 LER_Ingress 4 	nexthop  encap mpls  15002 via 10.0.3.2 dev leri-cr2 weight 100 
+1791792842.979020 LER_Ingress 4 	nexthop  encap mpls  15002 via 10.0.5.2 dev leri-cr3 weight 100 

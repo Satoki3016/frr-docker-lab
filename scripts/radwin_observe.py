@@ -654,6 +654,11 @@ def cmd_start(a) -> int:
             sys.exit(f"[NG] {pat} がすでに動いています。止めてから始めてください: sudo pkill -f {pat}")
     if subprocess.run(["pgrep", "-f", f"iperf3 .*-p {LOAD_PORT}"], capture_output=True).returncode == 0:
         sys.exit(f"[NG] {LOAD_PORT} 番の iperf3 (手動の負荷や radwin_live_monitor.py) が動いています。止めてから始めてください")
+    # 実機の観測なのにラボが veth で起動していると、ODU に届かず「無線断」と判断して CR1 を外したまま
+    # 観測が進んでしまう (2026-10-12 16:16、LAB_MODE=c2 を付けずに frr_all_up.sh を実行していた)
+    if not a.fake_odu_dir and not _cr1_lere_is_physical():
+        sys.exit("[NG] cr1-lere が veth です (ラボが仮想環境で起動している)。実機の観測は "
+                 "sudo env LAB_MODE=c2 bash scripts/frr_all_up.sh で起動し直してから始めてください")
     if a.fake_odu_dir and _cr1_lere_is_physical():
         sys.exit("[NG] cr1-lere が物理 NIC です (実機の構成)。偽の ODU は veth でしか使えません")
     # 計測の長さと最初の基準の計測は、実機の観測では変えない (回どうしを比べられなくなる)

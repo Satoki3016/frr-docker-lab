@@ -1193,7 +1193,23 @@ class FaultPlanTests(unittest.TestCase):
         self.assertEqual(runs, obs.fault_runs(conds, 3, seed=12345))     # 種から同じ順番を再現できる
         self.assertNotEqual(runs, conds * 3)
 
+    def test_real_observation_refuses_veth_lab(self):
+        text = (SCRIPTS / "radwin_observe.py").read_text()
+        self.assertIn("if not a.fake_odu_dir and not _cr1_lere_is_physical():", text)
+
     def test_fault_has_duration_and_shuffle_options(self):
         text = (SCRIPTS / "radwin_observe.py").read_text()
         for s in ('"--shuffle"', '"--duration"', "← 今、置く", "← 今、外す", "fault_plan.csv"):
             self.assertIn(s, text)
+
+
+class SshExitCodeTests(unittest.TestCase):
+    """radwin_ssh._run_pty: 失敗した SSH を「成功 (0)」と返さない (2026-10-12 修正)。"""
+
+    def test_exit_codes_are_kept(self):
+        import radwin_ssh as r
+        self.assertEqual(r._run_pty(["sh", "-c", "echo 'No route to host' >&2; exit 255"], "pw", 5)[0], 255)
+        self.assertEqual(r._run_pty(["sh", "-c", "sleep 0.8; exit 3"], "pw", 5)[0], 3)
+        self.assertEqual(r._run_pty(["sh", "-c", "echo ok"], "pw", 5), (0, "ok"))
+        self.assertNotEqual(r._run_pty(["sh", "-c", "sleep 10"], "pw", 1)[0], 0)     # 時間切れは失敗
+        self.assertEqual(r._run_pty(["sh", "-c", "printf 'Password: '; read x; echo got $x"], "pw", 5), (0, "got pw"))

@@ -142,6 +142,8 @@ def _run_pty(argv: list[str], password: str, timeout: float) -> tuple[int, str]:
 
     out = bytearray()
     sent = False
+    reaped = None                     # 下の WNOHANG で回収した終了状態
+
     deadline = __import__("time").monotonic() + timeout
     try:
         while True:
@@ -162,35 +164,39 @@ def _run_pty(argv: list[str], password: str, timeout: float) -> tuple[int, str]:
                     os.write(fd, password.encode() + b"\n")
                     sent = True
             else:
-                # 子が終了していれば抜ける
-                if os.waitpid(pid, os.WNOHANG)[0] == pid:
+                # 子が終了していれば抜ける。ここで回収した終了状態を捨てると、後の waitpid が
+                # ChildProcessError になって「成功 (0)」扱いになり、届かない ODU を
+                # 「相手の局がいない」と記録していた (2026-10-12 16:16)
+                got, st = os.waitpid(pid, os.WNOHANG)
+                if got == pid:
+                    reaped = st
                     break
     finally:
         os.close(fd)
     # 時間切れで抜けた場合、子はまだ生きている。以前はここで終了を待ち続けたため、
     # 無線断で ODU が消えると制御ループが 80 秒止まった (2026-09-25 実機)。
     # 必ず止めてから回収する。
-    if _still_alive(pid):
-        try:
-            os.kill(pid, signal.SIGKILL)
-        except ProcessLookupError:
-            pass
+    # 以前の _still_alive() も WNOHANG で子を回収してしまい、その後の waitpid が
+    # ChildProcessError → 「成功 (0)」になっていた。回収は 1 か所で行い、状態を必ず受け取る
+    status = reaped
     try:
-        _, status = os.waitpid(pid, 0)
+        if status is None:
+            got, st = os.waitpid(pid, os.WNOHANG)
+            if got == pid:
+                status = st
+            else:                         # まだ生きている (時間切れ): 止めてから回収する
+                try:
+                    os.kill(pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+                _, status = os.waitpid(pid, 0)
     except ChildProcessError:
-        status = 0
+        status = 1 << 8                   # 終了状態が分からない: 失敗として扱う
     text = out.decode("utf-8", "replace")
     # エコーバックされたプロンプト行を落とす
     lines = [l for l in text.splitlines()
              if "assword" not in l and not l.startswith("Warning: Permanently added")]
     return os.WEXITSTATUS(status) if os.WIFEXITED(status) else 1, "\n".join(lines).strip()
-
-
-def _still_alive(pid: int) -> bool:
-    try:
-        return os.waitpid(pid, os.WNOHANG)[0] == 0
-    except ChildProcessError:
-        return False
 
 
 if __name__ == "__main__":
