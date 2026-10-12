@@ -47,7 +47,8 @@ matplotlib.rcParams.update({
 CLS = [("af41", "AF41 (高)", "#0072B2"), ("af42", "AF42 (中)", "#E69F00"), ("af43", "AF43 (低)", "#CC79A7")]
 HOP = [("192.168.1.31", "無線 1 (.31→.32)", "#009E73", "-"), ("192.168.1.33", "無線 2 (.33→.34)", "#D55E00", "--")]
 CONDS = [("P", "P"), ("P3", "P3"), ("P4", "P4"), ("S", "S"), ("N", "N")]
-PLATE_ON, PLATE_OFF = 20, 50          # fault --duration 30 の合図 (通信開始から)
+PLATE_ON, PLATE_OFF = 20, 50          # fault --duration 30 の合図 (通信開始から)。--plate-seconds で変える
+LABEL = "plate30"                   # 障害ありの回の fault のラベル。--label で変える
 # 遮られた区間が約 55 秒と長かったため除外し、測り直した回 (01_report/plate_experiment_20261012.md)
 EXCLUDE = {"20261012_success_rainobs_wcmp_140": "S: 遮られた区間 約 52 秒・無線 2 も",
            "20261012_success_rainobs_wcmp_141": "P4: 遮られた区間 約 55 秒"}
@@ -56,12 +57,13 @@ EXCLUDE = {"20261012_success_rainobs_wcmp_140": "S: 遮られた区間 約 52 �
 def load_runs(obs: Path) -> list[dict]:
     runs = []
     for p in csv.DictReader((lay.sub(obs, lay.FULLLOAD) / "probes.csv").open()):
-        m = re.fullmatch(r"fault:(none|plate30)@(P|P3|P4|S|N)", p["reason"])
+        m = re.fullmatch(rf"fault:(none|{re.escape(LABEL)})@(P|P3|P4|S|N)", p["reason"])
         if not m or p["folder"] in EXCLUDE:
             continue
         d = lay.probe_dir(obs, p["folder"]) / "frr_observe"
         t0 = int(re.search(r"throughput_t0_epoch_ms=(\d+)", (d / "timebase.txt").read_text()).group(1)) / 1000
-        runs.append({"folder": p["folder"], "state": m.group(1), "cond": m.group(2), "dir": d, "t0": t0,
+        runs.append({"folder": p["folder"], "state": "none" if m.group(1) == "none" else "fault",
+                     "cond": m.group(2), "dir": d, "t0": t0,
                      "loss": sm.iperf_loss_pct(d / "iperf3_af41.log")})
     return runs
 
@@ -99,7 +101,7 @@ def shade(ax):
 
 def representative(runs: list[dict], cond: str) -> dict:
     """その条件の金属板の回のうち、AF41 損失率が中央値の回。"""
-    g = sorted((r for r in runs if r["cond"] == cond and r["state"] == "plate30"), key=lambda r: r["loss"])
+    g = sorted((r for r in runs if r["cond"] == cond and r["state"] == "fault"), key=lambda r: r["loss"])
     return g[len(g) // 2]
 
 
@@ -175,7 +177,7 @@ def simple_figures(runs: list[dict], odu: list[dict], out: Path) -> None:
     # 5. AF41 の損失率 (全条件・全回)
     fig, ax = plt.subplots(figsize=(5.0, 2.9))
     xs = {c: i for i, (c, _) in enumerate(CONDS)}
-    for state, dx, face, lab in (("none", -0.15, "white", "障害なし"), ("plate30", 0.15, "#333333", "金属板 30 秒")):
+    for state, dx, face, lab in (("none", -0.15, "white", "障害なし"), ("fault", 0.15, "#333333", f"金属板 {PLATE_OFF - PLATE_ON} 秒")):
         first = True
         for c, _ in CONDS:
             g = [r for r in runs if r["cond"] == c and r["state"] == state]
@@ -259,7 +261,7 @@ def paper_figures(runs: list[dict], odu: list[dict], out: Path) -> dict:
              ("S", "動的制御\nなし"), ("N", "動的制御・\n経路監視なし")]
     fig, ax = plt.subplots(figsize=(3.4, 2.45))
     w = 0.36
-    for j, (state, lab, face) in enumerate((("none", "障害なし", "white"), ("plate30", "障害あり", "#4D4D4D"))):
+    for j, (state, lab, face) in enumerate((("none", "障害なし", "white"), ("fault", "障害あり", "#4D4D4D"))):
         for i, (c, _) in enumerate(conds):
             v = [r["loss"] for r in runs if r["cond"] == c and r["state"] == state]
             med = st.median(v)
@@ -267,7 +269,7 @@ def paper_figures(runs: list[dict], odu: list[dict], out: Path) -> dict:
             ax.bar(x, med, w, color=face, edgecolor="#333333", lw=0.8, zorder=3, label=lab if i == 0 else None)
             ax.errorbar(x, med, yerr=[[med - min(v)], [max(v) - med]], fmt="none", ecolor="#333333",
                         elinewidth=0.8, capsize=2.2, zorder=4)
-            if state == "plate30":
+            if state == "fault":
                 ax.text(x, max(v) + 0.04, f"{med:.2f}", ha="center", va="bottom", fontsize=6.5)
     ax.set_xticks(range(len(conds)))
     ax.set_xticklabels([lab for _, lab in conds], fontsize=6.6)
@@ -286,7 +288,11 @@ def main() -> int:
     ap.add_argument("--out", default=None, help="出力先フォルダ (既定: 観測フォルダの 01_report/figures)")
     ap.add_argument("--paper", action="store_true",
                     help="論文 (PN 研究会) 用の図 pn_*.pdf/png を作る (論文中の条件名・用語だけを使う、1 段組の幅)")
+    ap.add_argument("--label", default="plate30", help="障害ありの回の fault のラベル (例 plate80)")
+    ap.add_argument("--plate-seconds", type=int, default=30, help="金属板を置いた秒数 (fault --duration と同じ値)")
     a = ap.parse_args()
+    global LABEL, PLATE_OFF
+    LABEL, PLATE_OFF = a.label, PLATE_ON + a.plate_seconds
     obs = sm.resolve_dir(a.dir) if hasattr(sm, "resolve_dir") else Path(a.dir)
     runs = load_runs(obs)
     odu = sm.rows(obs, "odu*.csv")
