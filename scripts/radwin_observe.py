@@ -14,6 +14,8 @@
             容量を下げるときに経路を先に変える + MCS ごとの効率で容量を見積もる)
         P3: P2 + AF41 の振り分けの判定 (--af41-guard 0.05。CR1 の容量が小さく、乗った AF41 が
             溢れる確率が 5% を超えるときは、AF41 だけ CR1 から外す。AF42 / AF43 は CR1 を使い続ける)
+        P4: P3 + 戻すのを待つ (--hold-down 10。無線が途切れ途切れのとき、OSPF の隣接や MCS が
+            戻っても 10 秒安定するまで CR1 を経路へ戻さず、整形レートも上げない)
         計測が終わると P に戻す。障害を起こさない基準は --label none で測る
     sudo python3 scripts/radwin_observe.py status     # 状態を見る
     sudo python3 scripts/radwin_observe.py stop       # 止める (欠測の検査をして結果名を付け替える)
@@ -61,9 +63,10 @@ from pathlib import Path
 
 SCRIPTS = Path(__file__).resolve().parent
 # 比較の条件。P2 / P3 は制御をこの引数を足して起動し直す
-CONDITIONS = ("P", "P2", "P3", "S", "N")
+CONDITIONS = ("P", "P2", "P3", "P4", "S", "N")
 _PPRIME = ["--pprime", "--efficiency-table", str(SCRIPTS / "radwin_mcs_efficiency.json")]
-PPRIME_ARGS = {"P2": _PPRIME, "P3": _PPRIME + ["--af41-guard", "0.05"]}
+PPRIME_ARGS = {"P2": _PPRIME, "P3": _PPRIME + ["--af41-guard", "0.05"],
+               "P4": _PPRIME + ["--af41-guard", "0.05", "--hold-down", "10"]}
 sys.path.insert(0, str(SCRIPTS))
 import radwin_obs_layout as lay  # noqa: E402
 LAB = SCRIPTS.parent
@@ -919,7 +922,7 @@ def main() -> int:
     fa.add_argument("--every", type=float, default=0,
                     help="回の始まりどうしの間隔 [秒]。既定 0 = 前の回が終わったらすぐ (窓が乾くのを追うときは 300 など)")
     fa.add_argument("--condition", default="P",
-                    help="P 今の方式 / P2 改良版 P′ / P3 P′ + AF41 の振り分けの判定 / "
+                    help="P 今の方式 / P2 改良版 P′ / P3 P′ + AF41 の振り分けの判定 / P4 P3 + 戻すのを待つ / "
                          "S 動的制御なし / N 迂回も動的制御もなし (その回だけ)。"
                          "コンマで並べると続けて測る (例 P2,P3。--count 2 なら P2 P3 P2 P3)")
     d = sub.add_parser("_daemon")

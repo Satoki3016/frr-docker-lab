@@ -1,0 +1,399 @@
+time,event,detail
+1791742035.983,observe_start,/home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/observation/20261012_running_rainobs_02
+1791742035.984,child_start,te_monitor pid=1566905
+1791742035.984,child_start,controller pid=1566906
+1791742035.985,child_start,odu_logger pid=1566907
+1791742035.985,child_start,state_logger pid=1566909
+1791742035.986,child_start,load_server pid=1566911
+1791742035.986,child_start,weather_logger pid=1566912
+1791742035.987,child_start,nowcast_logger pid=1566913
+1791742035.987,child_start,ping_logger pid=1566915
+1791742039.995,child_start,load_client pid=1567419
+1791742044.018,child_start,controller pid=1567588
+1791742044.519,condition_enter,P2 制御を --pprime --efficiency-table /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/scripts/radwin_mcs_efficiency.json で起動し直した
+1791742044.520,load_pause,全負荷計測のため軽い負荷を止める
+1791742047.524,probe_start,fault:none@P2
+1791742179.183,probe_end,fault:none@P2 code=0 success
+1791742179.216,child_start,controller pid=1577814
+1791742179.216,condition_leave,P2 → P
+1791742179.216,load_resume,
+1791742181.221,child_start,load_client pid=1577906
+1791742181.237,child_start,controller pid=1577907
+1791742181.738,condition_enter,P3 制御を --pprime --efficiency-table /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/scripts/radwin_mcs_efficiency.json --af41-guard 0.05 で起動し直した
+1791742181.740,load_pause,全負荷計測のため軽い負荷を止める
+1791742184.741,probe_start,fault:none@P3
+1791742316.373,probe_end,fault:none@P3 code=0 success
+1791742316.406,child_start,controller pid=1588119
+1791742316.406,condition_leave,P3 → P
+1791742316.406,load_resume,
+1791742318.411,child_start,load_client pid=1588214
+1791742420.581,load_pause,全負荷計測のため軽い負荷を止める
+1791742423.586,probe_start,fault:none@P
+1791742555.281,probe_end,fault:none@P code=0 success
+1791742555.281,load_resume,
+1791742557.286,child_start,load_client pid=1602725
+1791742557.319,child_start,controller pid=1602754
+1791742557.820,condition_enter,P2 制御を --pprime --efficiency-table /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/scripts/radwin_mcs_efficiency.json で起動し直した
+1791742557.821,load_pause,全負荷計測のため軽い負荷を止める
+1791742560.825,probe_start,fault:none@P2
+1791742692.267,probe_end,fault:none@P2 code=0 success
+1791742692.300,child_start,controller pid=1612860
+1791742692.300,condition_leave,P2 → P
+1791742692.300,load_resume,
+1791742694.304,child_start,load_client pid=1612964
+1791742694.321,child_start,controller pid=1612965
+1791742694.822,condition_enter,P3 制御を --pprime --efficiency-table /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/scripts/radwin_mcs_efficiency.json --af41-guard 0.05 で起動し直した
+1791742694.823,load_pause,全負荷計測のため軽い負荷を止める
+1791742697.828,probe_start,fault:none@P3
+1791742829.449,probe_end,fault:none@P3 code=0 success
+1791742829.466,child_start,controller pid=1623021
+1791742829.466,condition_leave,P3 → P
+1791742829.466,load_resume,
+1791742831.471,child_start,load_client pid=1623115
+1791742835.555,condition_enter,"S 停止=controller 整形=2160M 重み=(6, 25, 25) code=0"
+1791742835.557,load_pause,全負荷計測のため軽い負荷を止める
+1791742838.558,probe_start,fault:none@S
+1791742970.059,probe_end,fault:none@S code=0 success
+1791742970.060,child_start,controller pid=1633147
+1791742970.060,condition_leave,S → P
+1791742970.060,load_resume,
+1791742972.065,child_start,load_client pid=1633345
+1791742976.175,condition_enter,"N 停止=controller,te_monitor 整形=2160M 重み=(6, 25, 25) code=0"
+1791742976.176,load_pause,全負荷計測のため軽い負荷を止める
+1791742979.181,probe_start,fault:none@N
+1791743110.723,probe_end,fault:none@N code=0 success
+1791743110.724,child_start,te_monitor pid=1638680
+1791743110.725,child_start,controller pid=1638681
+1791743110.725,condition_leave,N → P
+1791743110.725,load_resume,
+1791743112.729,child_start,load_client pid=1638931
+1791743273.002,load_pause,全負荷計測のため軽い負荷を止める
+1791743276.005,probe_start,periodic
+1791743407.476,probe_end,periodic code=0 success
+1791743407.477,load_resume,
+1791743409.480,child_start,load_client pid=1656269
+1791743573.773,load_pause,全負荷計測のため軽い負荷を止める
+1791743576.777,probe_start,periodic
+1791743708.362,probe_end,periodic code=0 success
+1791743708.362,load_resume,
+1791743710.367,child_start,load_client pid=1673281
+1791744301.439,load_pause,全負荷計測のため軽い負荷を止める
+1791744304.444,probe_start,periodic
+1791744436.573,probe_end,periodic code=0 success
+1791744436.573,load_resume,
+1791744438.577,child_start,load_client pid=1707424
+1791745200.030,load_pause,全負荷計測のため軽い負荷を止める
+1791745203.033,probe_start,periodic
+1791745334.692,probe_end,periodic code=0 success
+1791745334.692,load_resume,
+1791745336.696,child_start,load_client pid=1749103
+1791746100.145,load_pause,全負荷計測のため軽い負荷を止める
+1791746103.149,probe_start,periodic
+1791746234.748,probe_end,periodic code=0 success
+1791746234.748,load_resume,
+1791746236.753,child_start,load_client pid=1790325
+1791747000.233,load_pause,全負荷計測のため軽い負荷を止める
+1791747003.238,probe_start,periodic
+1791747134.903,probe_end,periodic code=0 success
+1791747134.903,load_resume,
+1791747136.909,child_start,load_client pid=1831842
+1791747900.469,load_pause,全負荷計測のため軽い負荷を止める
+1791747903.474,probe_start,periodic
+1791748035.218,probe_end,periodic code=0 success
+1791748035.218,load_resume,
+1791748037.223,child_start,load_client pid=1873392
+1791748800.777,load_pause,全負荷計測のため軽い負荷を止める
+1791748803.782,probe_start,periodic
+1791748935.425,probe_end,periodic code=0 success
+1791748935.425,load_resume,
+1791748937.430,child_start,load_client pid=1915040
+1791749701.059,load_pause,全負荷計測のため軽い負荷を止める
+1791749704.061,probe_start,periodic
+1791749835.809,probe_end,periodic code=0 success
+1791749835.809,load_resume,
+1791749837.814,child_start,load_client pid=1956350
+1791750601.479,load_pause,全負荷計測のため軽い負荷を止める
+1791750604.481,probe_start,periodic
+1791750736.210,probe_end,periodic code=0 success
+1791750736.210,load_resume,
+1791750738.215,child_start,load_client pid=1998011
+1791751501.909,load_pause,全負荷計測のため軽い負荷を止める
+1791751504.913,probe_start,periodic
+1791751636.617,probe_end,periodic code=0 success
+1791751636.617,load_resume,
+1791751638.622,child_start,load_client pid=2039383
+1791752400.366,load_pause,全負荷計測のため軽い負荷を止める
+1791752403.371,probe_start,periodic
+1791752403.372,report_start,直近 6 時間
+1791752407.381,report_end,code=0
+1791752535.026,probe_end,periodic code=0 success
+1791752535.026,load_resume,
+1791752537.030,child_start,load_client pid=2080463
+1791753300.806,load_pause,全負荷計測のため軽い負荷を止める
+1791753303.809,probe_start,periodic
+1791753435.626,probe_end,periodic code=0 success
+1791753435.626,load_resume,
+1791753437.631,child_start,load_client pid=2121844
+1791754201.464,load_pause,全負荷計測のため軽い負荷を止める
+1791754204.469,probe_start,periodic
+1791754336.162,probe_end,periodic code=0 success
+1791754336.162,load_resume,
+1791754338.168,child_start,load_client pid=2163046
+1791755100.043,load_pause,全負荷計測のため軽い負荷を止める
+1791755103.047,probe_start,periodic
+1791755234.805,probe_end,periodic code=0 success
+1791755234.805,load_resume,
+1791755236.812,child_start,load_client pid=2204718
+1791756000.772,load_pause,全負荷計測のため軽い負荷を止める
+1791756003.777,probe_start,periodic
+1791756135.713,probe_end,periodic code=0 success
+1791756135.714,load_resume,
+1791756137.720,child_start,load_client pid=2246318
+1791756901.684,load_pause,全負荷計測のため軽い負荷を止める
+1791756904.688,probe_start,periodic
+1791757036.369,probe_end,periodic code=0 success
+1791757036.369,load_resume,
+1791757038.376,child_start,load_client pid=2287573
+1791757800.414,load_pause,全負荷計測のため軽い負荷を止める
+1791757803.417,probe_start,periodic
+1791757935.256,probe_end,periodic code=0 success
+1791757935.257,load_resume,
+1791757937.263,child_start,load_client pid=2328725
+1791758701.334,load_pause,全負荷計測のため軽い負荷を止める
+1791758704.339,probe_start,periodic
+1791758836.045,probe_end,periodic code=0 success
+1791758836.046,load_resume,
+1791758838.052,child_start,load_client pid=2370604
+1791759600.083,load_pause,全負荷計測のため軽い負荷を止める
+1791759603.088,probe_start,periodic
+1791759734.785,probe_end,periodic code=0 success
+1791759734.785,load_resume,
+1791759736.792,child_start,load_client pid=2411860
+1791760500.961,load_pause,全負荷計測のため軽い負荷を止める
+1791760503.965,probe_start,periodic
+1791760635.774,probe_end,periodic code=0 success
+1791760635.775,load_resume,
+1791760637.781,child_start,load_client pid=2453127
+1791761401.954,load_pause,全負荷計測のため軽い負荷を止める
+1791761404.958,probe_start,periodic
+1791761536.790,probe_end,periodic code=0 success
+1791761536.790,load_resume,
+1791761538.797,child_start,load_client pid=2494347
+1791762300.994,load_pause,全負荷計測のため軽い負荷を止める
+1791762303.999,probe_start,periodic
+1791762435.871,probe_end,periodic code=0 success
+1791762435.871,load_resume,
+1791762437.877,child_start,load_client pid=2535786
+1791763200.131,load_pause,全負荷計測のため軽い負荷を止める
+1791763203.133,probe_start,periodic
+1791763335.023,probe_end,periodic code=0 success
+1791763335.023,load_resume,
+1791763337.030,child_start,load_client pid=2577108
+1791764101.337,load_pause,全負荷計測のため軽い負荷を止める
+1791764104.342,probe_start,periodic
+1791764236.093,probe_end,periodic code=0 success
+1791764236.093,load_resume,
+1791764238.098,child_start,load_client pid=2618161
+1791765000.414,load_pause,全負荷計測のため軽い負荷を止める
+1791765003.418,probe_start,periodic
+1791765135.312,probe_end,periodic code=0 success
+1791765135.312,load_resume,
+1791765137.319,child_start,load_client pid=2659182
+1791765901.625,load_pause,全負荷計測のため軽い負荷を止める
+1791765904.630,probe_start,periodic
+1791766036.417,probe_end,periodic code=0 success
+1791766036.417,load_resume,
+1791766038.425,child_start,load_client pid=2700859
+1791766800.733,load_pause,全負荷計測のため軽い負荷を止める
+1791766803.737,probe_start,periodic
+1791766935.704,probe_end,periodic code=0 success
+1791766935.704,load_resume,
+1791766937.711,child_start,load_client pid=2742343
+1791767701.993,load_pause,全負荷計測のため軽い負荷を止める
+1791767704.998,probe_start,periodic
+1791767836.766,probe_end,periodic code=0 success
+1791767836.766,load_resume,
+1791767838.773,child_start,load_client pid=2783473
+1791768601.081,load_pause,全負荷計測のため軽い負荷を止める
+1791768604.085,probe_start,periodic
+1791768735.941,probe_end,periodic code=0 success
+1791768735.941,load_resume,
+1791768737.948,child_start,load_client pid=2824699
+1791769500.255,load_pause,全負荷計測のため軽い負荷を止める
+1791769503.260,probe_start,periodic
+1791769634.996,probe_end,periodic code=0 success
+1791769634.996,load_resume,
+1791769637.004,child_start,load_client pid=2866323
+1791770401.329,load_pause,全負荷計測のため軽い負荷を止める
+1791770404.333,probe_start,periodic
+1791770536.047,probe_end,periodic code=0 success
+1791770536.047,load_resume,
+1791770538.052,child_start,load_client pid=2907544
+1791771300.362,load_pause,全負荷計測のため軽い負荷を止める
+1791771303.365,probe_start,periodic
+1791771435.054,probe_end,periodic code=0 success
+1791771435.054,load_resume,
+1791771437.061,child_start,load_client pid=2948605
+1791772201.364,load_pause,全負荷計測のため軽い負荷を止める
+1791772204.369,probe_start,periodic
+1791772336.059,probe_end,periodic code=0 success
+1791772336.059,load_resume,
+1791772338.067,child_start,load_client pid=2990040
+1791773100.353,load_pause,全負荷計測のため軽い負荷を止める
+1791773103.358,probe_start,periodic
+1791773235.146,probe_end,periodic code=0 success
+1791773235.146,load_resume,
+1791773237.153,child_start,load_client pid=3031635
+1791774001.490,load_pause,全負荷計測のため軽い負荷を止める
+1791774004.495,probe_start,periodic
+1791774004.496,report_start,直近 6 時間
+1791774016.524,report_end,code=0
+1791774136.272,probe_end,periodic code=0 success
+1791774136.273,load_resume,
+1791774138.280,child_start,load_client pid=3073162
+1791774900.576,load_pause,全負荷計測のため軽い負荷を止める
+1791774903.581,probe_start,periodic
+1791775035.339,probe_end,periodic code=0 success
+1791775035.339,load_resume,
+1791775037.345,child_start,load_client pid=3114311
+1791775801.675,load_pause,全負荷計測のため軽い負荷を止める
+1791775804.677,probe_start,periodic
+1791775936.524,probe_end,periodic code=0 success
+1791775936.524,load_resume,
+1791775938.532,child_start,load_client pid=3155820
+1791776700.785,load_pause,全負荷計測のため軽い負荷を止める
+1791776703.790,probe_start,periodic
+1791776835.484,probe_end,periodic code=0 success
+1791776835.484,load_resume,
+1791776837.489,child_start,load_client pid=3197337
+1791777601.713,load_pause,全負荷計測のため軽い負荷を止める
+1791777604.718,probe_start,periodic
+1791777736.347,probe_end,periodic code=0 success
+1791777736.347,load_resume,
+1791777738.353,child_start,load_client pid=3238488
+1791778500.644,load_pause,全負荷計測のため軽い負荷を止める
+1791778503.649,probe_start,periodic
+1791778635.501,probe_end,periodic code=0 success
+1791778635.501,load_resume,
+1791778637.508,child_start,load_client pid=3279687
+1791779401.823,load_pause,全負荷計測のため軽い負荷を止める
+1791779404.825,probe_start,periodic
+1791779536.596,probe_end,periodic code=0 success
+1791779536.596,load_resume,
+1791779538.603,child_start,load_client pid=3320929
+1791780300.920,load_pause,全負荷計測のため軽い負荷を止める
+1791780303.921,probe_start,periodic
+1791780435.725,probe_end,periodic code=0 success
+1791780435.725,load_resume,
+1791780437.733,child_start,load_client pid=3362598
+1791781200.086,load_pause,全負荷計測のため軽い負荷を止める
+1791781203.089,probe_start,periodic
+1791781334.796,probe_end,periodic code=0 success
+1791781334.796,load_resume,
+1791781336.801,child_start,load_client pid=3404076
+1791782101.112,load_pause,全負荷計測のため軽い負荷を止める
+1791782104.116,probe_start,periodic
+1791782235.851,probe_end,periodic code=0 success
+1791782235.851,load_resume,
+1791782237.857,child_start,load_client pid=3445610
+1791783000.094,load_pause,全負荷計測のため軽い負荷を止める
+1791783003.097,probe_start,periodic
+1791783134.862,probe_end,periodic code=0 success
+1791783134.862,load_resume,
+1791783136.866,child_start,load_client pid=3487056
+1791783602.275,load_pause,全負荷計測のため軽い負荷を止める
+1791783605.277,probe_start,fault:none@P
+1791783737.075,probe_end,fault:none@P code=0 success
+1791783737.075,load_resume,
+1791783739.082,child_start,load_client pid=3517008
+1791783739.091,child_start,controller pid=3517009
+1791783739.592,condition_enter,P2 制御を --pprime --efficiency-table /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/scripts/radwin_mcs_efficiency.json で起動し直した
+1791783739.593,load_pause,全負荷計測のため軽い負荷を止める
+1791783742.598,probe_start,fault:none@P2
+1791783874.384,probe_end,fault:none@P2 code=0 success
+1791783874.392,child_start,controller pid=3527286
+1791783874.392,condition_leave,P2 → P
+1791783874.392,load_resume,
+1791783876.397,child_start,load_client pid=3527380
+1791783876.413,child_start,controller pid=3527381
+1791783876.914,condition_enter,P3 制御を --pprime --efficiency-table /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/scripts/radwin_mcs_efficiency.json --af41-guard 0.05 で起動し直した
+1791783876.915,load_pause,全負荷計測のため軽い負荷を止める
+1791783879.920,probe_start,fault:none@P3
+1791784011.711,probe_end,fault:none@P3 code=0 success
+1791784011.727,child_start,controller pid=3537705
+1791784011.727,condition_leave,P3 → P
+1791784011.728,load_resume,
+1791784013.735,child_start,load_client pid=3537802
+1791784017.813,condition_enter,"S 停止=controller 整形=2160M 重み=(6, 25, 25) code=0"
+1791784017.814,load_pause,全負荷計測のため軽い負荷を止める
+1791784020.818,probe_start,fault:none@S
+1791784152.529,probe_end,fault:none@S code=0 success
+1791784152.530,child_start,controller pid=3547960
+1791784152.530,condition_leave,S → P
+1791784152.530,load_resume,
+1791784154.535,child_start,load_client pid=3548044
+1791784158.672,condition_enter,"N 停止=controller,te_monitor 整形=2160M 重み=(6, 25, 25) code=0"
+1791784158.673,load_pause,全負荷計測のため軽い負荷を止める
+1791784161.678,probe_start,fault:none@N
+1791784293.474,probe_end,fault:none@N code=0 success
+1791784293.475,child_start,te_monitor pid=3553565
+1791784293.476,child_start,controller pid=3553566
+1791784293.476,condition_leave,N → P
+1791784293.476,load_resume,
+1791784295.484,child_start,load_client pid=3553804
+1791784423.860,load_pause,全負荷計測のため軽い負荷を止める
+1791784426.865,probe_start,fault:stand30@P
+1791784558.749,probe_end,fault:stand30@P code=0 success
+1791784558.749,load_resume,
+1791784560.757,child_start,load_client pid=3571100
+1791784560.773,child_start,controller pid=3571101
+1791784561.274,condition_enter,P2 制御を --pprime --efficiency-table /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/scripts/radwin_mcs_efficiency.json で起動し直した
+1791784561.276,load_pause,全負荷計測のため軽い負荷を止める
+1791784564.280,probe_start,fault:stand30@P2
+1791784696.003,probe_end,fault:stand30@P2 code=0 success
+1791784696.019,child_start,controller pid=3582563
+1791784696.019,condition_leave,P2 → P
+1791784696.019,load_resume,
+1791784698.026,child_start,load_client pid=3582651
+1791784698.043,child_start,controller pid=3582652
+1791784698.544,condition_enter,P3 制御を --pprime --efficiency-table /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/scripts/radwin_mcs_efficiency.json --af41-guard 0.05 で起動し直した
+1791784698.545,load_pause,全負荷計測のため軽い負荷を止める
+1791784701.550,probe_start,fault:stand30@P3
+1791784833.430,probe_end,fault:stand30@P3 code=0 success
+1791784833.463,child_start,controller pid=3594350
+1791784833.463,condition_leave,P3 → P
+1791784833.463,load_resume,
+1791784835.471,child_start,load_client pid=3594453
+1791784839.540,condition_enter,"S 停止=controller 整形=2160M 重み=(6, 25, 25) code=0"
+1791784839.541,load_pause,全負荷計測のため軽い負荷を止める
+1791784842.546,probe_start,fault:stand30@S
+1791784974.299,probe_end,fault:stand30@S code=0 success
+1791784974.300,child_start,controller pid=3605740
+1791784974.300,condition_leave,S → P
+1791784974.300,load_resume,
+1791784976.307,child_start,load_client pid=3605933
+1791784980.425,condition_enter,"N 停止=controller,te_monitor 整形=2160M 重み=(6, 25, 25) code=0"
+1791784980.426,load_pause,全負荷計測のため軽い負荷を止める
+1791784983.429,probe_start,fault:stand30@N
+1791785115.204,probe_end,fault:stand30@N code=0 success
+1791785115.205,child_start,te_monitor pid=3611528
+1791785115.206,child_start,controller pid=3611529
+1791785115.206,condition_leave,N → P
+1791785115.206,load_resume,
+1791785117.214,child_start,load_client pid=3611776
+1791785277.702,load_pause,全負荷計測のため軽い負荷を止める
+1791785280.707,probe_start,recovered
+1791785412.443,probe_end,recovered code=0 success
+1791785412.443,load_resume,
+1791785414.451,child_start,load_client pid=3629190
+1791785701.290,load_pause,全負荷計測のため軽い負荷を止める
+1791785704.295,probe_start,periodic
+1791785836.010,probe_end,periodic code=0 success
+1791785836.010,load_resume,
+1791785838.017,child_start,load_client pid=3651794
+1791786600.321,load_pause,全負荷計測のため軽い負荷を止める
+1791786603.325,probe_start,periodic
+1791786735.108,probe_end,periodic code=0 success
+1791786735.108,load_resume,
+1791786737.114,child_start,load_client pid=3705519
+1791786742.631,observe_stop,

@@ -1,0 +1,144 @@
+=== 事前確認 ===
+  [OK] LER_Ingress/leri-cr1 に HTB qdisc あり
+  [OK] CR1/cr1-lere に HTB qdisc あり
+  [OK] table 41 は 3 本の nexthop (マルチパス)
+  [OK] fib_multipath_hash_policy = 1 (L3+L4ハッシュ)
+
+MPLS ラベル: 16005
+制御ループ開始 (間隔 2.0s / 閾値 ±10% / 上げは 3 回連続確認)
+ログ: /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/observation/20261012_running_flaptest_02/04_control/controller.csv
+
+[15:51:07] init  PHY 2502/2502 (MCS 9/9) → 推定 1301 Mbps → CR1_BW 1171M 重み 13:100:100 (経路=self)
+[15:51:09] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:51:11] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:51:13] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:51:15] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:51:17] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:51:19] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:51:21] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:51:23] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:51:25] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:51:27] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:51:29] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:51:31] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   後継の制御に引き継ぐため停止します (重みファイルは残す)
+=== 事前確認 ===
+  [OK] LER_Ingress/leri-cr1 に HTB qdisc あり
+  [OK] CR1/cr1-lere に HTB qdisc あり
+  [OK] table 41 は 3 本の nexthop (マルチパス)
+  [OK] fib_multipath_hash_policy = 1 (L3+L4ハッシュ)
+
+MPLS ラベル: 16005
+制御ループ開始 (間隔 2.0s / 閾値 ±10% / 上げは 3 回連続確認)
+ログ: /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/observation/20261012_running_flaptest_02/04_control/controller.csv
+
+[15:51:33] init  PHY 2502/2502 (MCS 9/9) → 推定 1301 Mbps → CR1_BW 1171M 重み 13:100:100 (経路=te_monitor)
+[15:51:35] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:51:37] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:51:39] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:51:41] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:51:43] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:51:45] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:51:47] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:51:49] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:51:51] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:51:53] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:51:55] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M     [P3] AF41 の CR1 を外す (溢れる確率 13.2%、閾値 5.0%)
+  [P′] 経路の重み 2 (AF41 0) の反映 を確認できず (2 秒で打ち切り)
+[15:51:59] down  PHY 2502/385 (MCS 9/1) → 推定 200 Mbps → CR1_BW 180M 重み 2:100:100 (経路=te_monitor)
+[15:51:59] up_wait(1/3) PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 180M   [15:52:01] up_wait(2/3) PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 180M   [15:52:03] keep  PHY 2502/385 (MCS 9/1 -60/-66dBm) 推定 200 / 現在 180M   [15:52:05] keep  PHY 2502/385 (MCS 9/1 -60/-66dBm) 推定 200 / 現在 180M   [15:52:07] up_wait(1/3) PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 180M   [15:52:09] up_wait(2/3) PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 180M   [15:52:11] keep  PHY 2502/385 (MCS 9/1 -60/-66dBm) 推定 200 / 現在 180M   [15:52:13] keep  PHY 2502/385 (MCS 9/1 -60/-66dBm) 推定 200 / 現在 180M   [15:52:15] up_wait(1/3) PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 180M   [15:52:17] up_wait(2/3) PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 180M   [15:52:19] keep  PHY 2502/385 (MCS 9/1 -60/-66dBm) 推定 200 / 現在 180M   [15:52:21] up_wait(1/3) PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 180M   [15:52:23] up_wait(2/3) PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 180M     [P3] AF41 の CR1 を戻す (溢れる確率 1.5%、閾値 5.0%)
+  [P′] 経路の重み 13 (AF41 13) の反映 0.36 秒
+[15:52:26] up    PHY 2502/2502 (MCS 9/9) → 推定 1301 Mbps → CR1_BW 1171M 重み 13:100:100 (経路=te_monitor)
+  [P3] AF41 の CR1 を外す (溢れる確率 13.2%、閾値 5.0%)
+  [P′] 経路の重み 2 (AF41 0) の反映 を確認できず (2 秒で打ち切り)
+[15:52:29] down  PHY 2502/385 (MCS 9/1) → 推定 200 Mbps → CR1_BW 180M 重み 2:100:100 (経路=te_monitor)
+[15:52:29] up_wait(1/3) PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 180M   [15:52:31] up_wait(2/3) PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 180M     [P3] AF41 の CR1 を戻す (溢れる確率 1.5%、閾値 5.0%)
+  [P′] 経路の重み 13 (AF41 13) の反映 0.32 秒
+[15:52:34] up    PHY 2502/2502 (MCS 9/9) → 推定 1301 Mbps → CR1_BW 1171M 重み 13:100:100 (経路=te_monitor)
+[15:52:35] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:52:37] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:52:39] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:52:41] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:52:43] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:52:45] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:52:47] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   後継の制御に引き継ぐため停止します (重みファイルは残す)
+=== 事前確認 ===
+  [OK] LER_Ingress/leri-cr1 に HTB qdisc あり
+  [OK] CR1/cr1-lere に HTB qdisc あり
+  [OK] table 41 は 3 本の nexthop (マルチパス)
+  [OK] fib_multipath_hash_policy = 1 (L3+L4ハッシュ)
+
+MPLS ラベル: 16005
+制御ループ開始 (間隔 2.0s / 閾値 ±10% / 上げは 3 回連続確認)
+ログ: /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/observation/20261012_running_flaptest_02/04_control/controller.csv
+
+[15:52:48] init  PHY 2502/2502 (MCS 9/9) → 推定 1301 Mbps → CR1_BW 1171M 重み 13:100:100 (経路=te_monitor)
+[15:52:50] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:52:52] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   後継の制御に引き継ぐため停止します (重みファイルは残す)
+=== 事前確認 ===
+  [OK] LER_Ingress/leri-cr1 に HTB qdisc あり
+  [OK] CR1/cr1-lere に HTB qdisc あり
+  [OK] table 41 は 3 本の nexthop (マルチパス)
+  [OK] fib_multipath_hash_policy = 1 (L3+L4ハッシュ)
+
+MPLS ラベル: 16005
+制御ループ開始 (間隔 2.0s / 閾値 ±10% / 上げは 3 回連続確認)
+ログ: /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/observation/20261012_running_flaptest_02/04_control/controller.csv
+
+[15:52:54] init  PHY 2502/2502 (MCS 9/9) → 推定 1301 Mbps → CR1_BW 1171M 重み 13:100:100 (経路=te_monitor)
+[15:52:56] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:52:58] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:53:00] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:53:02] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:53:04] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:53:06] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:53:08] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:53:10] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:53:12] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:53:14] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:53:16] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M     [P3] AF41 の CR1 を外す (溢れる確率 13.2%、閾値 5.0%)
+  [P′] 経路の重み 2 (AF41 0) の反映 を確認できず (2 秒で打ち切り)
+[15:53:20] down  PHY 2502/385 (MCS 9/1) → 推定 200 Mbps → CR1_BW 180M 重み 2:100:100 (経路=te_monitor)
+[15:53:20] up_wait(1/3) PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 180M   [15:53:22] up_wait(2/3) PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 180M   [15:53:24] keep  PHY 2502/385 (MCS 9/1 -60/-66dBm) 推定 200 / 現在 180M   [15:53:26] keep  PHY 2502/385 (MCS 9/1 -60/-66dBm) 推定 200 / 現在 180M   [15:53:28] up_wait(1/3) PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 180M   [15:53:30] up_wait(2/3) PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 180M   [15:53:32] keep  PHY 2502/385 (MCS 9/1 -60/-66dBm) 推定 200 / 現在 180M   [15:53:34] keep  PHY 2502/385 (MCS 9/1 -60/-66dBm) 推定 200 / 現在 180M   [15:53:36] up_wait(1/3) PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 180M   [15:53:38] up_wait(2/3) PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 180M   [15:53:40] keep  PHY 2502/385 (MCS 9/1 -60/-66dBm) 推定 200 / 現在 180M   [15:53:42] up_wait(1/3) PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 180M   [15:53:44] up_wait(2/3) PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 180M   [15:53:46] up_hold(4s) PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 180M   [15:53:48] keep  PHY 2502/385 (MCS 9/1 -60/-66dBm) 推定 200 / 現在 180M   [15:53:50] up_wait(1/3) PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 180M   [15:53:52] up_wait(2/3) PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 180M   [15:53:54] up_hold(4s) PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 180M   [15:53:56] up_hold(2s) PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 180M     [P3] AF41 の CR1 を戻す (溢れる確率 1.5%、閾値 5.0%)
+  [P′] 経路の重み 13 (AF41 13) の反映 を確認できず (2 秒で打ち切り)
+[15:54:00] up    PHY 2502/2502 (MCS 9/9) → 推定 1301 Mbps → CR1_BW 1171M 重み 13:100:100 (経路=te_monitor)
+[15:54:00] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:54:02] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:54:04] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:54:06] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:54:08] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   後継の制御に引き継ぐため停止します (重みファイルは残す)
+=== 事前確認 ===
+  [OK] LER_Ingress/leri-cr1 に HTB qdisc あり
+  [OK] CR1/cr1-lere に HTB qdisc あり
+  [OK] table 41 は 3 本の nexthop (マルチパス)
+  [OK] fib_multipath_hash_policy = 1 (L3+L4ハッシュ)
+
+MPLS ラベル: 16005
+制御ループ開始 (間隔 2.0s / 閾値 ±10% / 上げは 3 回連続確認)
+ログ: /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/observation/20261012_running_flaptest_02/04_control/controller.csv
+
+[15:54:09] init  PHY 2502/2502 (MCS 9/9) → 推定 1301 Mbps → CR1_BW 1171M 重み 13:100:100 (経路=te_monitor)
+[15:54:11] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:54:13] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:54:15] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   後継の制御に引き継ぐため停止します (重みファイルは残す)
+=== 事前確認 ===
+  [OK] LER_Ingress/leri-cr1 に HTB qdisc あり
+  [OK] CR1/cr1-lere に HTB qdisc あり
+  [OK] table 41 は 3 本の nexthop (マルチパス)
+  [OK] fib_multipath_hash_policy = 1 (L3+L4ハッシュ)
+
+MPLS ラベル: 16005
+制御ループ開始 (間隔 2.0s / 閾値 ±10% / 上げは 3 回連続確認)
+ログ: /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/observation/20261012_running_flaptest_02/04_control/controller.csv
+
+[15:54:17] init  PHY 2502/2502 (MCS 9/9) → 推定 1301 Mbps → CR1_BW 1171M 重み 13:100:100 (経路=te_monitor)
+[15:54:19] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:54:21] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:54:23] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:54:25] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:54:27] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:54:29] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:54:31] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:54:33] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:54:35] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:54:37] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:54:39] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M     [P3] AF41 の CR1 を外す (溢れる確率 13.2%、閾値 5.0%)
+  [P′] 経路の重み 2 (AF41 0) の反映 0.32 秒
+[15:54:42] down  PHY 2502/385 (MCS 9/1) → 推定 200 Mbps → CR1_BW 180M 重み 2:100:100 (経路=te_monitor)
+[15:54:43] up_wait(1/3) PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 180M   [15:54:45] up_wait(2/3) PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 180M   [15:54:47] keep  PHY 2502/385 (MCS 9/1 -60/-66dBm) 推定 200 / 現在 180M   [15:54:49] keep  PHY 2502/385 (MCS 9/1 -60/-66dBm) 推定 200 / 現在 180M   [15:54:51] up_wait(1/3) PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 180M   [15:54:53] up_wait(2/3) PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 180M   [15:54:55] keep  PHY 2502/385 (MCS 9/1 -60/-66dBm) 推定 200 / 現在 180M   [15:54:57] keep  PHY 2502/385 (MCS 9/1 -60/-66dBm) 推定 200 / 現在 180M   [15:54:59] up_wait(1/3) PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 180M   [15:55:01] up_wait(2/3) PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 180M   [15:55:03] keep  PHY 2502/385 (MCS 9/1 -60/-66dBm) 推定 200 / 現在 180M   [15:55:05] up_wait(1/3) PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 180M   [15:55:07] up_wait(2/3) PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 180M     [P3] AF41 の CR1 を戻す (溢れる確率 1.5%、閾値 5.0%)
+  [P′] 経路の重み 13 (AF41 13) の反映 0.45 秒
+[15:55:10] up    PHY 2502/2502 (MCS 9/9) → 推定 1301 Mbps → CR1_BW 1171M 重み 13:100:100 (経路=te_monitor)
+  [P3] AF41 の CR1 を外す (溢れる確率 13.2%、閾値 5.0%)
+  [P′] 経路の重み 2 (AF41 0) の反映 0.37 秒
+[15:55:12] down  PHY 2502/385 (MCS 9/1) → 推定 200 Mbps → CR1_BW 180M 重み 2:100:100 (経路=te_monitor)
+[15:55:13] up_wait(1/3) PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 180M   [15:55:15] up_wait(2/3) PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 180M     [P3] AF41 の CR1 を戻す (溢れる確率 1.5%、閾値 5.0%)
+  [P′] 経路の重み 13 (AF41 13) の反映 0.32 秒
+[15:55:18] up    PHY 2502/2502 (MCS 9/9) → 推定 1301 Mbps → CR1_BW 1171M 重み 13:100:100 (経路=te_monitor)
+[15:55:19] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:55:21] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:55:23] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:55:25] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:55:27] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:55:29] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:55:31] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   後継の制御に引き継ぐため停止します (重みファイルは残す)
+=== 事前確認 ===
+  [OK] LER_Ingress/leri-cr1 に HTB qdisc あり
+  [OK] CR1/cr1-lere に HTB qdisc あり
+  [OK] table 41 は 3 本の nexthop (マルチパス)
+  [OK] fib_multipath_hash_policy = 1 (L3+L4ハッシュ)
+
+MPLS ラベル: 16005
+制御ループ開始 (間隔 2.0s / 閾値 ±10% / 上げは 3 回連続確認)
+ログ: /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/observation/20261012_running_flaptest_02/04_control/controller.csv
+
+[15:55:32] init  PHY 2502/2502 (MCS 9/9) → 推定 1301 Mbps → CR1_BW 1171M 重み 13:100:100 (経路=te_monitor)
+[15:55:34] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:55:36] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   後継の制御に引き継ぐため停止します (重みファイルは残す)
+=== 事前確認 ===
+  [OK] LER_Ingress/leri-cr1 に HTB qdisc あり
+  [OK] CR1/cr1-lere に HTB qdisc あり
+  [OK] table 41 は 3 本の nexthop (マルチパス)
+  [OK] fib_multipath_hash_policy = 1 (L3+L4ハッシュ)
+
+MPLS ラベル: 16005
+制御ループ開始 (間隔 2.0s / 閾値 ±10% / 上げは 3 回連続確認)
+ログ: /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/observation/20261012_running_flaptest_02/04_control/controller.csv
+
+[15:55:38] init  PHY 2502/2502 (MCS 9/9) → 推定 1301 Mbps → CR1_BW 1171M 重み 13:100:100 (経路=te_monitor)
+[15:55:40] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:55:42] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:55:44] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:55:46] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:55:48] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:55:50] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:55:52] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:55:54] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:55:56] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:55:58] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:56:00] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M     [P3] AF41 の CR1 を外す (溢れる確率 13.2%、閾値 5.0%)
+  [P′] 経路の重み 2 (AF41 0) の反映 0.36 秒
+[15:56:03] down  PHY 2502/385 (MCS 9/1) → 推定 200 Mbps → CR1_BW 180M 重み 2:100:100 (経路=te_monitor)
+[15:56:04] up_wait(1/3) PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 180M   [15:56:06] up_wait(2/3) PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 180M   [15:56:08] keep  PHY 2502/385 (MCS 9/1 -60/-66dBm) 推定 200 / 現在 180M   [15:56:10] keep  PHY 2502/385 (MCS 9/1 -60/-66dBm) 推定 200 / 現在 180M   [15:56:12] up_wait(1/3) PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 180M   [15:56:14] up_wait(2/3) PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 180M   [15:56:16] keep  PHY 2502/385 (MCS 9/1 -60/-66dBm) 推定 200 / 現在 180M   [15:56:18] keep  PHY 2502/385 (MCS 9/1 -60/-66dBm) 推定 200 / 現在 180M   [15:56:20] up_wait(1/3) PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 180M   [15:56:22] up_wait(2/3) PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 180M   [15:56:24] keep  PHY 2502/385 (MCS 9/1 -60/-66dBm) 推定 200 / 現在 180M   [15:56:26] up_wait(1/3) PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 180M   [15:56:28] up_wait(2/3) PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 180M   [15:56:30] keep  PHY 2502/385 (MCS 9/1 -60/-66dBm) 推定 200 / 現在 180M   [15:56:32] keep  PHY 2502/385 (MCS 9/1 -60/-66dBm) 推定 200 / 現在 180M   [15:56:34] up_wait(1/3) PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 180M   [15:56:36] up_wait(2/3) PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 180M   [15:56:38] up_hold(4s) PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 180M   [15:56:40] up_hold(2s) PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 180M     [P3] AF41 の CR1 を戻す (溢れる確率 1.5%、閾値 5.0%)
+  [P′] 経路の重み 13 (AF41 13) の反映 を確認できず (2 秒で打ち切り)
+[15:56:44] up    PHY 2502/2502 (MCS 9/9) → 推定 1301 Mbps → CR1_BW 1171M 重み 13:100:100 (経路=te_monitor)
+[15:56:44] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:56:46] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:56:48] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:56:50] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:56:52] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   後継の制御に引き継ぐため停止します (重みファイルは残す)
+=== 事前確認 ===
+  [OK] LER_Ingress/leri-cr1 に HTB qdisc あり
+  [OK] CR1/cr1-lere に HTB qdisc あり
+  [OK] table 41 は 3 本の nexthop (マルチパス)
+  [OK] fib_multipath_hash_policy = 1 (L3+L4ハッシュ)
+
+MPLS ラベル: 16005
+制御ループ開始 (間隔 2.0s / 閾値 ±10% / 上げは 3 回連続確認)
+ログ: /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/observation/20261012_running_flaptest_02/04_control/controller.csv
+
+[15:56:53] init  PHY 2502/2502 (MCS 9/9) → 推定 1301 Mbps → CR1_BW 1171M 重み 13:100:100 (経路=te_monitor)
+[15:56:55] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   [15:56:57] keep  PHY 2502/2502 (MCS 9/9 -60/-58dBm) 推定 1301 / 現在 1171M   

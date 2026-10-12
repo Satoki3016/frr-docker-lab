@@ -52,16 +52,20 @@ WEIGHTS_FILE="${RADWIN_WEIGHTS_FILE:-/run/radwin/weights.env}"
 WEIGHTS_MAX_AGE="${RADWIN_WEIGHTS_MAX_AGE:-30}"
 # W1_AF41 (任意) は AF41 の表 (table 41) だけの CR1 の重み。0 なら AF41 だけ CR1 を外す
 # (制御の条件 P3: CR1 の容量が小さく、AF41 が溢れる確率が高いとき)。無ければ W1 と同じ。
-_dw1=""; _dw2=""; _dw3=""; _dw1a=""; _dw_src=""; _applied_sig=""
+# HOLD (任意、秒) は条件 P4: OSPF の隣接が戻っても、その秒数安定するまで CR を経路へ戻さない。
+# 無線が数秒おきに途切れては戻るとき、戻った瞬間に CR1 へ流し直して次の途切れで失うのを防ぐ。
+# 制御が止まると重みファイルが消えるので、S / N では 0 (今までどおりすぐ戻す)。
+_dw1=""; _dw2=""; _dw3=""; _dw1a=""; _dhold=0; _dw_src=""; _applied_sig=""
 
 _load_weights() {
     local src="static" w1="${WCMP_W1:-1}" w2="${WCMP_W2:-10}" w3="${WCMP_W3:-10}"
-    local w1a="" TS="" W1="" W2="" W3="" W1_AF41="" line age
+    local w1a="" hold=0 TS="" W1="" W2="" W3="" W1_AF41="" HOLD="" line age
     if [ -r "$WEIGHTS_FILE" ]; then
         src="stale"
         while IFS= read -r line || [ -n "$line" ]; do
-            [[ "$line" =~ ^(TS|W1|W2|W3|W1_AF41)=([0-9]+)$ ]] || continue
+            [[ "$line" =~ ^(TS|W1|W2|W3|W1_AF41|HOLD)=([0-9]+)$ ]] || continue
             case "${BASH_REMATCH[1]}" in
+                HOLD) HOLD="${BASH_REMATCH[2]}" ;;
                 W1_AF41) W1_AF41="${BASH_REMATCH[2]}" ;;
                 TS) TS="${BASH_REMATCH[2]}" ;;
                 W1) W1="${BASH_REMATCH[2]}" ;;
@@ -79,6 +83,9 @@ _load_weights() {
                 if [ -n "$W1_AF41" ] && (( 10#$W1_AF41 <= 255 )); then
                     w1a=$((10#$W1_AF41))
                 fi
+                if [ -n "$HOLD" ] && (( 10#$HOLD <= 600 )); then
+                    hold=$((10#$HOLD))
+                fi
             fi
         fi
     fi
@@ -89,7 +96,7 @@ _load_weights() {
             static)  log "  [重み] 動的制御なし → 静的値 ${w1}:${w2}:${w3} を使用" ;;
         esac
     fi
-    _dw1=$w1; _dw2=$w2; _dw3=$w3; _dw1a=${w1a:-$w1}; _dw_src=$src
+    _dw1=$w1; _dw2=$w2; _dw3=$w3; _dw1a=${w1a:-$w1}; _dhold=$hold; _dw_src=$src
     return 0
 }
 
@@ -351,6 +358,7 @@ update_tables() {
 # ── OSPF 隣接ポーリング ───────────────────────────────────────────────────
 # netlink が発火しない障害 (netem/iptables) を ~2秒周期で補完検知する
 _ospf_poll_last=0
+_full_since=("" "" "")       # P4: 隣接が戻った時刻 (安定を待っている間だけ)
 check_ospf_neighbors() {
     local now; now=$(date +%s)
     # 1秒未満の連呼を抑制
@@ -369,9 +377,22 @@ check_ospf_neighbors() {
             update_tables
         elif [ "${state[$i]}" -eq 1 ] && [ "$currently_full" -eq 1 ]; then
             # 障害 → Full回復: netem 解除後の自然復旧を検知
+            if (( ${_dhold:-0} > 0 )); then
+                # P4: 戻ってから HOLD 秒続けて Full のときだけ戻す
+                if [ -z "${_full_since[$i]:-}" ]; then
+                    _full_since[$i]=$now
+                    log "…  ${CR_NAMES[$i]} OSPF Full回復 → ${_dhold} 秒安定するまで経路へ戻さない"
+                fi
+                (( now - ${_full_since[$i]} < _dhold )) && continue
+            fi
+            _full_since[$i]=""
             log "✓  ${CR_NAMES[$i]} OSPF Full回復検知 (ポーリング) → テーブル更新"
             state[$i]=0
             update_tables
+        elif [ "${state[$i]}" -eq 1 ] && [ -n "${_full_since[$i]:-}" ]; then
+            # 待っている間に再び消えた: 待ち直し
+            log "⚠  ${CR_NAMES[$i]} 回復を待つ間に再び消失 → 待ち直し"
+            _full_since[$i]=""
         fi
     done
 }

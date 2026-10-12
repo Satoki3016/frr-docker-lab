@@ -439,6 +439,11 @@ SNMP_LERI="/proc/${LER_INGRESS_PID}/net/snmp"
 # CR1 自身の出口 (cr1-lere、無線区間へ) の HTB の破棄も数える (2026-10-09 追加)。
 # LER_Ingress の出口だけでは、CR1 経路の先で落ちた AF41 の場所が分からなかったため。
 CR1_PID=$(docker inspect --format '{{.State.Pid}}' CR1 2>/dev/null || echo "")
+# CR2 / CR3 の出口 (有線) の HTB の破棄も数える (2026-10-12 追加)。障害のとき CR1 が
+# LER_Ingress へ送り返した通信は LER_Ingress の整形を通らずに CR2/CR3 へ流れ、
+# CR2/CR3 の出口の HTB で初めて整形される。そこで何が落ちたかを残すため。
+CR2_PID=$(docker inspect --format '{{.State.Pid}}' CR2 2>/dev/null || echo "")
+CR3_PID=$(docker inspect --format '{{.State.Pid}}' CR3 2>/dev/null || echo "")
 echo "  [ok] LER_Ingress PID=${LER_INGRESS_PID} / CR1 PID=${CR1_PID:-なし}"
 
 # ── 経路別の送信量モニター ──────────────────────────────────────────
@@ -480,7 +485,8 @@ echo "  [ok] 経路別モニター PID=$PATH_MONITOR_PID → $PATH_CSV"
     _poll_tc_drops() {
         local spec node pid dev
         for spec in "LER_Ingress:$LER_INGRESS_PID:leri-cr1" "LER_Ingress:$LER_INGRESS_PID:leri-cr2" \
-                    "LER_Ingress:$LER_INGRESS_PID:leri-cr3" "CR1:$CR1_PID:cr1-lere"; do
+                    "LER_Ingress:$LER_INGRESS_PID:leri-cr3" "CR1:$CR1_PID:cr1-lere" \
+                    "CR2:$CR2_PID:cr2-lere" "CR3:$CR3_PID:cr3-lere"; do
             IFS=: read -r node pid dev <<< "$spec"
             [ -n "$pid" ] || continue
             nsenter -t "$pid" -n -- tc -s class show dev "$dev" 2>/dev/null \
@@ -559,6 +565,94 @@ echo "  [ok] 経路別モニター PID=$PATH_MONITOR_PID → $PATH_CSV"
 ) &
 DROP_MONITOR_PID=$!
 echo "  [ok] PID=$DROP_MONITOR_PID → $HTB_CSV / $IP_DROP_CSV"
+
+# ── 受信側の取りこぼしと、障害のときの経路の向き (2026-10-12 追加) ──────────
+# 障害の実験で、全フローに少しずつ出る AF41 の損失の場所が分からなかった。
+# 候補の (1) LER_Egress の受信 (物理 NIC・Rx への veth) と (2) 受信の iperf3 の
+# UDP 受信バッファの溢れを毎秒数える。あわせて、CR1 が LER_Egress 行きのラベルを
+# どちらへ送っているか (無線側か、LER_Ingress への送り返しか) と、LER_Ingress が
+# CR1 から受け取った量 (送り返しの量) を残す。
+RX_DROP_CSV="$RESULTS_DIR/rx_drops.csv"
+echo "time,node,counter,per_sec" > "$RX_DROP_CSV"
+ROUTE_CSV="$RESULTS_DIR/route_state.csv"
+echo "time,cr1_label_dev,leri_label_dev,leri_from_cr1_bytes_per_sec" > "$ROUTE_CSV"
+RX_PIDS=()
+for rx in Rx1 Rx2 Rx3; do
+    RX_PIDS+=("$rx:$(docker inspect --format '{{.State.Pid}}' "$rx" 2>/dev/null || echo "")")
+done
+(
+    set +e
+    t_start=$(date +%s)
+    declare -A prev
+    # 出力は 機器:計数器:累計。値は文字列のまま数字だけ取り出す (mawk の指数表記を避ける)
+    _poll_rx() {
+        awk '
+            function out(n, v) { gsub(/[^0-9]/, "", v); print "LER_Egress:" n ":" (v == "" ? 0 : v) }
+            { sub(/^ +/, "") }
+            $1 ~ /^lere-cr[123]:$/ { d = substr($1, 1, length($1) - 1)
+                out(d ".rx_errs", $4); out(d ".rx_drop", $5); out(d ".rx_fifo", $6) }
+            $1 ~ /^lere-rx[123]:$/ { d = substr($1, 1, length($1) - 1); out(d ".tx_drop", $13) }
+        ' "$NETDEV_FILE" 2>/dev/null
+        local spec node pid
+        for spec in "${RX_PIDS[@]}"; do
+            IFS=: read -r node pid <<< "$spec"
+            [ -n "$pid" ] || continue
+            awk -v n="$node" '
+                /^Udp:/ { if (!h) { for (i = 2; i <= NF; i++) col[$i] = i; h = 1; next }
+                          split("InDatagrams InErrors RcvbufErrors", k, " ")
+                          for (j = 1; j <= 3; j++) { v = $(col[k[j]]); gsub(/[^0-9]/, "", v)
+                                                     print n ":udp." k[j] ":" (v == "" ? 0 : v) }
+                          exit }
+            ' "/proc/$pid/net/snmp" 2>/dev/null
+        done
+    }
+    # ラベルの行き先のインタフェース名 (複数なら + でつなぐ)。無ければ none
+    _label_dev() {
+        [ -n "$1" ] || { echo "-"; return; }
+        nsenter -t "$1" -n -- ip -M route show "$LERE_LABEL" 2>/dev/null \
+            | grep -o 'dev [^ ]*' | awk '{printf "%s%s", (NR > 1 ? "+" : ""), $2} END{if (!NR) printf "none"}'
+    }
+    _from_cr1() { awk '$1=="leri-cr1:"{printf "%.0f", $2}' "$NETDEV_LERI" 2>/dev/null; }
+
+    while IFS=: read -r node c v; do prev["$node:$c"]=$v; done < <(_poll_rx)
+    p_from=$(_from_cr1); p_from=${p_from:-0}; t_prev_ms=$(date +%s%3N)
+    while true; do
+        sleep 1
+        t=$(( $(date +%s) - t_start ))
+        while IFS=: read -r node c v; do
+            d=$(( ${v:-0} - ${prev["$node:$c"]:-0} )); [ "$d" -lt 0 ] && d=0
+            echo "$t,$node,$c,$d" >> "$RX_DROP_CSV"
+            prev["$node:$c"]=${v:-0}
+        done < <(_poll_rx)
+        c_from=$(_from_cr1); now_ms=$(date +%s%3N); dt=$(( now_ms - t_prev_ms )); [ "$dt" -le 0 ] && dt=1000
+        [[ "$c_from" =~ ^[0-9]+$ ]] || c_from=$p_from
+        d_from=$(( (c_from - p_from) * 1000 / dt )); [ "$d_from" -lt 0 ] && d_from=0
+        echo "$t,$(_label_dev "$CR1_PID"),$(_label_dev "$LER_INGRESS_PID"),$d_from" >> "$ROUTE_CSV"
+        p_from=$c_from; t_prev_ms=$now_ms
+    done
+) &
+RX_MONITOR_PID=$!
+echo "  [ok] PID=$RX_MONITOR_PID → $RX_DROP_CSV / $ROUTE_CSV"
+
+# ── ラベル転送表・経路表の書き換えの記録 (2026-10-12 追加) ───────────────
+# veth の flaptest で、CR1 を経路から外したあとも、無線が途切れるたびに AF41 が約 1440 個
+# (全フローから同じくらい、約 10 ms 分) 落ちていた。どの計数器にも出ないため、OSPF の
+# 再計算のたびに FRR がラベル転送表や経路表を消して入れ直し、その一瞬に落ちているのでは
+# ないかを確かめる。書き換えの通知 (ip monitor) を、機器名と時刻 (秒、小数 6 桁) 付きで残す。
+MPLS_LOG="$RESULTS_DIR/route_events.log"
+: > "$MPLS_LOG"
+MPLS_MON_PIDS=()
+for spec in "LER_Ingress:$LER_INGRESS_PID" "CR1:$CR1_PID" "CR2:$CR2_PID" "CR3:$CR3_PID" \
+            "LER_Egress:$LER_EGRESS_PID"; do
+    IFS=: read -r node pid <<< "$spec"
+    [ -n "$pid" ] || continue
+    for fam in "-M" "-4"; do
+        ( nsenter -t "$pid" -n -- ip "$fam" monitor route 2>/dev/null \
+            | while IFS= read -r l; do echo "$EPOCHREALTIME $node ${fam#-} $l"; done >> "$MPLS_LOG" ) &
+        MPLS_MON_PIDS+=($!)
+    done
+done
+echo "  [ok] 経路の書き換えの記録 → $MPLS_LOG"
 
 # ── 障害注入プロセス ──────────────────────────────────────────────────
 FAILURE_PID=""
@@ -700,6 +794,9 @@ fi
 
 kill "$THR_MONITOR_PID"       2>/dev/null || true
 kill "${DROP_MONITOR_PID:-}" 2>/dev/null || true
+kill "${RX_MONITOR_PID:-}" 2>/dev/null || true
+kill "${MPLS_MON_PIDS[@]:-}" 2>/dev/null || true
+pkill -f "ip -[M4] monitor route" 2>/dev/null || true
 kill "${PATH_MONITOR_PID:-}" 2>/dev/null || true
 
 # failure_reroute の場合はモニターも停止

@@ -938,3 +938,188 @@ class ShortProbeTests(unittest.TestCase):
         self.assertIn("--probe-seconds 60 --no-start-probe", text)
         self.assertNotIn("sleep 200", text)
 
+
+
+class HoldDownTests(unittest.TestCase):
+    """条件 P4: 途切れ途切れの無線で、戻ってもしばらく CR1 へ流し直さない。"""
+
+    def setUp(self):
+        import radwin_wcmp_controller as ctl
+        self.ctl = ctl
+
+    def make(self, hold):
+        args = self.ctl.parse_args(["--pprime", "--af41-guard", "0.05", "--hold-down", str(hold)])
+        c = self.ctl.Controller(args, "16005", csv.writer(open(os.devnull, "w")))
+        c.current = 180
+        return c
+
+    def test_up_waits_for_hold_after_down(self):
+        c = self.make(10)
+        c.last_down = time.time() - 3
+        c.up_streak = 2
+        with patch.object(self.ctl, "apply_htb", return_value=True), \
+             patch.object(self.ctl, "te_monitor_owns_routes", return_value=True), \
+             patch.object(self.ctl, "publish_weights"), patch.object(self.ctl, "notify_te_monitor"), \
+             patch.object(self.ctl, "wait_routes", return_value=0.3):
+            row = c._on_normal(1301.3, {}, {})
+            self.assertTrue(row[-1].startswith("up_hold"), row[-1])
+            self.assertEqual(c.current, 180)                   # 上げていない
+            c.last_down = time.time() - 11
+            row = c._on_normal(1301.3, {}, {})
+            self.assertEqual(row[-1], "up")
+            self.assertEqual(c.current, 1171)
+
+    def test_flapping_readings_do_not_raise_until_ten_seconds_of_good_readings(self):
+        """2 秒ごとの読み取りが「低い・よい・よい・よい・低い…」と揺れる間は上げない (veth flaptest の再現)。"""
+        c = self.make(10)
+        clock = [0.0]
+        seq = ["lo", "hi", "hi", "hi", "lo", "hi", "hi", "hi", "lo"] + ["hi"] * 6
+        acts = []
+        with patch.object(self.ctl.time, "time", side_effect=lambda: clock[0]), \
+             patch.object(self.ctl, "apply_htb", return_value=True), \
+             patch.object(self.ctl, "te_monitor_owns_routes", return_value=True), \
+             patch.object(self.ctl, "publish_weights"), patch.object(self.ctl, "notify_te_monitor"), \
+             patch.object(self.ctl, "wait_routes", return_value=0.3):
+            for k, v in enumerate(seq):
+                clock[0] = 2.0 * k
+                acts.append(c._on_normal(200.0 if v == "lo" else 1301.3, {}, {})[-1])
+        first_up = acts.index("up")
+        self.assertEqual(first_up, 13)                         # 最後の低い読み取り (16 秒) の 10 秒後 = 26 秒
+        self.assertGreaterEqual(2.0 * first_up - 16.0, 10)
+        self.assertNotIn("up", acts[:first_up])
+
+    def test_without_hold_up_is_unchanged(self):
+        c = self.make(0)
+        c.last_down = time.time()
+        c.up_streak = 2
+        with patch.object(self.ctl, "apply_htb", return_value=True), \
+             patch.object(self.ctl, "te_monitor_owns_routes", return_value=True), \
+             patch.object(self.ctl, "publish_weights"), patch.object(self.ctl, "notify_te_monitor"), \
+             patch.object(self.ctl, "wait_routes", return_value=0.3):
+            self.assertEqual(c._on_normal(1301.3, {}, {})[-1], "up")
+
+    def test_recovery_after_link_down_also_waits(self):
+        c = self.make(10)
+        c.link_down, c.recover_streak = True, 2
+        c.last_down = time.time() - 2
+        self.assertTrue(c._on_recovering(1301.3)[-1].startswith("link_up_hold"))
+        self.assertTrue(c.link_down)
+
+    def test_hold_is_published(self):
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "w.env"
+            with patch.object(self.ctl, "WEIGHTS_FILE", str(f)):
+                c = self.make(10)
+                c._publish()
+                self.assertIn("HOLD=10\n", f.read_text())
+                c.link_down = True
+                c._publish()
+                self.assertIn("HOLD=10\n", f.read_text())        # 外している間も伝える
+
+    def run_neighbor_checks(self, seq, hold):
+        """te_monitor の check_ospf_neighbors を、隣接の状態の列 seq [(秒, Full か)] で動かす。"""
+        text = (SCRIPTS / "frr_te_monitor.sh").read_text()
+        func = re.search(r"^_ospf_poll_last=0\n.*?^\}", text, re.S | re.M).group(0)
+        steps = " ".join(f"{t}:{int(full)}" for t, full in seq)
+        script = f"""
+LOG=""; log() {{ LOG="$LOG|$*"; }}; update_tables() {{ LOG="$LOG|UPDATE state0=${{state[0]}}"; }}
+CR_NAMES=(CR1 CR2 CR3); CR_ROUTER_IDS=(a b c); state=(0 0 0); _dhold={hold}; _path_side=x
+_fetch_neighbors() {{ :; }}
+_path_full_cached() {{ [ "$1" != a ] || [ "$CUR" = 1 ]; }}
+date() {{ echo "$NOW"; }}
+{func}
+for s in {steps}; do NOW=${{s%%:*}}; CUR=${{s##*:}}; check_ospf_neighbors; done
+echo "$LOG"
+"""
+        return subprocess.run(["bash", "-c", script], capture_output=True, text=True).stdout
+
+    def test_te_monitor_restores_cr1_only_after_stable(self):
+        # 10 秒に消える → 12 秒に戻る → 15 秒にまた消える → 17 秒に戻る → 28 秒まで Full
+        seq = [(10, 0), (12, 1), (13, 1), (15, 0), (17, 1), (20, 1), (26, 1), (28, 1)]
+        log = self.run_neighbor_checks(seq, 10)
+        self.assertEqual(log.count("UPDATE state0=0"), 1)          # 戻したのは 1 回だけ
+        self.assertIn("再び消失", log)
+        self.assertLess(log.index("安定するまで"), log.index("UPDATE state0=0"))
+        self.assertTrue(log.rstrip().endswith("UPDATE state0=0"))   # 17 + 10 = 27 秒以降の 28 秒で戻す
+
+    def test_te_monitor_without_hold_restores_at_once(self):
+        log = self.run_neighbor_checks([(10, 0), (12, 1), (15, 0), (17, 1)], 0)
+        self.assertEqual(log.count("UPDATE state0=0"), 2)
+
+    def test_te_monitor_reads_hold(self):
+        text = (SCRIPTS / "frr_te_monitor.sh").read_text()
+        func = re.search(r"^_load_weights\(\) \{.*?^\}", text, re.S | re.M).group(0)
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "w.env"
+            for content, want in ((f"TS={int(time.time())}\nW1=2\nW2=100\nW3=100\nHOLD=10\n", "10"),
+                                  (f"TS={int(time.time())}\nW1=2\nW2=100\nW3=100\n", "0"),
+                                  ("TS=1\nW1=2\nW2=100\nW3=100\nHOLD=10\n", "0")):   # 古いファイルは使わない
+                f.write_text(content)
+                script = (f'log() {{ :; }}; WEIGHTS_FILE={f}; WEIGHTS_MAX_AGE=30\n{func}\n'
+                          '_load_weights; echo "$_dhold"')
+                out = subprocess.run(["bash", "-c", script], capture_output=True, text=True).stdout.strip()
+                self.assertEqual(out, want, content)
+
+    def test_observer_condition_p4(self):
+        self.assertIn("P4", obs.CONDITIONS)
+        self.assertEqual(obs.PPRIME_ARGS["P4"][-4:], ["--af41-guard", "0.05", "--hold-down", "10"])
+
+
+class FaultAnalysisTests(unittest.TestCase):
+    """集計: 遮られた区間の判定 (ping も使う) と、区間の損失・新しい記録。"""
+
+    def setUp(self):
+        sys.path.insert(0, str(SCRIPTS.parent / "results" / "frr" / "tools"))
+        import summarize_rain_observation as sm
+        self.sm = sm
+
+    def test_detect_event_pairs_by_time_even_when_reads_are_missing(self):
+        t0 = 1000.0
+        odu = [{"time": str(t0 - 100), "odu": ip, "signal_dbm": "-55", "connected": "1"}
+               for ip in ("192.168.1.31", "192.168.1.32")]
+        # .32 は最初の 2 回の読み取りが抜けている (以前は並び順で組んでいたので、ここで全部ずれた)
+        for k, t in enumerate((10, 15, 20, 25)):
+            odu.append({"time": str(t0 + t), "odu": "192.168.1.31", "signal_dbm": "-70", "connected": "1"})
+            if k >= 2:
+                odu.append({"time": str(t0 + t + 1), "odu": "192.168.1.32", "signal_dbm": "-70", "connected": "1"})
+        ev = self.sm.detect_event(odu, [], [], t0, t0 + 120)
+        self.assertEqual(ev["event"], 1)
+        self.assertEqual(ev["event_hop"], "無線1")
+
+    def test_detect_event_from_ping_only(self):
+        t0 = 1000.0
+        ping = [{"time": str(t0 + t), "status": "no_answer"} for t in (30, 33, 40)]
+        ev = self.sm.detect_event([], [], ping, t0, t0 + 120)
+        self.assertEqual((ev["event"], ev["event_hop"], ev["event_drop_db"]), (1, "ping", "ping のみ"))
+        self.assertEqual(round(ev["event_t1"] - ev["event_t0"]), 11)
+        lone = [{"time": str(t0 + 30), "status": "no_answer"}, {"time": str(t0 + 80), "status": "timeout"}]
+        self.assertEqual(self.sm.detect_event([], [], lone, t0, t0 + 120)["event"], 0)   # 離れた 1 回ずつは数えない
+
+    def test_interval_loss_takes_first_sum_line(self):
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "iperf3_af41.log"
+            f.write_text("[SUM]   0.00-1.00   sec  1 GBytes  8 Gbits/sec  0.05 ms  5/142000 (0%)\n"
+                         "[SUM]   1.00-2.00   sec  1 GBytes  8 Gbits/sec  0.05 ms  7/142000 (0%)\n"
+                         "[SUM]   0.00-120.00 sec  1 GBytes  8 Gbits/sec  0.05 ms  12/17000000 (0%)  receiver\n"
+                         "[SUM]   1.00-2.00   sec  1 GBytes  8 Gbits/sec  0.05 ms  99/142000 (0%)\n")
+            self.assertEqual(self.sm.iperf_interval_lost(f), {0: 5, 1: 7})
+
+    def test_extra_drops(self):
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            (d / "rx_drops.csv").write_text("time,node,counter,per_sec\n1,Rx1,udp.RcvbufErrors,3\n"
+                                            "2,Rx1,udp.RcvbufErrors,4\n1,LER_Egress,lere-cr2.rx_drop,2\n"
+                                            "1,Rx1,udp.InDatagrams,99\n")
+            (d / "tc_drops.csv").write_text("time,node,iface,class,drops_per_sec\n1,CR2,cr2-lere,AF41,0\n"
+                                            "1,CR2,cr2-lere,AF42,50\n1,LER_Ingress,leri-cr1,AF41,9\n")
+            (d / "route_state.csv").write_text("time,cr1_label_dev,leri_label_dev,leri_from_cr1_bytes_per_sec\n"
+                                               "1,cr1-lere,leri-cr1,100\n2,cr1-leri,leri-cr2+leri-cr3,250000000\n")
+            r = self.sm.extra_drops(d)
+            self.assertEqual((r["rx_rcvbuf"], r["lere_rx_drop"], r["cr23_af41_drop"], r["hairpin_s"],
+                              r["hairpin_max_mbps"]), (7, 2, 0, 1, 2000))
+
+    def test_measure_records_new_files(self):
+        text = (SCRIPTS / "frr_measure.sh").read_text()
+        for name in ("rx_drops.csv", "route_state.csv", "route_events.log", '"CR2:$CR2_PID:cr2-lere"', '"CR3:$CR3_PID:cr3-lere"',
+                     'kill "${RX_MONITOR_PID:-}"'):
+            self.assertIn(name, text)

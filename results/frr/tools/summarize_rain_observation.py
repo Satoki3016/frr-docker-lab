@@ -116,6 +116,44 @@ def iperf_lost(path: Path) -> int | str:
         return ""
 
 
+def iperf_interval_lost(path: Path) -> dict[int, int]:
+    """iperf3 の 1 秒ごとの [SUM] 行 (受信側) の失った数 {区間の始まりの秒: 数}。同じ区間は最初の行だけ使う。"""
+    out: dict[int, int] = {}
+    try:
+        text = path.read_text(errors="replace")
+    except OSError:
+        return out
+    for m in re.finditer(r"^\[SUM\]\s+(\d+)\.\d+-(\d+)\.\d+\s+sec.*?\s(\d+)/(\d+) \(", text, re.M):
+        a, b = int(m.group(1)), int(m.group(2))
+        if b - a == 1 and a not in out:
+            out[a] = int(m.group(3))
+    return out
+
+
+def extra_drops(folder: Path) -> dict:
+    """2026-10-12 から足した記録の合計: 受信側の取りこぼし・LER_Egress の受信の破棄・CR2/CR3 の出口の
+    AF41 の破棄・CR1 から LER_Ingress への送り返し。記録が無い古い回は空欄。"""
+    r = {"rx_rcvbuf": "", "lere_rx_drop": "", "cr23_af41_drop": "", "hairpin_s": "", "hairpin_max_mbps": ""}
+    f = folder / "rx_drops.csv"
+    if f.exists():
+        rows = list(csv.DictReader(f.open()))
+        r["rx_rcvbuf"] = sum(int(num(x["per_sec"])) for x in rows if x["counter"] == "udp.RcvbufErrors")
+        r["lere_rx_drop"] = sum(int(num(x["per_sec"])) for x in rows
+                                if x["node"] == "LER_Egress" and x["counter"].split(".")[-1] in ("rx_drop", "rx_fifo"))
+    f = folder / "tc_drops.csv"
+    if f.exists():
+        rows = [x for x in csv.DictReader(f.open()) if x.get("node") in ("CR2", "CR3")]
+        if rows:
+            r["cr23_af41_drop"] = sum(int(num(x["drops_per_sec"])) for x in rows if x["class"] == "AF41")
+    f = folder / "route_state.csv"
+    if f.exists():
+        rows = list(csv.DictReader(f.open()))
+        back = [x for x in rows if "cr1-leri" in x["cr1_label_dev"]]
+        r["hairpin_s"] = len(back)
+        r["hairpin_max_mbps"] = round(max((num(x["leri_from_cr1_bytes_per_sec"]) for x in rows), default=0) * 8 / 1e6)
+    return r
+
+
 def steady_gbps(path: Path) -> dict[str, float]:
     """throughput.csv (毎秒の受信量 [bytes/s]) の平均 [Gbps]。始めの 10 秒と終わりの 5 秒を除く。"""
     try:
@@ -149,6 +187,13 @@ HOPS = (("無線1", "192.168.1.31", "192.168.1.32"), ("無線2", "192.168.1.33",
 DROP_BOTH, DROP_ONE = 4.0, 6.0   # 両端とも 4 dB 以上、かつ片方が 6 dB 以上下がったら「遮られた」
 
 
+def _drop_text(drops: list[float]):
+    """最も下がった量。受信電力で捉えられず ping だけで検出したときは「ping のみ」。"""
+    if not drops:
+        return "ping のみ"
+    return "切断" if max(drops) >= 99 else round(max(drops))
+
+
 def detect_event(odu: list[dict], ctl: list[dict], ping: list[dict], t0: float, t1: float) -> dict:
     """計測の時間帯 [t0, t1] に、電波が遮られた・切れた時間帯があるかを記録から割り出す。
 
@@ -165,7 +210,13 @@ def detect_event(odu: list[dict], ctl: list[dict], ping: list[dict], t0: float, 
                           and t0 - 300 <= num(r["time"]) < t0 - 5) for ip in (a_ip, b_ip)}
         a = sorted((num(r["time"]), r) for r in odu if r["odu"] == a_ip and t0 <= num(r["time"]) <= t1)
         b = sorted((num(r["time"]), r) for r in odu if r["odu"] == b_ip and t0 <= num(r["time"]) <= t1)
-        for (ta, ra), (tb, rb) in zip(a, b):           # 同じ巡回 (5 秒ごと) の両端の読み取り
+        # 同じ巡回 (5 秒ごと) の両端の読み取りを、時刻のいちばん近いもの同士で組にする。
+        # 以前は並び順 (zip) で組んでいたため、遮られて片方の読み取りが抜けると後ろが全部ずれ、
+        # 検出できなかった (2026-10-12 の stand30@N)
+        for ta, ra in a:
+            if not b:
+                break
+            tb, rb = min(b, key=lambda x: abs(x[0] - ta))
             if abs(ta - tb) > 3:
                 continue
             down = ra["connected"] != "1" or rb["connected"] != "1"
@@ -173,17 +224,22 @@ def detect_event(odu: list[dict], ctl: list[dict], ping: list[dict], t0: float, 
             db = pre[b_ip] - num(rb["signal_dbm"]) if rb["signal_dbm"] != "" else 0.0
             if down or (min(da, db) >= DROP_BOTH and max(da, db) >= DROP_ONE):
                 flagged.append((min(ta, tb), name, 99.0 if down else max(da, db)))
-    pg = [r for r in ping if t0 <= num(r["time"]) <= t1 and r["status"] != "ok"]
+    pg = sorted(num(r["time"]) for r in ping if t0 <= num(r["time"]) <= t1 and r["status"] != "ok")
     out["ping_noanswer"] = len(pg)
+    # 無線区間の ping (1 秒ごと) が 10 秒以内に 2 回以上応答しなければ、遮られたとみなす。
+    # 受信電力の読み取りは 5 秒ごとで、遮られている間は読めないこともあるため、それを補う
+    ping_hit = [t for i, t in enumerate(pg) if any(abs(u - t) <= 10 for j, u in enumerate(pg) if j != i)]
+    flagged += [(t, "ping", 99.0) for t in ping_hit]
     if not flagged:
         return out
     start = min(t for t, _, _ in flagged)
-    end = max(t for t, _, _ in flagged) + 5           # 読み取りは 5 秒ごと
+    end = max(t + (1 if n == "ping" else 5) for t, n, _ in flagged)   # ping は 1 秒、受信電力は 5 秒ごと
     acts = [r for r in ctl if start - 10 <= num(r["time"]) <= t1
             and r["action"].split("(")[0] in ("down", "link_lost", "link_down")]
     out.update(event=1, event_hop=",".join(sorted({n for _, n, _ in flagged})),
+               event_t0=start, event_t1=end,
                event_start_jst=fmt(start), event_len_s=round(end - start),
-               event_drop_db=("切断" if max(d for _, _, d in flagged) >= 99 else round(max(d for _, _, d in flagged))))
+               event_drop_db=_drop_text([d for _, n, d in flagged if n != "ping"]))
     if acts:
         out["ctl_first"] = acts[0]["action"].split("(")[0]
         out["ctl_delay_s"] = round(num(acts[0]["time"]) - start, 1)
@@ -214,7 +270,7 @@ def probe_rows(obs: Path, ctl, odu, ping, wx, nc) -> list[dict]:
         r = {"start_jst": fmt(t0), "reason": p["reason"], "result": p["result"], "folder": p["folder"]}
         # 比較の条件 (P 今の方式 / S 動的制御なし / N 迂回も動的制御もなし) と障害の種類。
         # 理由の欄が "fault:<種類>@<条件>"。定期・低下時などの計測は P、種類は理由そのもの
-        m = re.fullmatch(r"fault:([^@]+)@(P2|P3|P|S|N)", p["reason"])
+        m = re.fullmatch(r"fault:([^@]+)@(P2|P3|P4|P|S|N)", p["reason"])
         r["condition"], r["label"] = (m.group(2), m.group(1)) if m else ("P", p["reason"])
         thr = steady_gbps(folder / "throughput.csv")
         for key, _, _ in CLASSES:
@@ -249,6 +305,17 @@ def probe_rows(obs: Path, ctl, odu, ping, wx, nc) -> list[dict]:
         r["nowcast_mmh"] = f"{n['mmh_lo']}-{n['mmh_hi']}" if n else ""
         r.update(detect_event(odu, ctl, ping, t0, t1))
         r["af41_lost_pkts"] = iperf_lost(folder / "iperf3_af41.log")
+        # 遮られた区間の AF41 の損失。iperf3 の始まりと t0 は数秒ずれうるので、前に 3 秒・後ろに 5 秒広げる。
+        # 120 秒全体の損失率は遮られた長さで薄まるため、条件の比較にはこちらを使う
+        ev0, ev1 = r.pop("event_t0", None), r.pop("event_t1", None)
+        r.update(af41_ev_lost="", af41_ev_s="", af41_ev_lost_per_s="", af41_out_lost="")
+        if ev0 is not None:
+            per = iperf_interval_lost(folder / "iperf3_af41.log")
+            a, b = int(ev0 - t0) - 3, int(ev1 - t0) + 5
+            inside = sum(v for k, v in per.items() if a <= k < b)
+            r.update(af41_ev_lost=inside, af41_ev_s=b - a, af41_ev_lost_per_s=round(inside / (b - a), 1),
+                     af41_out_lost=sum(per.values()) - inside)
+        r.update(extra_drops(folder))
         out.append(r)
     return out
 
@@ -519,14 +586,23 @@ def build_report(obs: Path, t0: float, t1: float, ctl, odu, ping, wx, nc, summar
         for s in summary:
             key = (s["condition"], "通常 (定期)" if s["label"] == "periodic" else s["label"])
             groups.setdefault(key, []).append(s)
-        L += ["## 条件ごとの比較 (P 今の方式 / P2 改良版 P′ / P3 P′ + AF41 の振り分けの判定 / S 動的制御なし / N 迂回も動的制御もなし)", "",
-              "| 条件 | 障害の種類 | 回数 | AF41 損失率 中央値 | 最大 | 失ったパケット 中央値 |", "|---|---|---|---|---|---|"]
+        L += ["## 条件ごとの比較 (P 今の方式 / P2 改良版 P′ / P3 P′ + AF41 の振り分けの判定 / "
+              "P4 P3 + 戻すのを待つ / S 動的制御なし / N 迂回も動的制御もなし)", "",
+              "遮られた区間の損失 = 遮られた区間 (前 3 秒・後ろ 5 秒を含む) に失った AF41 を、その秒数で割った値。"
+              "120 秒全体の損失率は遮られた長さで薄まるので、障害の比較にはこちらを使う。", "",
+              "| 条件 | 障害の種類 | 回数 | AF41 損失率 中央値 | 最大 | 失ったパケット 中央値 "
+              "| 遮られた区間の損失 [個/秒] 中央値 | 受信側の取りこぼし 中央値 | CR2/CR3 出口の AF41 破棄 |",
+              "|---|---|---|---|---|---|---|---|---|"]
         for (cond, label), g in sorted(groups.items()):
             loss = [x["af41_loss_pct"] for x in g if x["af41_loss_pct"] == x["af41_loss_pct"]]
             pk = [x["af41_lost_pkts"] for x in g if isinstance(x.get("af41_lost_pkts"), int)]
+            evl = [x["af41_ev_lost_per_s"] for x in g if isinstance(x.get("af41_ev_lost_per_s"), (int, float))]
+            rb = [x["rx_rcvbuf"] for x in g if isinstance(x.get("rx_rcvbuf"), int)]
+            cr = [x["cr23_af41_drop"] for x in g if isinstance(x.get("cr23_af41_drop"), int)]
             if loss:
                 L.append(f"| {cond} | {label} | {len(g)} | {st.median(loss):.4f}% | {max(loss):.4f}% | "
-                         f"{st.median(pk) if pk else '-'} |")
+                         f"{st.median(pk) if pk else '-'} | {st.median(evl) if evl else '-'} | "
+                         f"{st.median(rb) if rb else '-'} | {sum(cr) if cr else '-'} |")
         L.append("")
 
     # ping (全負荷計測の時間帯を除く)

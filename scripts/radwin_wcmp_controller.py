@@ -167,6 +167,15 @@ def _a41(w: int | None) -> dict:
     return {} if w is None else {"af41_w1": w}
 
 
+# ── 戻すのを待つ (条件 P4) ──────────────────────────────────────────
+# 人が立つ・窓が濡れるなどで無線が数秒おきに途切れては戻ると、OSPF の隣接もそのたびに
+# 消えては戻り、te_monitor は戻った瞬間に CR1 を経路へ戻していた。制御も MCS が一時的に
+# 戻ると 6 秒で整形レートを上げ直していた。そのたびに無線の上へ AF41 を乗せ直し、次の
+# 途切れでまた失っていた (2026-10-12 stand30@P)。--hold-down 秒を付けると、
+#   - 制御: 最後に下げてから (または読めなくなってから) その秒数がたつまで上げない
+#   - te_monitor: 重みファイルの HOLD= を読み、隣接が戻ってもその秒数安定するまで CR1 を戻さない
+
+
 def af41_w1(mbps: float, w: tuple[int, int, int], limit: float | None) -> int | None:
     """AF41 の表の CR1 の重み。判定しない (limit が None) なら None (= 全クラス同じ重み)。"""
     if limit is None:
@@ -285,7 +294,8 @@ def te_monitor_owns_routes() -> bool:
 _publish_warned = False
 
 
-def publish_weights(w: tuple[int, int, int], mbps: int, af41_w1: int | None = None) -> None:
+def publish_weights(w: tuple[int, int, int], mbps: int, af41_w1: int | None = None,
+                    hold: int | None = None) -> None:
     """適用中の重みを te_monitor に公開する。
 
     毎ポーリングで書き直す (TS が生存信号を兼ねる)。te_monitor は TS が古ければ
@@ -299,7 +309,8 @@ def publish_weights(w: tuple[int, int, int], mbps: int, af41_w1: int | None = No
         tmp = path.with_name("." + path.name + ".tmp")
         tmp.write_text(f"TS={int(time.time())}\nW1={w[0]}\nW2={w[1]}\nW3={w[2]}\n"
                        f"CR1_BW_MBPS={mbps}\n"
-                       + (f"W1_AF41={af41_w1}\n" if af41_w1 is not None else ""))
+                       + (f"W1_AF41={af41_w1}\n" if af41_w1 is not None else "")
+                       + (f"HOLD={hold}\n" if hold else ""))
         os.replace(tmp, path)
     except OSError as e:
         if not _publish_warned:
@@ -398,6 +409,24 @@ class Controller:
         self.link_down = False           # CR1 を外している (重み 0 を公開中)
         self.down_streak = 0             # 連続した「未接続」の回数
         self.recover_streak = 0          # 無線断のあとの連続した「接続」の回数
+        self.last_down = 0.0             # 最後に「上げる理由がない」読み取りだった時刻 (P4 の待ち)
+
+    def _hold_left(self) -> float:
+        """P4: 上げる・戻すまでに、あと何秒待つか (待たない条件では 0)。
+
+        数え始めは、最後に下げた時刻ではなく「上げる理由がない読み取り (下げる・据え置き・読めない)」
+        の最後。途切れ途切れの無線では、低い読み取りは据え置き (同じ低い値) になり、下げた時刻が
+        更新されない。そのため 10 秒前に一度下げただけで、6 秒よい読み取りが続くと上げていた
+        (2026-10-12 veth flaptest@P4)。これで「10 秒続けてよい読み取り」のときだけ上げる。"""
+        hold = getattr(self.args, "hold_down", 0) or 0
+        return max(0.0, hold - (time.time() - self.last_down))
+
+    def _pub_kw(self, a1: int | None) -> dict:
+        """重みファイルに足す行 (AF41 の重み・戻すのを待つ秒数)。どちらも無い条件では何も足さない。"""
+        kw = _a41(a1)
+        if getattr(self.args, "hold_down", 0):
+            kw["hold"] = int(self.args.hold_down)
+        return kw
 
     # ── 1回の観測 ────────────────────────────────────────────────────
     def step(self, d: dict) -> None:
@@ -419,6 +448,7 @@ class Controller:
     def _on_unreachable(self) -> tuple:
         """無線の状態を読めない。DOWN_CONFIRM 回続いたら CR1 を外す。"""
         self.down_streak += 1
+        self.last_down = time.time()
         self.recover_streak = 0
         if self.link_down:
             action = "link_down"
@@ -441,7 +471,9 @@ class Controller:
         self.recover_streak += 1
         target = max(MIN_MBPS, int(est * SAFETY))
         action = f"link_up_wait({self.recover_streak}/{UP_CONFIRM})"
-        if self.recover_streak >= UP_CONFIRM:
+        if self.recover_streak >= UP_CONFIRM and self._hold_left() > 0:
+            action = f"link_up_hold({self._hold_left():.0f}s)"
+        elif self.recover_streak >= UP_CONFIRM:
             _, ok, owner = self._apply_capacity(target)
             action = "link_up" if ok else "link_up_FAIL"
             if ok:
@@ -463,11 +495,18 @@ class Controller:
         elif target < self.current * (1 - self.args.threshold):
             action = "down"          # 低下は即座に反映
             self.up_streak = 0
+            self.last_down = time.time()
         elif target > self.current * (1 + self.args.threshold):
             self.up_streak += 1
-            action = "up" if self.up_streak >= UP_CONFIRM else f"up_wait({self.up_streak}/{UP_CONFIRM})"
+            if self.up_streak < UP_CONFIRM:
+                action = f"up_wait({self.up_streak}/{UP_CONFIRM})"
+            elif self._hold_left() > 0:
+                action = f"up_hold({self._hold_left():.0f}s)"   # P4: 最後に下げてから待つ
+            else:
+                action = "up"
         else:
             self.up_streak = 0
+            self.last_down = time.time()     # 据え置き: 上げる理由がない読み取り
 
         applied = self.current
         phy = f"PHY {h1.get('tx_phy_mbps', 0):.0f}/{h2.get('tx_phy_mbps', 0):.0f}"
@@ -524,7 +563,7 @@ class Controller:
         def route() -> bool:
             if owner == "self":
                 return apply_route(target, self.label, **_a41(a1))[1]
-            publish_weights(ww, target, **_a41(a1))
+            publish_weights(ww, target, **self._pub_kw(a1))
             notify_te_monitor()
             expect = {41: ww[0]} if a1 is None else {41: a1, 42: ww[0]}
             took = wait_routes(expect)
@@ -546,7 +585,7 @@ class Controller:
             return True, "-"
         if te_monitor_owns_routes():
             if getattr(self.args, "pprime", False):   # P′: 次の読み込みを待たずに知らせる
-                publish_weights(LINK_DOWN_WEIGHTS, 0)
+                publish_weights(LINK_DOWN_WEIGHTS, 0, **self._pub_kw(None))
                 notify_te_monitor()
             return True, "te_monitor"          # _publish で重み 0 が伝わる
         _, ok = apply_weights(LINK_DOWN_WEIGHTS, self.label)
@@ -558,9 +597,9 @@ class Controller:
         if self.args.dry_run:
             return
         if self.link_down:
-            publish_weights(LINK_DOWN_WEIGHTS, 0)
+            publish_weights(LINK_DOWN_WEIGHTS, 0, **self._pub_kw(None))
         elif self.current is not None:
-            publish_weights(weights_for(self.current), self.current, **_a41(self._af41_w1(self.current)))
+            publish_weights(weights_for(self.current), self.current, **self._pub_kw(self._af41_w1(self.current)))
 
     # ── 記録 ────────────────────────────────────────────────────────
     def _write(self, h1: dict, h2: dict, est, target, applied, w1, action) -> None:
@@ -588,6 +627,9 @@ def parse_args(argv=None):
     ap.add_argument("--af41-guard", type=float, default=None, metavar="RISK",
                     help="P3: CR1 に乗る AF41 が溢れる確率がこれを超える容量では、AF41 だけ CR1 から外す "
                          "(例 0.05。MCS 8 以上 (整形 1081M〜) は 1.5%% 以下で外れず、MCS 3 以下で外れる)")
+    ap.add_argument("--hold-down", type=float, default=0, metavar="SEC",
+                    help="P4: 最後に下げてからこの秒数は上げない。te_monitor にも重みファイルで伝え、"
+                         "OSPF の隣接が戻ってもこの秒数安定するまで CR1 を戻させない (例 10)")
     a = ap.parse_args(argv)
     a.eff_table = load_efficiency(a.efficiency_table)
     return a

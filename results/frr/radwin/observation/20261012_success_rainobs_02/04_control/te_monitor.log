@@ -1,0 +1,1946 @@
+[03:07:15] === OSPF-SR TE Monitor 起動 (netlink イベント駆動 / OSPF収束ベース動的ラベル版) ===
+[03:07:15]   検知方式: ip monitor link (netlink) / OSPF障害待ち: 6s / OSPF復旧待ち: 15s
+[03:07:15]   ログ: /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/observation/20261012_running_rainobs_02/04_control/te_monitor.log
+[03:07:16]   [SID] OSPF動的取得: LER_Egress=16005
+[03:07:16]   [重み] 動的制御なし → 静的値 6:25:25 を使用
+[03:07:16] 経路更新 [wcmp]: CR1(w=6) CR2(w=25) CR3(w=25)
+[03:07:16]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[03:07:16] 初期TE経路設定完了
+[03:07:16]   [netlink] nsenter ip monitor link 起動 PID=1567217 (NS pid=1557545)
+[03:07:16] === 監視ループ開始 (netlink + OSPF ポーリング 二重化) ===
+[03:07:18]   [重み] 動的制御の重みを採用: 13:100:100
+[03:07:18] ⚖  重みの変化を検知 (6:25:25 → 13:100:100, dynamic) → 経路更新
+[03:07:18]   [SID] OSPF動的取得: LER_Egress=16005
+[03:07:18] 経路更新 [wcmp]: CR1(w=13) CR2(w=100) CR3(w=100)
+[03:07:18]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[03:07:46]   [SID] OSPF動的取得: LER_Egress=16005
+[03:08:17]   [SID] OSPF動的取得: LER_Egress=16005
+[03:08:48]   [SID] OSPF動的取得: LER_Egress=16005
+[03:09:19]   [SID] OSPF動的取得: LER_Egress=16005
+[03:09:49]   [SID] OSPF動的取得: LER_Egress=16005
+[03:10:20]   [SID] OSPF動的取得: LER_Egress=16005
+[03:10:51]   [SID] OSPF動的取得: LER_Egress=16005
+[03:11:22]   [SID] OSPF動的取得: LER_Egress=16005
+[03:11:53]   [SID] OSPF動的取得: LER_Egress=16005
+[03:12:24]   [SID] OSPF動的取得: LER_Egress=16005
+[03:12:54]   [SID] OSPF動的取得: LER_Egress=16005
+[03:13:25]   [SID] OSPF動的取得: LER_Egress=16005
+[03:13:55]   [SID] OSPF動的取得: LER_Egress=16005
+[03:14:27]   [SID] OSPF動的取得: LER_Egress=16005
+[03:14:58]   [SID] OSPF動的取得: LER_Egress=16005
+[03:15:29]   [SID] OSPF動的取得: LER_Egress=16005
+[03:15:59]   [SID] OSPF動的取得: LER_Egress=16005
+[03:16:30]   [SID] OSPF動的取得: LER_Egress=16005
+[03:17:01]   [SID] OSPF動的取得: LER_Egress=16005
+[03:17:32]   [SID] OSPF動的取得: LER_Egress=16005
+[03:18:03]   [SID] OSPF動的取得: LER_Egress=16005
+[03:18:33]   [SID] OSPF動的取得: LER_Egress=16005
+[03:19:04]   [SID] OSPF動的取得: LER_Egress=16005
+[03:19:35]   [SID] OSPF動的取得: LER_Egress=16005
+[03:20:06]   [SID] OSPF動的取得: LER_Egress=16005
+[03:20:31]   [重み] 動的制御なし → 静的値 6:25:25 を使用
+[03:20:31] ⚖  重みの変化を検知 (13:100:100 → 6:25:25, static) → 経路更新
+[03:20:31]   [SID] OSPF動的取得: LER_Egress=16005
+[03:20:32] 経路更新 [wcmp]: CR1(w=6) CR2(w=25) CR3(w=25)
+[03:20:32]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[03:20:36]   [SID] OSPF動的取得: LER_Egress=16005
+[03:21:07]   [SID] OSPF動的取得: LER_Egress=16005
+[03:21:38]   [SID] OSPF動的取得: LER_Egress=16005
+[03:22:09]   [SID] OSPF動的取得: LER_Egress=16005
+[03:22:40]   [SID] OSPF動的取得: LER_Egress=16005
+[03:22:51]   [重み] 動的制御の重みを採用: 13:100:100
+[03:22:51] ⚖  重みの変化を検知 (6:25:25 → 13:100:100, dynamic) → 経路更新
+[03:22:51]   [SID] OSPF動的取得: LER_Egress=16005
+[03:22:51] 経路更新 [wcmp]: CR1(w=13) CR2(w=100) CR3(w=100)
+[03:22:51]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[03:25:10] === OSPF-SR TE Monitor 起動 (netlink イベント駆動 / OSPF収束ベース動的ラベル版) ===
+[03:25:10]   検知方式: ip monitor link (netlink) / OSPF障害待ち: 6s / OSPF復旧待ち: 15s
+[03:25:10]   ログ: /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/observation/20261012_running_rainobs_02/04_control/te_monitor.log
+[03:25:11]   [SID] OSPF動的取得: LER_Egress=16005
+[03:25:11]   [重み] 動的制御なし → 静的値 6:25:25 を使用
+[03:25:11] 経路更新 [wcmp]: CR1(w=6) CR2(w=25) CR3(w=25)
+[03:25:11]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[03:25:11] 初期TE経路設定完了
+[03:25:11]   [netlink] nsenter ip monitor link 起動 PID=1638916 (NS pid=1557545)
+[03:25:11] === 監視ループ開始 (netlink + OSPF ポーリング 二重化) ===
+[03:25:13]   [重み] 動的制御の重みを採用: 13:100:100
+[03:25:13] ⚖  重みの変化を検知 (6:25:25 → 13:100:100, dynamic) → 経路更新
+[03:25:13]   [SID] OSPF動的取得: LER_Egress=16005
+[03:25:13] 経路更新 [wcmp]: CR1(w=13) CR2(w=100) CR3(w=100)
+[03:25:13]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[03:25:43]   [SID] OSPF動的取得: LER_Egress=16005
+[03:26:12]   [SID] OSPF動的取得: LER_Egress=16005
+[03:26:44]   [SID] OSPF動的取得: LER_Egress=16005
+[03:27:13]   [SID] OSPF動的取得: LER_Egress=16005
+[03:27:44]   [SID] OSPF動的取得: LER_Egress=16005
+[03:28:15]   [SID] OSPF動的取得: LER_Egress=16005
+[03:28:46]   [SID] OSPF動的取得: LER_Egress=16005
+[03:29:17]   [SID] OSPF動的取得: LER_Egress=16005
+[03:29:48]   [SID] OSPF動的取得: LER_Egress=16005
+[03:30:18]   [SID] OSPF動的取得: LER_Egress=16005
+[03:30:50]   [SID] OSPF動的取得: LER_Egress=16005
+[03:31:21]   [SID] OSPF動的取得: LER_Egress=16005
+[03:31:51]   [SID] OSPF動的取得: LER_Egress=16005
+[03:32:22]   [SID] OSPF動的取得: LER_Egress=16005
+[03:32:52]   [SID] OSPF動的取得: LER_Egress=16005
+[03:33:22]   [SID] OSPF動的取得: LER_Egress=16005
+[03:33:54]   [SID] OSPF動的取得: LER_Egress=16005
+[03:34:25]   [SID] OSPF動的取得: LER_Egress=16005
+[03:34:56]   [SID] OSPF動的取得: LER_Egress=16005
+[03:35:28]   [SID] OSPF動的取得: LER_Egress=16005
+[03:35:57]   [SID] OSPF動的取得: LER_Egress=16005
+[03:36:28]   [SID] OSPF動的取得: LER_Egress=16005
+[03:36:58]   [SID] OSPF動的取得: LER_Egress=16005
+[03:37:29]   [SID] OSPF動的取得: LER_Egress=16005
+[03:37:59]   [SID] OSPF動的取得: LER_Egress=16005
+[03:38:30]   [SID] OSPF動的取得: LER_Egress=16005
+[03:39:00]   [SID] OSPF動的取得: LER_Egress=16005
+[03:39:32]   [SID] OSPF動的取得: LER_Egress=16005
+[03:40:01]   [SID] OSPF動的取得: LER_Egress=16005
+[03:40:33]   [SID] OSPF動的取得: LER_Egress=16005
+[03:41:02]   [SID] OSPF動的取得: LER_Egress=16005
+[03:41:34]   [SID] OSPF動的取得: LER_Egress=16005
+[03:42:03]   [SID] OSPF動的取得: LER_Egress=16005
+[03:42:35]   [SID] OSPF動的取得: LER_Egress=16005
+[03:43:04]   [SID] OSPF動的取得: LER_Egress=16005
+[03:43:36]   [SID] OSPF動的取得: LER_Egress=16005
+[03:44:07]   [SID] OSPF動的取得: LER_Egress=16005
+[03:44:37]   [SID] OSPF動的取得: LER_Egress=16005
+[03:45:08]   [SID] OSPF動的取得: LER_Egress=16005
+[03:45:39]   [SID] OSPF動的取得: LER_Egress=16005
+[03:46:11]   [SID] OSPF動的取得: LER_Egress=16005
+[03:46:42]   [SID] OSPF動的取得: LER_Egress=16005
+[03:47:12]   [SID] OSPF動的取得: LER_Egress=16005
+[03:47:41] ⚖  重みの変化を検知 (13:100:100 → 16:100:100, dynamic) → 経路更新
+[03:47:41]   [SID] OSPF動的取得: LER_Egress=16005
+[03:47:41] 経路更新 [wcmp]: CR1(w=16) CR2(w=100) CR3(w=100)
+[03:47:41]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[03:47:42]   [SID] OSPF動的取得: LER_Egress=16005
+[03:47:44] ⚖  重みの変化を検知 (16:100:100 → 13:100:100, dynamic) → 経路更新
+[03:47:44]   [SID] OSPF動的取得: LER_Egress=16005
+[03:47:44] 経路更新 [wcmp]: CR1(w=13) CR2(w=100) CR3(w=100)
+[03:47:44]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[03:48:14]   [SID] OSPF動的取得: LER_Egress=16005
+[03:48:43]   [SID] OSPF動的取得: LER_Egress=16005
+[03:49:14]   [SID] OSPF動的取得: LER_Egress=16005
+[03:49:44]   [SID] OSPF動的取得: LER_Egress=16005
+[03:50:15]   [SID] OSPF動的取得: LER_Egress=16005
+[03:50:45]   [SID] OSPF動的取得: LER_Egress=16005
+[03:51:16]   [SID] OSPF動的取得: LER_Egress=16005
+[03:51:46]   [SID] OSPF動的取得: LER_Egress=16005
+[03:52:17]   [SID] OSPF動的取得: LER_Egress=16005
+[03:52:49]   [SID] OSPF動的取得: LER_Egress=16005
+[03:53:21]   [SID] OSPF動的取得: LER_Egress=16005
+[03:53:50]   [SID] OSPF動的取得: LER_Egress=16005
+[03:54:22]   [SID] OSPF動的取得: LER_Egress=16005
+[03:54:51]   [SID] OSPF動的取得: LER_Egress=16005
+[03:55:23]   [SID] OSPF動的取得: LER_Egress=16005
+[03:55:52]   [SID] OSPF動的取得: LER_Egress=16005
+[03:56:24]   [SID] OSPF動的取得: LER_Egress=16005
+[03:56:53]   [SID] OSPF動的取得: LER_Egress=16005
+[03:57:02] ⚖  重みの変化を検知 (13:100:100 → 16:100:100, dynamic) → 経路更新
+[03:57:02]   [SID] OSPF動的取得: LER_Egress=16005
+[03:57:02] 経路更新 [wcmp]: CR1(w=16) CR2(w=100) CR3(w=100)
+[03:57:02]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[03:57:04] ⚖  重みの変化を検知 (16:100:100 → 13:100:100, dynamic) → 経路更新
+[03:57:04]   [SID] OSPF動的取得: LER_Egress=16005
+[03:57:04] 経路更新 [wcmp]: CR1(w=13) CR2(w=100) CR3(w=100)
+[03:57:04]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[03:57:25]   [SID] OSPF動的取得: LER_Egress=16005
+[03:57:56]   [SID] OSPF動的取得: LER_Egress=16005
+[03:58:26]   [SID] OSPF動的取得: LER_Egress=16005
+[03:58:57]   [SID] OSPF動的取得: LER_Egress=16005
+[03:59:29]   [SID] OSPF動的取得: LER_Egress=16005
+[04:00:00]   [SID] OSPF動的取得: LER_Egress=16005
+[04:00:31]   [SID] OSPF動的取得: LER_Egress=16005
+[04:01:02]   [SID] OSPF動的取得: LER_Egress=16005
+[04:01:34]   [SID] OSPF動的取得: LER_Egress=16005
+[04:02:05]   [SID] OSPF動的取得: LER_Egress=16005
+[04:02:36]   [SID] OSPF動的取得: LER_Egress=16005
+[04:03:06]   [SID] OSPF動的取得: LER_Egress=16005
+[04:03:37]   [SID] OSPF動的取得: LER_Egress=16005
+[04:04:07]   [SID] OSPF動的取得: LER_Egress=16005
+[04:04:38]   [SID] OSPF動的取得: LER_Egress=16005
+[04:05:08]   [SID] OSPF動的取得: LER_Egress=16005
+[04:05:39]   [SID] OSPF動的取得: LER_Egress=16005
+[04:06:11]   [SID] OSPF動的取得: LER_Egress=16005
+[04:06:42]   [SID] OSPF動的取得: LER_Egress=16005
+[04:07:12]   [SID] OSPF動的取得: LER_Egress=16005
+[04:07:44]   [SID] OSPF動的取得: LER_Egress=16005
+[04:08:13]   [SID] OSPF動的取得: LER_Egress=16005
+[04:08:45]   [SID] OSPF動的取得: LER_Egress=16005
+[04:09:14]   [SID] OSPF動的取得: LER_Egress=16005
+[04:09:46]   [SID] OSPF動的取得: LER_Egress=16005
+[04:10:18]   [SID] OSPF動的取得: LER_Egress=16005
+[04:10:47]   [SID] OSPF動的取得: LER_Egress=16005
+[04:11:19]   [SID] OSPF動的取得: LER_Egress=16005
+[04:11:48]   [SID] OSPF動的取得: LER_Egress=16005
+[04:12:20]   [SID] OSPF動的取得: LER_Egress=16005
+[04:12:49]   [SID] OSPF動的取得: LER_Egress=16005
+[04:13:20]   [SID] OSPF動的取得: LER_Egress=16005
+[04:13:50]   [SID] OSPF動的取得: LER_Egress=16005
+[04:14:21]   [SID] OSPF動的取得: LER_Egress=16005
+[04:14:51]   [SID] OSPF動的取得: LER_Egress=16005
+[04:15:21]   [SID] OSPF動的取得: LER_Egress=16005
+[04:15:52]   [SID] OSPF動的取得: LER_Egress=16005
+[04:16:23]   [SID] OSPF動的取得: LER_Egress=16005
+[04:16:54]   [SID] OSPF動的取得: LER_Egress=16005
+[04:17:24]   [SID] OSPF動的取得: LER_Egress=16005
+[04:17:56]   [SID] OSPF動的取得: LER_Egress=16005
+[04:18:25]   [SID] OSPF動的取得: LER_Egress=16005
+[04:18:57]   [SID] OSPF動的取得: LER_Egress=16005
+[04:19:26]   [SID] OSPF動的取得: LER_Egress=16005
+[04:19:58]   [SID] OSPF動的取得: LER_Egress=16005
+[04:20:27]   [SID] OSPF動的取得: LER_Egress=16005
+[04:20:59]   [SID] OSPF動的取得: LER_Egress=16005
+[04:21:30]   [SID] OSPF動的取得: LER_Egress=16005
+[04:22:02]   [SID] OSPF動的取得: LER_Egress=16005
+[04:22:33]   [SID] OSPF動的取得: LER_Egress=16005
+[04:23:03]   [SID] OSPF動的取得: LER_Egress=16005
+[04:23:35]   [SID] OSPF動的取得: LER_Egress=16005
+[04:24:04]   [SID] OSPF動的取得: LER_Egress=16005
+[04:24:36]   [SID] OSPF動的取得: LER_Egress=16005
+[04:25:07]   [SID] OSPF動的取得: LER_Egress=16005
+[04:25:37]   [SID] OSPF動的取得: LER_Egress=16005
+[04:26:09]   [SID] OSPF動的取得: LER_Egress=16005
+[04:26:31] ⚖  重みの変化を検知 (13:100:100 → 16:100:100, dynamic) → 経路更新
+[04:26:31]   [SID] OSPF動的取得: LER_Egress=16005
+[04:26:31] 経路更新 [wcmp]: CR1(w=16) CR2(w=100) CR3(w=100)
+[04:26:31]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[04:26:34] ⚖  重みの変化を検知 (16:100:100 → 13:100:100, dynamic) → 経路更新
+[04:26:34]   [SID] OSPF動的取得: LER_Egress=16005
+[04:26:34] 経路更新 [wcmp]: CR1(w=13) CR2(w=100) CR3(w=100)
+[04:26:34]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[04:26:39]   [SID] OSPF動的取得: LER_Egress=16005
+[04:27:10]   [SID] OSPF動的取得: LER_Egress=16005
+[04:27:40]   [SID] OSPF動的取得: LER_Egress=16005
+[04:28:11]   [SID] OSPF動的取得: LER_Egress=16005
+[04:28:41]   [SID] OSPF動的取得: LER_Egress=16005
+[04:29:12]   [SID] OSPF動的取得: LER_Egress=16005
+[04:29:42]   [SID] OSPF動的取得: LER_Egress=16005
+[04:30:14]   [SID] OSPF動的取得: LER_Egress=16005
+[04:30:45]   [SID] OSPF動的取得: LER_Egress=16005
+[04:31:17]   [SID] OSPF動的取得: LER_Egress=16005
+[04:31:48]   [SID] OSPF動的取得: LER_Egress=16005
+[04:32:18]   [SID] OSPF動的取得: LER_Egress=16005
+[04:32:48]   [SID] OSPF動的取得: LER_Egress=16005
+[04:33:19]   [SID] OSPF動的取得: LER_Egress=16005
+[04:33:49]   [SID] OSPF動的取得: LER_Egress=16005
+[04:34:20]   [SID] OSPF動的取得: LER_Egress=16005
+[04:34:50]   [SID] OSPF動的取得: LER_Egress=16005
+[04:35:22]   [SID] OSPF動的取得: LER_Egress=16005
+[04:35:51]   [SID] OSPF動的取得: LER_Egress=16005
+[04:36:23]   [SID] OSPF動的取得: LER_Egress=16005
+[04:36:54]   [SID] OSPF動的取得: LER_Egress=16005
+[04:37:24]   [SID] OSPF動的取得: LER_Egress=16005
+[04:37:55]   [SID] OSPF動的取得: LER_Egress=16005
+[04:38:25]   [SID] OSPF動的取得: LER_Egress=16005
+[04:38:56]   [SID] OSPF動的取得: LER_Egress=16005
+[04:39:26]   [SID] OSPF動的取得: LER_Egress=16005
+[04:39:57]   [SID] OSPF動的取得: LER_Egress=16005
+[04:40:27]   [SID] OSPF動的取得: LER_Egress=16005
+[04:40:58]   [SID] OSPF動的取得: LER_Egress=16005
+[04:41:28]   [SID] OSPF動的取得: LER_Egress=16005
+[04:42:00]   [SID] OSPF動的取得: LER_Egress=16005
+[04:42:29]   [SID] OSPF動的取得: LER_Egress=16005
+[04:43:01]   [SID] OSPF動的取得: LER_Egress=16005
+[04:43:30]   [SID] OSPF動的取得: LER_Egress=16005
+[04:44:02]   [SID] OSPF動的取得: LER_Egress=16005
+[04:44:31]   [SID] OSPF動的取得: LER_Egress=16005
+[04:45:02]   [SID] OSPF動的取得: LER_Egress=16005
+[04:45:33]   [SID] OSPF動的取得: LER_Egress=16005
+[04:46:05]   [SID] OSPF動的取得: LER_Egress=16005
+[04:46:36]   [SID] OSPF動的取得: LER_Egress=16005
+[04:47:07]   [SID] OSPF動的取得: LER_Egress=16005
+[04:47:39]   [SID] OSPF動的取得: LER_Egress=16005
+[04:48:10]   [SID] OSPF動的取得: LER_Egress=16005
+[04:48:42]   [SID] OSPF動的取得: LER_Egress=16005
+[04:49:14]   [SID] OSPF動的取得: LER_Egress=16005
+[04:49:43]   [SID] OSPF動的取得: LER_Egress=16005
+[04:49:52] ⚖  重みの変化を検知 (13:100:100 → 16:100:100, dynamic) → 経路更新
+[04:49:52]   [SID] OSPF動的取得: LER_Egress=16005
+[04:49:52] 経路更新 [wcmp]: CR1(w=16) CR2(w=100) CR3(w=100)
+[04:49:52]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[04:49:54] ⚖  重みの変化を検知 (16:100:100 → 13:100:100, dynamic) → 経路更新
+[04:49:54]   [SID] OSPF動的取得: LER_Egress=16005
+[04:49:54] 経路更新 [wcmp]: CR1(w=13) CR2(w=100) CR3(w=100)
+[04:49:54]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[04:50:13]   [SID] OSPF動的取得: LER_Egress=16005
+[04:50:44]   [SID] OSPF動的取得: LER_Egress=16005
+[04:51:14]   [SID] OSPF動的取得: LER_Egress=16005
+[04:51:46]   [SID] OSPF動的取得: LER_Egress=16005
+[04:52:17]   [SID] OSPF動的取得: LER_Egress=16005
+[04:52:47]   [SID] OSPF動的取得: LER_Egress=16005
+[04:53:18]   [SID] OSPF動的取得: LER_Egress=16005
+[04:53:48]   [SID] OSPF動的取得: LER_Egress=16005
+[04:54:19]   [SID] OSPF動的取得: LER_Egress=16005
+[04:54:49]   [SID] OSPF動的取得: LER_Egress=16005
+[04:55:21]   [SID] OSPF動的取得: LER_Egress=16005
+[04:55:36] ⚖  重みの変化を検知 (13:100:100 → 16:100:100, dynamic) → 経路更新
+[04:55:36]   [SID] OSPF動的取得: LER_Egress=16005
+[04:55:36] 経路更新 [wcmp]: CR1(w=16) CR2(w=100) CR3(w=100)
+[04:55:36]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[04:55:39] ⚖  重みの変化を検知 (16:100:100 → 13:100:100, dynamic) → 経路更新
+[04:55:39]   [SID] OSPF動的取得: LER_Egress=16005
+[04:55:39] 経路更新 [wcmp]: CR1(w=13) CR2(w=100) CR3(w=100)
+[04:55:39]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[04:55:50]   [SID] OSPF動的取得: LER_Egress=16005
+[04:56:20]   [SID] OSPF動的取得: LER_Egress=16005
+[04:56:52]   [SID] OSPF動的取得: LER_Egress=16005
+[04:57:21]   [SID] OSPF動的取得: LER_Egress=16005
+[04:57:53]   [SID] OSPF動的取得: LER_Egress=16005
+[04:58:22]   [SID] OSPF動的取得: LER_Egress=16005
+[04:58:54]   [SID] OSPF動的取得: LER_Egress=16005
+[04:59:23]   [SID] OSPF動的取得: LER_Egress=16005
+[04:59:55]   [SID] OSPF動的取得: LER_Egress=16005
+[05:00:25]   [SID] OSPF動的取得: LER_Egress=16005
+[05:00:56]   [SID] OSPF動的取得: LER_Egress=16005
+[05:01:27]   [SID] OSPF動的取得: LER_Egress=16005
+[05:01:58]   [SID] OSPF動的取得: LER_Egress=16005
+[05:02:30]   [SID] OSPF動的取得: LER_Egress=16005
+[05:03:01]   [SID] OSPF動的取得: LER_Egress=16005
+[05:03:31]   [SID] OSPF動的取得: LER_Egress=16005
+[05:04:02]   [SID] OSPF動的取得: LER_Egress=16005
+[05:04:32]   [SID] OSPF動的取得: LER_Egress=16005
+[05:05:03]   [SID] OSPF動的取得: LER_Egress=16005
+[05:05:33]   [SID] OSPF動的取得: LER_Egress=16005
+[05:06:05]   [SID] OSPF動的取得: LER_Egress=16005
+[05:06:34]   [SID] OSPF動的取得: LER_Egress=16005
+[05:07:06]   [SID] OSPF動的取得: LER_Egress=16005
+[05:07:35]   [SID] OSPF動的取得: LER_Egress=16005
+[05:08:07]   [SID] OSPF動的取得: LER_Egress=16005
+[05:08:38]   [SID] OSPF動的取得: LER_Egress=16005
+[05:09:08]   [SID] OSPF動的取得: LER_Egress=16005
+[05:09:40]   [SID] OSPF動的取得: LER_Egress=16005
+[05:10:11]   [SID] OSPF動的取得: LER_Egress=16005
+[05:10:36] ⚖  重みの変化を検知 (13:100:100 → 16:100:100, dynamic) → 経路更新
+[05:10:36]   [SID] OSPF動的取得: LER_Egress=16005
+[05:10:36] 経路更新 [wcmp]: CR1(w=16) CR2(w=100) CR3(w=100)
+[05:10:36]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[05:10:38] ⚖  重みの変化を検知 (16:100:100 → 13:100:100, dynamic) → 経路更新
+[05:10:39]   [SID] OSPF動的取得: LER_Egress=16005
+[05:10:39] 経路更新 [wcmp]: CR1(w=13) CR2(w=100) CR3(w=100)
+[05:10:39]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[05:10:41]   [SID] OSPF動的取得: LER_Egress=16005
+[05:11:13]   [SID] OSPF動的取得: LER_Egress=16005
+[05:11:45]   [SID] OSPF動的取得: LER_Egress=16005
+[05:12:14]   [SID] OSPF動的取得: LER_Egress=16005
+[05:12:46]   [SID] OSPF動的取得: LER_Egress=16005
+[05:13:17]   [SID] OSPF動的取得: LER_Egress=16005
+[05:13:49]   [SID] OSPF動的取得: LER_Egress=16005
+[05:14:20]   [SID] OSPF動的取得: LER_Egress=16005
+[05:14:52]   [SID] OSPF動的取得: LER_Egress=16005
+[05:15:22]   [SID] OSPF動的取得: LER_Egress=16005
+[05:15:53]   [SID] OSPF動的取得: LER_Egress=16005
+[05:16:25]   [SID] OSPF動的取得: LER_Egress=16005
+[05:16:56]   [SID] OSPF動的取得: LER_Egress=16005
+[05:17:26]   [SID] OSPF動的取得: LER_Egress=16005
+[05:17:58]   [SID] OSPF動的取得: LER_Egress=16005
+[05:18:29]   [SID] OSPF動的取得: LER_Egress=16005
+[05:18:59]   [SID] OSPF動的取得: LER_Egress=16005
+[05:19:31]   [SID] OSPF動的取得: LER_Egress=16005
+[05:20:00]   [SID] OSPF動的取得: LER_Egress=16005
+[05:20:32]   [SID] OSPF動的取得: LER_Egress=16005
+[05:21:01]   [SID] OSPF動的取得: LER_Egress=16005
+[05:21:33]   [SID] OSPF動的取得: LER_Egress=16005
+[05:22:02]   [SID] OSPF動的取得: LER_Egress=16005
+[05:22:34]   [SID] OSPF動的取得: LER_Egress=16005
+[05:23:03]   [SID] OSPF動的取得: LER_Egress=16005
+[05:23:34]   [SID] OSPF動的取得: LER_Egress=16005
+[05:24:04]   [SID] OSPF動的取得: LER_Egress=16005
+[05:24:35]   [SID] OSPF動的取得: LER_Egress=16005
+[05:25:05]   [SID] OSPF動的取得: LER_Egress=16005
+[05:25:37]   [SID] OSPF動的取得: LER_Egress=16005
+[05:26:06]   [SID] OSPF動的取得: LER_Egress=16005
+[05:26:38]   [SID] OSPF動的取得: LER_Egress=16005
+[05:26:51] ⚖  重みの変化を検知 (13:100:100 → 16:100:100, dynamic) → 経路更新
+[05:26:51]   [SID] OSPF動的取得: LER_Egress=16005
+[05:26:51] 経路更新 [wcmp]: CR1(w=16) CR2(w=100) CR3(w=100)
+[05:26:51]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[05:26:54] ⚖  重みの変化を検知 (16:100:100 → 13:100:100, dynamic) → 経路更新
+[05:26:54]   [SID] OSPF動的取得: LER_Egress=16005
+[05:26:54] 経路更新 [wcmp]: CR1(w=13) CR2(w=100) CR3(w=100)
+[05:26:54]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[05:27:10]   [SID] OSPF動的取得: LER_Egress=16005
+[05:27:41]   [SID] OSPF動的取得: LER_Egress=16005
+[05:28:11]   [SID] OSPF動的取得: LER_Egress=16005
+[05:28:42] ⚖  重みの変化を検知 (13:100:100 → 16:100:100, dynamic) → 経路更新
+[05:28:42]   [SID] OSPF動的取得: LER_Egress=16005
+[05:28:42] 経路更新 [wcmp]: CR1(w=16) CR2(w=100) CR3(w=100)
+[05:28:42]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[05:28:43]   [SID] OSPF動的取得: LER_Egress=16005
+[05:28:45] ⚖  重みの変化を検知 (16:100:100 → 13:100:100, dynamic) → 経路更新
+[05:28:45]   [SID] OSPF動的取得: LER_Egress=16005
+[05:28:45] 経路更新 [wcmp]: CR1(w=13) CR2(w=100) CR3(w=100)
+[05:28:45]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[05:29:12]   [SID] OSPF動的取得: LER_Egress=16005
+[05:29:44]   [SID] OSPF動的取得: LER_Egress=16005
+[05:30:16]   [SID] OSPF動的取得: LER_Egress=16005
+[05:30:47]   [SID] OSPF動的取得: LER_Egress=16005
+[05:31:19]   [SID] OSPF動的取得: LER_Egress=16005
+[05:31:50]   [SID] OSPF動的取得: LER_Egress=16005
+[05:32:20]   [SID] OSPF動的取得: LER_Egress=16005
+[05:32:52]   [SID] OSPF動的取得: LER_Egress=16005
+[05:33:21]   [SID] OSPF動的取得: LER_Egress=16005
+[05:33:53]   [SID] OSPF動的取得: LER_Egress=16005
+[05:34:22]   [SID] OSPF動的取得: LER_Egress=16005
+[05:34:53]   [SID] OSPF動的取得: LER_Egress=16005
+[05:35:23]   [SID] OSPF動的取得: LER_Egress=16005
+[05:35:54]   [SID] OSPF動的取得: LER_Egress=16005
+[05:36:24]   [SID] OSPF動的取得: LER_Egress=16005
+[05:36:56]   [SID] OSPF動的取得: LER_Egress=16005
+[05:37:25]   [SID] OSPF動的取得: LER_Egress=16005
+[05:37:57]   [SID] OSPF動的取得: LER_Egress=16005
+[05:38:26]   [SID] OSPF動的取得: LER_Egress=16005
+[05:38:58]   [SID] OSPF動的取得: LER_Egress=16005
+[05:39:27]   [SID] OSPF動的取得: LER_Egress=16005
+[05:39:58]   [SID] OSPF動的取得: LER_Egress=16005
+[05:40:28]   [SID] OSPF動的取得: LER_Egress=16005
+[05:40:59]   [SID] OSPF動的取得: LER_Egress=16005
+[05:41:31]   [SID] OSPF動的取得: LER_Egress=16005
+[05:42:03]   [SID] OSPF動的取得: LER_Egress=16005
+[05:42:32]   [SID] OSPF動的取得: LER_Egress=16005
+[05:43:03]   [SID] OSPF動的取得: LER_Egress=16005
+[05:43:33]   [SID] OSPF動的取得: LER_Egress=16005
+[05:44:04]   [SID] OSPF動的取得: LER_Egress=16005
+[05:44:34]   [SID] OSPF動的取得: LER_Egress=16005
+[05:45:05]   [SID] OSPF動的取得: LER_Egress=16005
+[05:45:36]   [SID] OSPF動的取得: LER_Egress=16005
+[05:46:07]   [SID] OSPF動的取得: LER_Egress=16005
+[05:46:39]   [SID] OSPF動的取得: LER_Egress=16005
+[05:47:09]   [SID] OSPF動的取得: LER_Egress=16005
+[05:47:39]   [SID] OSPF動的取得: LER_Egress=16005
+[05:48:10]   [SID] OSPF動的取得: LER_Egress=16005
+[05:48:40]   [SID] OSPF動的取得: LER_Egress=16005
+[05:49:12]   [SID] OSPF動的取得: LER_Egress=16005
+[05:49:43]   [SID] OSPF動的取得: LER_Egress=16005
+[05:50:13]   [SID] OSPF動的取得: LER_Egress=16005
+[05:50:44]   [SID] OSPF動的取得: LER_Egress=16005
+[05:51:16]   [SID] OSPF動的取得: LER_Egress=16005
+[05:51:47]   [SID] OSPF動的取得: LER_Egress=16005
+[05:52:19]   [SID] OSPF動的取得: LER_Egress=16005
+[05:52:51]   [SID] OSPF動的取得: LER_Egress=16005
+[05:53:20]   [SID] OSPF動的取得: LER_Egress=16005
+[05:53:51]   [SID] OSPF動的取得: LER_Egress=16005
+[05:54:21]   [SID] OSPF動的取得: LER_Egress=16005
+[05:54:52]   [SID] OSPF動的取得: LER_Egress=16005
+[05:55:22]   [SID] OSPF動的取得: LER_Egress=16005
+[05:55:53]   [SID] OSPF動的取得: LER_Egress=16005
+[05:56:23]   [SID] OSPF動的取得: LER_Egress=16005
+[05:56:54]   [SID] OSPF動的取得: LER_Egress=16005
+[05:57:24]   [SID] OSPF動的取得: LER_Egress=16005
+[05:57:55]   [SID] OSPF動的取得: LER_Egress=16005
+[05:58:25]   [SID] OSPF動的取得: LER_Egress=16005
+[05:58:56]   [SID] OSPF動的取得: LER_Egress=16005
+[05:59:26]   [SID] OSPF動的取得: LER_Egress=16005
+[05:59:57]   [SID] OSPF動的取得: LER_Egress=16005
+[06:00:28]   [SID] OSPF動的取得: LER_Egress=16005
+[06:00:59]   [SID] OSPF動的取得: LER_Egress=16005
+[06:01:30]   [SID] OSPF動的取得: LER_Egress=16005
+[06:02:01]   [SID] OSPF動的取得: LER_Egress=16005
+[06:02:31]   [SID] OSPF動的取得: LER_Egress=16005
+[06:03:03]   [SID] OSPF動的取得: LER_Egress=16005
+[06:03:32]   [SID] OSPF動的取得: LER_Egress=16005
+[06:04:04]   [SID] OSPF動的取得: LER_Egress=16005
+[06:04:33]   [SID] OSPF動的取得: LER_Egress=16005
+[06:05:05]   [SID] OSPF動的取得: LER_Egress=16005
+[06:05:34]   [SID] OSPF動的取得: LER_Egress=16005
+[06:06:06]   [SID] OSPF動的取得: LER_Egress=16005
+[06:06:35]   [SID] OSPF動的取得: LER_Egress=16005
+[06:07:07]   [SID] OSPF動的取得: LER_Egress=16005
+[06:07:31] ⚖  重みの変化を検知 (13:100:100 → 16:100:100, dynamic) → 経路更新
+[06:07:31]   [SID] OSPF動的取得: LER_Egress=16005
+[06:07:31] 経路更新 [wcmp]: CR1(w=16) CR2(w=100) CR3(w=100)
+[06:07:31]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[06:07:33] ⚖  重みの変化を検知 (16:100:100 → 13:100:100, dynamic) → 経路更新
+[06:07:34]   [SID] OSPF動的取得: LER_Egress=16005
+[06:07:34] 経路更新 [wcmp]: CR1(w=13) CR2(w=100) CR3(w=100)
+[06:07:34]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[06:07:36]   [SID] OSPF動的取得: LER_Egress=16005
+[06:08:06]   [SID] OSPF動的取得: LER_Egress=16005
+[06:08:37]   [SID] OSPF動的取得: LER_Egress=16005
+[06:09:09]   [SID] OSPF動的取得: LER_Egress=16005
+[06:09:40]   [SID] OSPF動的取得: LER_Egress=16005
+[06:10:12]   [SID] OSPF動的取得: LER_Egress=16005
+[06:10:43]   [SID] OSPF動的取得: LER_Egress=16005
+[06:11:13]   [SID] OSPF動的取得: LER_Egress=16005
+[06:11:44]   [SID] OSPF動的取得: LER_Egress=16005
+[06:12:14]   [SID] OSPF動的取得: LER_Egress=16005
+[06:12:45]   [SID] OSPF動的取得: LER_Egress=16005
+[06:13:15]   [SID] OSPF動的取得: LER_Egress=16005
+[06:13:46]   [SID] OSPF動的取得: LER_Egress=16005
+[06:14:16]   [SID] OSPF動的取得: LER_Egress=16005
+[06:14:47]   [SID] OSPF動的取得: LER_Egress=16005
+[06:15:17]   [SID] OSPF動的取得: LER_Egress=16005
+[06:15:49]   [SID] OSPF動的取得: LER_Egress=16005
+[06:16:20]   [SID] OSPF動的取得: LER_Egress=16005
+[06:16:51]   [SID] OSPF動的取得: LER_Egress=16005
+[06:17:22]   [SID] OSPF動的取得: LER_Egress=16005
+[06:17:51]   [SID] OSPF動的取得: LER_Egress=16005
+[06:18:23]   [SID] OSPF動的取得: LER_Egress=16005
+[06:18:52]   [SID] OSPF動的取得: LER_Egress=16005
+[06:19:24]   [SID] OSPF動的取得: LER_Egress=16005
+[06:19:53]   [SID] OSPF動的取得: LER_Egress=16005
+[06:20:25]   [SID] OSPF動的取得: LER_Egress=16005
+[06:20:54]   [SID] OSPF動的取得: LER_Egress=16005
+[06:21:26]   [SID] OSPF動的取得: LER_Egress=16005
+[06:21:55]   [SID] OSPF動的取得: LER_Egress=16005
+[06:22:27]   [SID] OSPF動的取得: LER_Egress=16005
+[06:22:56]   [SID] OSPF動的取得: LER_Egress=16005
+[06:23:28]   [SID] OSPF動的取得: LER_Egress=16005
+[06:23:59]   [SID] OSPF動的取得: LER_Egress=16005
+[06:24:29]   [SID] OSPF動的取得: LER_Egress=16005
+[06:25:01]   [SID] OSPF動的取得: LER_Egress=16005
+[06:25:30]   [SID] OSPF動的取得: LER_Egress=16005
+[06:26:02]   [SID] OSPF動的取得: LER_Egress=16005
+[06:26:33]   [SID] OSPF動的取得: LER_Egress=16005
+[06:27:03]   [SID] OSPF動的取得: LER_Egress=16005
+[06:27:34]   [SID] OSPF動的取得: LER_Egress=16005
+[06:28:04]   [SID] OSPF動的取得: LER_Egress=16005
+[06:28:35]   [SID] OSPF動的取得: LER_Egress=16005
+[06:29:07]   [SID] OSPF動的取得: LER_Egress=16005
+[06:29:39]   [SID] OSPF動的取得: LER_Egress=16005
+[06:30:08]   [SID] OSPF動的取得: LER_Egress=16005
+[06:30:39]   [SID] OSPF動的取得: LER_Egress=16005
+[06:31:11]   [SID] OSPF動的取得: LER_Egress=16005
+[06:31:42]   [SID] OSPF動的取得: LER_Egress=16005
+[06:32:13]   [SID] OSPF動的取得: LER_Egress=16005
+[06:32:44]   [SID] OSPF動的取得: LER_Egress=16005
+[06:33:14]   [SID] OSPF動的取得: LER_Egress=16005
+[06:33:45]   [SID] OSPF動的取得: LER_Egress=16005
+[06:34:15]   [SID] OSPF動的取得: LER_Egress=16005
+[06:34:47]   [SID] OSPF動的取得: LER_Egress=16005
+[06:35:16]   [SID] OSPF動的取得: LER_Egress=16005
+[06:35:48]   [SID] OSPF動的取得: LER_Egress=16005
+[06:36:19]   [SID] OSPF動的取得: LER_Egress=16005
+[06:36:51]   [SID] OSPF動的取得: LER_Egress=16005
+[06:37:22]   [SID] OSPF動的取得: LER_Egress=16005
+[06:37:54]   [SID] OSPF動的取得: LER_Egress=16005
+[06:38:26]   [SID] OSPF動的取得: LER_Egress=16005
+[06:38:57]   [SID] OSPF動的取得: LER_Egress=16005
+[06:39:27]   [SID] OSPF動的取得: LER_Egress=16005
+[06:39:58]   [SID] OSPF動的取得: LER_Egress=16005
+[06:40:28]   [SID] OSPF動的取得: LER_Egress=16005
+[06:40:59]   [SID] OSPF動的取得: LER_Egress=16005
+[06:41:17] ⚖  重みの変化を検知 (13:100:100 → 16:100:100, dynamic) → 経路更新
+[06:41:17]   [SID] OSPF動的取得: LER_Egress=16005
+[06:41:17] 経路更新 [wcmp]: CR1(w=16) CR2(w=100) CR3(w=100)
+[06:41:17]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[06:41:20] ⚖  重みの変化を検知 (16:100:100 → 13:100:100, dynamic) → 経路更新
+[06:41:20]   [SID] OSPF動的取得: LER_Egress=16005
+[06:41:20] 経路更新 [wcmp]: CR1(w=13) CR2(w=100) CR3(w=100)
+[06:41:20]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[06:41:29]   [SID] OSPF動的取得: LER_Egress=16005
+[06:42:01]   [SID] OSPF動的取得: LER_Egress=16005
+[06:42:32]   [SID] OSPF動的取得: LER_Egress=16005
+[06:43:02]   [SID] OSPF動的取得: LER_Egress=16005
+[06:43:33]   [SID] OSPF動的取得: LER_Egress=16005
+[06:44:03]   [SID] OSPF動的取得: LER_Egress=16005
+[06:44:34]   [SID] OSPF動的取得: LER_Egress=16005
+[06:45:04]   [SID] OSPF動的取得: LER_Egress=16005
+[06:45:35]   [SID] OSPF動的取得: LER_Egress=16005
+[06:46:06]   [SID] OSPF動的取得: LER_Egress=16005
+[06:46:37]   [SID] OSPF動的取得: LER_Egress=16005
+[06:47:08]   [SID] OSPF動的取得: LER_Egress=16005
+[06:47:40]   [SID] OSPF動的取得: LER_Egress=16005
+[06:48:09]   [SID] OSPF動的取得: LER_Egress=16005
+[06:48:41]   [SID] OSPF動的取得: LER_Egress=16005
+[06:49:10]   [SID] OSPF動的取得: LER_Egress=16005
+[06:49:42]   [SID] OSPF動的取得: LER_Egress=16005
+[06:50:11]   [SID] OSPF動的取得: LER_Egress=16005
+[06:50:42]   [SID] OSPF動的取得: LER_Egress=16005
+[06:51:12]   [SID] OSPF動的取得: LER_Egress=16005
+[06:51:43]   [SID] OSPF動的取得: LER_Egress=16005
+[06:52:13]   [SID] OSPF動的取得: LER_Egress=16005
+[06:52:44]   [SID] OSPF動的取得: LER_Egress=16005
+[06:53:14]   [SID] OSPF動的取得: LER_Egress=16005
+[06:53:45]   [SID] OSPF動的取得: LER_Egress=16005
+[06:54:15]   [SID] OSPF動的取得: LER_Egress=16005
+[06:54:47]   [SID] OSPF動的取得: LER_Egress=16005
+[06:55:16]   [SID] OSPF動的取得: LER_Egress=16005
+[06:55:48]   [SID] OSPF動的取得: LER_Egress=16005
+[06:56:17]   [SID] OSPF動的取得: LER_Egress=16005
+[06:56:49]   [SID] OSPF動的取得: LER_Egress=16005
+[06:57:20]   [SID] OSPF動的取得: LER_Egress=16005
+[06:57:50]   [SID] OSPF動的取得: LER_Egress=16005
+[06:58:01] ⚖  重みの変化を検知 (13:100:100 → 16:100:100, dynamic) → 経路更新
+[06:58:01]   [SID] OSPF動的取得: LER_Egress=16005
+[06:58:01] 経路更新 [wcmp]: CR1(w=16) CR2(w=100) CR3(w=100)
+[06:58:01]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[06:58:03] ⚖  重みの変化を検知 (16:100:100 → 13:100:100, dynamic) → 経路更新
+[06:58:03]   [SID] OSPF動的取得: LER_Egress=16005
+[06:58:03] 経路更新 [wcmp]: CR1(w=13) CR2(w=100) CR3(w=100)
+[06:58:03]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[06:58:22]   [SID] OSPF動的取得: LER_Egress=16005
+[06:58:53]   [SID] OSPF動的取得: LER_Egress=16005
+[06:59:23]   [SID] OSPF動的取得: LER_Egress=16005
+[06:59:54]   [SID] OSPF動的取得: LER_Egress=16005
+[07:00:25]   [SID] OSPF動的取得: LER_Egress=16005
+[07:00:56]   [SID] OSPF動的取得: LER_Egress=16005
+[07:01:27]   [SID] OSPF動的取得: LER_Egress=16005
+[07:01:58]   [SID] OSPF動的取得: LER_Egress=16005
+[07:02:28]   [SID] OSPF動的取得: LER_Egress=16005
+[07:03:00]   [SID] OSPF動的取得: LER_Egress=16005
+[07:03:31]   [SID] OSPF動的取得: LER_Egress=16005
+[07:04:01]   [SID] OSPF動的取得: LER_Egress=16005
+[07:04:32]   [SID] OSPF動的取得: LER_Egress=16005
+[07:05:02]   [SID] OSPF動的取得: LER_Egress=16005
+[07:05:33]   [SID] OSPF動的取得: LER_Egress=16005
+[07:06:03]   [SID] OSPF動的取得: LER_Egress=16005
+[07:06:34]   [SID] OSPF動的取得: LER_Egress=16005
+[07:07:06]   [SID] OSPF動的取得: LER_Egress=16005
+[07:07:38]   [SID] OSPF動的取得: LER_Egress=16005
+[07:08:07]   [SID] OSPF動的取得: LER_Egress=16005
+[07:08:39]   [SID] OSPF動的取得: LER_Egress=16005
+[07:09:08]   [SID] OSPF動的取得: LER_Egress=16005
+[07:09:40]   [SID] OSPF動的取得: LER_Egress=16005
+[07:10:11]   [SID] OSPF動的取得: LER_Egress=16005
+[07:10:43]   [SID] OSPF動的取得: LER_Egress=16005
+[07:11:15]   [SID] OSPF動的取得: LER_Egress=16005
+[07:11:44]   [SID] OSPF動的取得: LER_Egress=16005
+[07:12:16]   [SID] OSPF動的取得: LER_Egress=16005
+[07:12:47]   [SID] OSPF動的取得: LER_Egress=16005
+[07:13:16] ⚖  重みの変化を検知 (13:100:100 → 16:100:100, dynamic) → 経路更新
+[07:13:16]   [SID] OSPF動的取得: LER_Egress=16005
+[07:13:17] 経路更新 [wcmp]: CR1(w=16) CR2(w=100) CR3(w=100)
+[07:13:17]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[07:13:17]   [SID] OSPF動的取得: LER_Egress=16005
+[07:13:19] ⚖  重みの変化を検知 (16:100:100 → 13:100:100, dynamic) → 経路更新
+[07:13:19]   [SID] OSPF動的取得: LER_Egress=16005
+[07:13:19] 経路更新 [wcmp]: CR1(w=13) CR2(w=100) CR3(w=100)
+[07:13:19]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[07:13:47]   [SID] OSPF動的取得: LER_Egress=16005
+[07:14:18]   [SID] OSPF動的取得: LER_Egress=16005
+[07:14:48]   [SID] OSPF動的取得: LER_Egress=16005
+[07:15:20]   [SID] OSPF動的取得: LER_Egress=16005
+[07:15:51]   [SID] OSPF動的取得: LER_Egress=16005
+[07:16:22]   [SID] OSPF動的取得: LER_Egress=16005
+[07:16:53]   [SID] OSPF動的取得: LER_Egress=16005
+[07:17:24]   [SID] OSPF動的取得: LER_Egress=16005
+[07:17:53]   [SID] OSPF動的取得: LER_Egress=16005
+[07:18:25]   [SID] OSPF動的取得: LER_Egress=16005
+[07:18:54]   [SID] OSPF動的取得: LER_Egress=16005
+[07:19:26]   [SID] OSPF動的取得: LER_Egress=16005
+[07:19:55]   [SID] OSPF動的取得: LER_Egress=16005
+[07:20:27]   [SID] OSPF動的取得: LER_Egress=16005
+[07:20:56]   [SID] OSPF動的取得: LER_Egress=16005
+[07:21:27]   [SID] OSPF動的取得: LER_Egress=16005
+[07:21:57]   [SID] OSPF動的取得: LER_Egress=16005
+[07:22:29]   [SID] OSPF動的取得: LER_Egress=16005
+[07:22:58]   [SID] OSPF動的取得: LER_Egress=16005
+[07:23:30]   [SID] OSPF動的取得: LER_Egress=16005
+[07:23:59]   [SID] OSPF動的取得: LER_Egress=16005
+[07:24:30]   [SID] OSPF動的取得: LER_Egress=16005
+[07:25:00]   [SID] OSPF動的取得: LER_Egress=16005
+[07:25:32]   [SID] OSPF動的取得: LER_Egress=16005
+[07:26:01]   [SID] OSPF動的取得: LER_Egress=16005
+[07:26:33]   [SID] OSPF動的取得: LER_Egress=16005
+[07:27:02]   [SID] OSPF動的取得: LER_Egress=16005
+[07:27:34]   [SID] OSPF動的取得: LER_Egress=16005
+[07:28:05]   [SID] OSPF動的取得: LER_Egress=16005
+[07:28:35]   [SID] OSPF動的取得: LER_Egress=16005
+[07:29:06]   [SID] OSPF動的取得: LER_Egress=16005
+[07:29:36]   [SID] OSPF動的取得: LER_Egress=16005
+[07:30:08]   [SID] OSPF動的取得: LER_Egress=16005
+[07:30:39]   [SID] OSPF動的取得: LER_Egress=16005
+[07:31:10]   [SID] OSPF動的取得: LER_Egress=16005
+[07:31:41]   [SID] OSPF動的取得: LER_Egress=16005
+[07:32:12]   [SID] OSPF動的取得: LER_Egress=16005
+[07:32:41]   [SID] OSPF動的取得: LER_Egress=16005
+[07:33:13]   [SID] OSPF動的取得: LER_Egress=16005
+[07:33:44]   [SID] OSPF動的取得: LER_Egress=16005
+[07:34:14]   [SID] OSPF動的取得: LER_Egress=16005
+[07:34:45]   [SID] OSPF動的取得: LER_Egress=16005
+[07:35:15]   [SID] OSPF動的取得: LER_Egress=16005
+[07:35:46]   [SID] OSPF動的取得: LER_Egress=16005
+[07:36:16]   [SID] OSPF動的取得: LER_Egress=16005
+[07:36:47]   [SID] OSPF動的取得: LER_Egress=16005
+[07:37:17]   [SID] OSPF動的取得: LER_Egress=16005
+[07:37:48]   [SID] OSPF動的取得: LER_Egress=16005
+[07:38:18]   [SID] OSPF動的取得: LER_Egress=16005
+[07:38:49]   [SID] OSPF動的取得: LER_Egress=16005
+[07:39:19]   [SID] OSPF動的取得: LER_Egress=16005
+[07:39:50]   [SID] OSPF動的取得: LER_Egress=16005
+[07:40:20]   [SID] OSPF動的取得: LER_Egress=16005
+[07:40:51]   [SID] OSPF動的取得: LER_Egress=16005
+[07:41:21]   [SID] OSPF動的取得: LER_Egress=16005
+[07:41:41] ⚖  重みの変化を検知 (13:100:100 → 16:100:100, dynamic) → 経路更新
+[07:41:41]   [SID] OSPF動的取得: LER_Egress=16005
+[07:41:41] 経路更新 [wcmp]: CR1(w=16) CR2(w=100) CR3(w=100)
+[07:41:41]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[07:41:43] ⚖  重みの変化を検知 (16:100:100 → 13:100:100, dynamic) → 経路更新
+[07:41:43]   [SID] OSPF動的取得: LER_Egress=16005
+[07:41:43] 経路更新 [wcmp]: CR1(w=13) CR2(w=100) CR3(w=100)
+[07:41:43]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[07:41:53]   [SID] OSPF動的取得: LER_Egress=16005
+[07:42:24]   [SID] OSPF動的取得: LER_Egress=16005
+[07:42:51] ⚖  重みの変化を検知 (13:100:100 → 16:100:100, dynamic) → 経路更新
+[07:42:51]   [SID] OSPF動的取得: LER_Egress=16005
+[07:42:51] 経路更新 [wcmp]: CR1(w=16) CR2(w=100) CR3(w=100)
+[07:42:51]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[07:42:54] ⚖  重みの変化を検知 (16:100:100 → 13:100:100, dynamic) → 経路更新
+[07:42:54]   [SID] OSPF動的取得: LER_Egress=16005
+[07:42:54] 経路更新 [wcmp]: CR1(w=13) CR2(w=100) CR3(w=100)
+[07:42:54]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[07:42:54]   [SID] OSPF動的取得: LER_Egress=16005
+[07:43:26]   [SID] OSPF動的取得: LER_Egress=16005
+[07:43:57]   [SID] OSPF動的取得: LER_Egress=16005
+[07:44:27]   [SID] OSPF動的取得: LER_Egress=16005
+[07:44:59]   [SID] OSPF動的取得: LER_Egress=16005
+[07:45:29]   [SID] OSPF動的取得: LER_Egress=16005
+[07:46:00]   [SID] OSPF動的取得: LER_Egress=16005
+[07:46:32]   [SID] OSPF動的取得: LER_Egress=16005
+[07:47:03]   [SID] OSPF動的取得: LER_Egress=16005
+[07:47:32]   [SID] OSPF動的取得: LER_Egress=16005
+[07:48:02]   [SID] OSPF動的取得: LER_Egress=16005
+[07:48:33]   [SID] OSPF動的取得: LER_Egress=16005
+[07:49:03]   [SID] OSPF動的取得: LER_Egress=16005
+[07:49:34]   [SID] OSPF動的取得: LER_Egress=16005
+[07:50:04]   [SID] OSPF動的取得: LER_Egress=16005
+[07:50:35]   [SID] OSPF動的取得: LER_Egress=16005
+[07:51:05]   [SID] OSPF動的取得: LER_Egress=16005
+[07:51:36]   [SID] OSPF動的取得: LER_Egress=16005
+[07:52:06]   [SID] OSPF動的取得: LER_Egress=16005
+[07:52:37]   [SID] OSPF動的取得: LER_Egress=16005
+[07:53:07]   [SID] OSPF動的取得: LER_Egress=16005
+[07:53:38]   [SID] OSPF動的取得: LER_Egress=16005
+[07:54:10]   [SID] OSPF動的取得: LER_Egress=16005
+[07:54:41]   [SID] OSPF動的取得: LER_Egress=16005
+[07:55:11]   [SID] OSPF動的取得: LER_Egress=16005
+[07:55:42]   [SID] OSPF動的取得: LER_Egress=16005
+[07:56:12]   [SID] OSPF動的取得: LER_Egress=16005
+[07:56:44]   [SID] OSPF動的取得: LER_Egress=16005
+[07:57:13]   [SID] OSPF動的取得: LER_Egress=16005
+[07:57:45]   [SID] OSPF動的取得: LER_Egress=16005
+[07:58:14]   [SID] OSPF動的取得: LER_Egress=16005
+[07:58:45]   [SID] OSPF動的取得: LER_Egress=16005
+[07:59:15]   [SID] OSPF動的取得: LER_Egress=16005
+[07:59:46]   [SID] OSPF動的取得: LER_Egress=16005
+[08:00:16]   [SID] OSPF動的取得: LER_Egress=16005
+[08:00:48]   [SID] OSPF動的取得: LER_Egress=16005
+[08:01:19]   [SID] OSPF動的取得: LER_Egress=16005
+[08:01:50]   [SID] OSPF動的取得: LER_Egress=16005
+[08:02:20]   [SID] OSPF動的取得: LER_Egress=16005
+[08:02:52]   [SID] OSPF動的取得: LER_Egress=16005
+[08:03:16] ⚖  重みの変化を検知 (13:100:100 → 16:100:100, dynamic) → 経路更新
+[08:03:16]   [SID] OSPF動的取得: LER_Egress=16005
+[08:03:16] 経路更新 [wcmp]: CR1(w=16) CR2(w=100) CR3(w=100)
+[08:03:16]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[08:03:19] ⚖  重みの変化を検知 (16:100:100 → 13:100:100, dynamic) → 経路更新
+[08:03:19]   [SID] OSPF動的取得: LER_Egress=16005
+[08:03:19] 経路更新 [wcmp]: CR1(w=13) CR2(w=100) CR3(w=100)
+[08:03:19]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[08:03:22]   [SID] OSPF動的取得: LER_Egress=16005
+[08:03:51]   [SID] OSPF動的取得: LER_Egress=16005
+[08:04:23]   [SID] OSPF動的取得: LER_Egress=16005
+[08:04:52]   [SID] OSPF動的取得: LER_Egress=16005
+[08:05:24]   [SID] OSPF動的取得: LER_Egress=16005
+[08:05:55]   [SID] OSPF動的取得: LER_Egress=16005
+[08:06:25]   [SID] OSPF動的取得: LER_Egress=16005
+[08:06:56]   [SID] OSPF動的取得: LER_Egress=16005
+[08:07:26]   [SID] OSPF動的取得: LER_Egress=16005
+[08:07:58]   [SID] OSPF動的取得: LER_Egress=16005
+[08:08:27]   [SID] OSPF動的取得: LER_Egress=16005
+[08:08:59]   [SID] OSPF動的取得: LER_Egress=16005
+[08:09:28]   [SID] OSPF動的取得: LER_Egress=16005
+[08:10:00]   [SID] OSPF動的取得: LER_Egress=16005
+[08:10:31]   [SID] OSPF動的取得: LER_Egress=16005
+[08:11:01]   [SID] OSPF動的取得: LER_Egress=16005
+[08:11:32]   [SID] OSPF動的取得: LER_Egress=16005
+[08:12:02]   [SID] OSPF動的取得: LER_Egress=16005
+[08:12:34]   [SID] OSPF動的取得: LER_Egress=16005
+[08:13:05]   [SID] OSPF動的取得: LER_Egress=16005
+[08:13:35]   [SID] OSPF動的取得: LER_Egress=16005
+[08:14:06]   [SID] OSPF動的取得: LER_Egress=16005
+[08:14:36]   [SID] OSPF動的取得: LER_Egress=16005
+[08:15:08]   [SID] OSPF動的取得: LER_Egress=16005
+[08:15:39]   [SID] OSPF動的取得: LER_Egress=16005
+[08:16:10]   [SID] OSPF動的取得: LER_Egress=16005
+[08:16:41]   [SID] OSPF動的取得: LER_Egress=16005
+[08:17:12]   [SID] OSPF動的取得: LER_Egress=16005
+[08:17:44]   [SID] OSPF動的取得: LER_Egress=16005
+[08:18:13]   [SID] OSPF動的取得: LER_Egress=16005
+[08:18:44]   [SID] OSPF動的取得: LER_Egress=16005
+[08:19:14]   [SID] OSPF動的取得: LER_Egress=16005
+[08:19:45]   [SID] OSPF動的取得: LER_Egress=16005
+[08:20:15]   [SID] OSPF動的取得: LER_Egress=16005
+[08:20:46]   [SID] OSPF動的取得: LER_Egress=16005
+[08:21:16]   [SID] OSPF動的取得: LER_Egress=16005
+[08:21:47]   [SID] OSPF動的取得: LER_Egress=16005
+[08:22:17]   [SID] OSPF動的取得: LER_Egress=16005
+[08:22:49]   [SID] OSPF動的取得: LER_Egress=16005
+[08:23:18]   [SID] OSPF動的取得: LER_Egress=16005
+[08:23:50]   [SID] OSPF動的取得: LER_Egress=16005
+[08:24:19]   [SID] OSPF動的取得: LER_Egress=16005
+[08:24:51]   [SID] OSPF動的取得: LER_Egress=16005
+[08:25:20]   [SID] OSPF動的取得: LER_Egress=16005
+[08:25:52]   [SID] OSPF動的取得: LER_Egress=16005
+[08:26:21]   [SID] OSPF動的取得: LER_Egress=16005
+[08:26:53]   [SID] OSPF動的取得: LER_Egress=16005
+[08:27:24]   [SID] OSPF動的取得: LER_Egress=16005
+[08:27:56]   [SID] OSPF動的取得: LER_Egress=16005
+[08:28:28]   [SID] OSPF動的取得: LER_Egress=16005
+[08:28:57]   [SID] OSPF動的取得: LER_Egress=16005
+[08:29:29]   [SID] OSPF動的取得: LER_Egress=16005
+[08:29:58]   [SID] OSPF動的取得: LER_Egress=16005
+[08:30:29]   [SID] OSPF動的取得: LER_Egress=16005
+[08:31:00]   [SID] OSPF動的取得: LER_Egress=16005
+[08:31:31]   [SID] OSPF動的取得: LER_Egress=16005
+[08:32:02]   [SID] OSPF動的取得: LER_Egress=16005
+[08:32:32]   [SID] OSPF動的取得: LER_Egress=16005
+[08:33:04]   [SID] OSPF動的取得: LER_Egress=16005
+[08:33:33]   [SID] OSPF動的取得: LER_Egress=16005
+[08:34:04]   [SID] OSPF動的取得: LER_Egress=16005
+[08:34:34]   [SID] OSPF動的取得: LER_Egress=16005
+[08:35:05]   [SID] OSPF動的取得: LER_Egress=16005
+[08:35:35]   [SID] OSPF動的取得: LER_Egress=16005
+[08:36:07]   [SID] OSPF動的取得: LER_Egress=16005
+[08:36:36]   [SID] OSPF動的取得: LER_Egress=16005
+[08:37:08]   [SID] OSPF動的取得: LER_Egress=16005
+[08:37:39]   [SID] OSPF動的取得: LER_Egress=16005
+[08:38:09]   [SID] OSPF動的取得: LER_Egress=16005
+[08:38:40]   [SID] OSPF動的取得: LER_Egress=16005
+[08:39:10]   [SID] OSPF動的取得: LER_Egress=16005
+[08:39:41]   [SID] OSPF動的取得: LER_Egress=16005
+[08:40:11]   [SID] OSPF動的取得: LER_Egress=16005
+[08:40:42]   [SID] OSPF動的取得: LER_Egress=16005
+[08:41:12]   [SID] OSPF動的取得: LER_Egress=16005
+[08:41:43]   [SID] OSPF動的取得: LER_Egress=16005
+[08:42:13]   [SID] OSPF動的取得: LER_Egress=16005
+[08:42:44]   [SID] OSPF動的取得: LER_Egress=16005
+[08:43:07] ⚖  重みの変化を検知 (13:100:100 → 16:100:100, dynamic) → 経路更新
+[08:43:07]   [SID] OSPF動的取得: LER_Egress=16005
+[08:43:07] 経路更新 [wcmp]: CR1(w=16) CR2(w=100) CR3(w=100)
+[08:43:07]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[08:43:09] ⚖  重みの変化を検知 (16:100:100 → 13:100:100, dynamic) → 経路更新
+[08:43:09]   [SID] OSPF動的取得: LER_Egress=16005
+[08:43:09] 経路更新 [wcmp]: CR1(w=13) CR2(w=100) CR3(w=100)
+[08:43:09]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[08:43:14]   [SID] OSPF動的取得: LER_Egress=16005
+[08:43:44]   [SID] OSPF動的取得: LER_Egress=16005
+[08:44:15]   [SID] OSPF動的取得: LER_Egress=16005
+[08:44:45]   [SID] OSPF動的取得: LER_Egress=16005
+[08:45:17]   [SID] OSPF動的取得: LER_Egress=16005
+[08:45:48]   [SID] OSPF動的取得: LER_Egress=16005
+[08:46:19]   [SID] OSPF動的取得: LER_Egress=16005
+[08:46:50]   [SID] OSPF動的取得: LER_Egress=16005
+[08:47:20]   [SID] OSPF動的取得: LER_Egress=16005
+[08:47:52]   [SID] OSPF動的取得: LER_Egress=16005
+[08:48:23]   [SID] OSPF動的取得: LER_Egress=16005
+[08:48:53]   [SID] OSPF動的取得: LER_Egress=16005
+[08:49:25]   [SID] OSPF動的取得: LER_Egress=16005
+[08:49:54]   [SID] OSPF動的取得: LER_Egress=16005
+[08:50:26]   [SID] OSPF動的取得: LER_Egress=16005
+[08:50:55]   [SID] OSPF動的取得: LER_Egress=16005
+[08:51:27]   [SID] OSPF動的取得: LER_Egress=16005
+[08:51:59]   [SID] OSPF動的取得: LER_Egress=16005
+[08:52:28]   [SID] OSPF動的取得: LER_Egress=16005
+[08:53:00]   [SID] OSPF動的取得: LER_Egress=16005
+[08:53:29]   [SID] OSPF動的取得: LER_Egress=16005
+[08:54:01]   [SID] OSPF動的取得: LER_Egress=16005
+[08:54:32]   [SID] OSPF動的取得: LER_Egress=16005
+[08:55:02]   [SID] OSPF動的取得: LER_Egress=16005
+[08:55:34]   [SID] OSPF動的取得: LER_Egress=16005
+[08:56:03]   [SID] OSPF動的取得: LER_Egress=16005
+[08:56:34]   [SID] OSPF動的取得: LER_Egress=16005
+[08:57:06]   [SID] OSPF動的取得: LER_Egress=16005
+[08:57:37]   [SID] OSPF動的取得: LER_Egress=16005
+[08:58:07]   [SID] OSPF動的取得: LER_Egress=16005
+[08:58:39]   [SID] OSPF動的取得: LER_Egress=16005
+[08:59:08]   [SID] OSPF動的取得: LER_Egress=16005
+[08:59:40]   [SID] OSPF動的取得: LER_Egress=16005
+[09:00:09]   [SID] OSPF動的取得: LER_Egress=16005
+[09:00:40]   [SID] OSPF動的取得: LER_Egress=16005
+[09:01:11] ⚖  重みの変化を検知 (13:100:100 → 16:100:100, dynamic) → 経路更新
+[09:01:11]   [SID] OSPF動的取得: LER_Egress=16005
+[09:01:11] 経路更新 [wcmp]: CR1(w=16) CR2(w=100) CR3(w=100)
+[09:01:11]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[09:01:12]   [SID] OSPF動的取得: LER_Egress=16005
+[09:01:14] ⚖  重みの変化を検知 (16:100:100 → 13:100:100, dynamic) → 経路更新
+[09:01:14]   [SID] OSPF動的取得: LER_Egress=16005
+[09:01:14] 経路更新 [wcmp]: CR1(w=13) CR2(w=100) CR3(w=100)
+[09:01:14]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[09:01:43]   [SID] OSPF動的取得: LER_Egress=16005
+[09:02:14]   [SID] OSPF動的取得: LER_Egress=16005
+[09:02:43]   [SID] OSPF動的取得: LER_Egress=16005
+[09:03:15]   [SID] OSPF動的取得: LER_Egress=16005
+[09:03:44]   [SID] OSPF動的取得: LER_Egress=16005
+[09:04:16]   [SID] OSPF動的取得: LER_Egress=16005
+[09:04:45]   [SID] OSPF動的取得: LER_Egress=16005
+[09:05:17]   [SID] OSPF動的取得: LER_Egress=16005
+[09:05:48]   [SID] OSPF動的取得: LER_Egress=16005
+[09:06:20]   [SID] OSPF動的取得: LER_Egress=16005
+[09:06:52]   [SID] OSPF動的取得: LER_Egress=16005
+[09:07:21]   [SID] OSPF動的取得: LER_Egress=16005
+[09:07:53]   [SID] OSPF動的取得: LER_Egress=16005
+[09:08:22]   [SID] OSPF動的取得: LER_Egress=16005
+[09:08:54]   [SID] OSPF動的取得: LER_Egress=16005
+[09:09:23]   [SID] OSPF動的取得: LER_Egress=16005
+[09:09:55]   [SID] OSPF動的取得: LER_Egress=16005
+[09:10:26]   [SID] OSPF動的取得: LER_Egress=16005
+[09:10:56]   [SID] OSPF動的取得: LER_Egress=16005
+[09:11:27]   [SID] OSPF動的取得: LER_Egress=16005
+[09:11:59]   [SID] OSPF動的取得: LER_Egress=16005
+[09:12:31]   [SID] OSPF動的取得: LER_Egress=16005
+[09:13:00]   [SID] OSPF動的取得: LER_Egress=16005
+[09:13:32]   [SID] OSPF動的取得: LER_Egress=16005
+[09:14:03]   [SID] OSPF動的取得: LER_Egress=16005
+[09:14:33]   [SID] OSPF動的取得: LER_Egress=16005
+[09:15:05]   [SID] OSPF動的取得: LER_Egress=16005
+[09:15:36]   [SID] OSPF動的取得: LER_Egress=16005
+[09:16:07]   [SID] OSPF動的取得: LER_Egress=16005
+[09:16:38]   [SID] OSPF動的取得: LER_Egress=16005
+[09:17:09]   [SID] OSPF動的取得: LER_Egress=16005
+[09:17:41]   [SID] OSPF動的取得: LER_Egress=16005
+[09:18:10]   [SID] OSPF動的取得: LER_Egress=16005
+[09:18:42]   [SID] OSPF動的取得: LER_Egress=16005
+[09:19:11]   [SID] OSPF動的取得: LER_Egress=16005
+[09:19:43]   [SID] OSPF動的取得: LER_Egress=16005
+[09:20:12]   [SID] OSPF動的取得: LER_Egress=16005
+[09:20:44]   [SID] OSPF動的取得: LER_Egress=16005
+[09:21:13]   [SID] OSPF動的取得: LER_Egress=16005
+[09:21:45]   [SID] OSPF動的取得: LER_Egress=16005
+[09:22:16]   [SID] OSPF動的取得: LER_Egress=16005
+[09:22:46]   [SID] OSPF動的取得: LER_Egress=16005
+[09:23:17]   [SID] OSPF動的取得: LER_Egress=16005
+[09:23:47]   [SID] OSPF動的取得: LER_Egress=16005
+[09:24:18]   [SID] OSPF動的取得: LER_Egress=16005
+[09:24:48]   [SID] OSPF動的取得: LER_Egress=16005
+[09:25:19]   [SID] OSPF動的取得: LER_Egress=16005
+[09:25:49]   [SID] OSPF動的取得: LER_Egress=16005
+[09:26:20]   [SID] OSPF動的取得: LER_Egress=16005
+[09:26:50]   [SID] OSPF動的取得: LER_Egress=16005
+[09:27:21]   [SID] OSPF動的取得: LER_Egress=16005
+[09:27:51]   [SID] OSPF動的取得: LER_Egress=16005
+[09:28:23]   [SID] OSPF動的取得: LER_Egress=16005
+[09:28:52]   [SID] OSPF動的取得: LER_Egress=16005
+[09:29:24]   [SID] OSPF動的取得: LER_Egress=16005
+[09:29:53]   [SID] OSPF動的取得: LER_Egress=16005
+[09:30:23]   [SID] OSPF動的取得: LER_Egress=16005
+[09:30:55]   [SID] OSPF動的取得: LER_Egress=16005
+[09:31:26]   [SID] OSPF動的取得: LER_Egress=16005
+[09:31:57]   [SID] OSPF動的取得: LER_Egress=16005
+[09:32:27]   [SID] OSPF動的取得: LER_Egress=16005
+[09:32:59]   [SID] OSPF動的取得: LER_Egress=16005
+[09:33:28]   [SID] OSPF動的取得: LER_Egress=16005
+[09:34:00]   [SID] OSPF動的取得: LER_Egress=16005
+[09:34:29]   [SID] OSPF動的取得: LER_Egress=16005
+[09:35:01]   [SID] OSPF動的取得: LER_Egress=16005
+[09:35:30]   [SID] OSPF動的取得: LER_Egress=16005
+[09:36:02]   [SID] OSPF動的取得: LER_Egress=16005
+[09:36:33]   [SID] OSPF動的取得: LER_Egress=16005
+[09:37:03]   [SID] OSPF動的取得: LER_Egress=16005
+[09:37:34]   [SID] OSPF動的取得: LER_Egress=16005
+[09:38:04]   [SID] OSPF動的取得: LER_Egress=16005
+[09:38:35]   [SID] OSPF動的取得: LER_Egress=16005
+[09:39:07]   [SID] OSPF動的取得: LER_Egress=16005
+[09:39:38]   [SID] OSPF動的取得: LER_Egress=16005
+[09:40:08]   [SID] OSPF動的取得: LER_Egress=16005
+[09:40:39]   [SID] OSPF動的取得: LER_Egress=16005
+[09:41:09]   [SID] OSPF動的取得: LER_Egress=16005
+[09:41:40]   [SID] OSPF動的取得: LER_Egress=16005
+[09:42:10]   [SID] OSPF動的取得: LER_Egress=16005
+[09:42:41]   [SID] OSPF動的取得: LER_Egress=16005
+[09:43:11]   [SID] OSPF動的取得: LER_Egress=16005
+[09:43:42]   [SID] OSPF動的取得: LER_Egress=16005
+[09:44:12]   [SID] OSPF動的取得: LER_Egress=16005
+[09:44:43]   [SID] OSPF動的取得: LER_Egress=16005
+[09:45:13]   [SID] OSPF動的取得: LER_Egress=16005
+[09:45:44]   [SID] OSPF動的取得: LER_Egress=16005
+[09:46:15]   [SID] OSPF動的取得: LER_Egress=16005
+[09:46:46]   [SID] OSPF動的取得: LER_Egress=16005
+[09:47:17]   [SID] OSPF動的取得: LER_Egress=16005
+[09:47:46]   [SID] OSPF動的取得: LER_Egress=16005
+[09:48:16]   [SID] OSPF動的取得: LER_Egress=16005
+[09:48:47]   [SID] OSPF動的取得: LER_Egress=16005
+[09:49:17]   [SID] OSPF動的取得: LER_Egress=16005
+[09:49:48]   [SID] OSPF動的取得: LER_Egress=16005
+[09:50:20]   [SID] OSPF動的取得: LER_Egress=16005
+[09:50:51]   [SID] OSPF動的取得: LER_Egress=16005
+[09:51:21]   [SID] OSPF動的取得: LER_Egress=16005
+[09:51:52]   [SID] OSPF動的取得: LER_Egress=16005
+[09:52:22]   [SID] OSPF動的取得: LER_Egress=16005
+[09:52:53]   [SID] OSPF動的取得: LER_Egress=16005
+[09:53:23]   [SID] OSPF動的取得: LER_Egress=16005
+[09:53:54]   [SID] OSPF動的取得: LER_Egress=16005
+[09:54:12] ⚖  重みの変化を検知 (13:100:100 → 16:100:100, dynamic) → 経路更新
+[09:54:12]   [SID] OSPF動的取得: LER_Egress=16005
+[09:54:13] 経路更新 [wcmp]: CR1(w=16) CR2(w=100) CR3(w=100)
+[09:54:13]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[09:54:15] ⚖  重みの変化を検知 (16:100:100 → 13:100:100, dynamic) → 経路更新
+[09:54:15]   [SID] OSPF動的取得: LER_Egress=16005
+[09:54:15] 経路更新 [wcmp]: CR1(w=13) CR2(w=100) CR3(w=100)
+[09:54:15]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[09:54:24]   [SID] OSPF動的取得: LER_Egress=16005
+[09:54:54]   [SID] OSPF動的取得: LER_Egress=16005
+[09:55:25]   [SID] OSPF動的取得: LER_Egress=16005
+[09:55:55]   [SID] OSPF動的取得: LER_Egress=16005
+[09:56:26]   [SID] OSPF動的取得: LER_Egress=16005
+[09:56:56]   [SID] OSPF動的取得: LER_Egress=16005
+[09:57:28]   [SID] OSPF動的取得: LER_Egress=16005
+[09:57:57]   [SID] OSPF動的取得: LER_Egress=16005
+[09:58:29]   [SID] OSPF動的取得: LER_Egress=16005
+[09:58:58]   [SID] OSPF動的取得: LER_Egress=16005
+[09:59:30]   [SID] OSPF動的取得: LER_Egress=16005
+[10:00:01]   [SID] OSPF動的取得: LER_Egress=16005
+[10:00:32]   [SID] OSPF動的取得: LER_Egress=16005
+[10:01:03]   [SID] OSPF動的取得: LER_Egress=16005
+[10:01:34]   [SID] OSPF動的取得: LER_Egress=16005
+[10:02:05]   [SID] OSPF動的取得: LER_Egress=16005
+[10:02:35]   [SID] OSPF動的取得: LER_Egress=16005
+[10:03:07]   [SID] OSPF動的取得: LER_Egress=16005
+[10:03:36]   [SID] OSPF動的取得: LER_Egress=16005
+[10:04:08]   [SID] OSPF動的取得: LER_Egress=16005
+[10:04:37]   [SID] OSPF動的取得: LER_Egress=16005
+[10:05:09]   [SID] OSPF動的取得: LER_Egress=16005
+[10:05:38]   [SID] OSPF動的取得: LER_Egress=16005
+[10:06:10]   [SID] OSPF動的取得: LER_Egress=16005
+[10:06:41]   [SID] OSPF動的取得: LER_Egress=16005
+[10:07:11]   [SID] OSPF動的取得: LER_Egress=16005
+[10:07:42]   [SID] OSPF動的取得: LER_Egress=16005
+[10:08:12]   [SID] OSPF動的取得: LER_Egress=16005
+[10:08:43]   [SID] OSPF動的取得: LER_Egress=16005
+[10:09:13]   [SID] OSPF動的取得: LER_Egress=16005
+[10:09:44]   [SID] OSPF動的取得: LER_Egress=16005
+[10:10:14]   [SID] OSPF動的取得: LER_Egress=16005
+[10:10:45]   [SID] OSPF動的取得: LER_Egress=16005
+[10:11:15]   [SID] OSPF動的取得: LER_Egress=16005
+[10:11:46]   [SID] OSPF動的取得: LER_Egress=16005
+[10:12:16]   [SID] OSPF動的取得: LER_Egress=16005
+[10:12:47]   [SID] OSPF動的取得: LER_Egress=16005
+[10:13:17]   [SID] OSPF動的取得: LER_Egress=16005
+[10:13:48]   [SID] OSPF動的取得: LER_Egress=16005
+[10:14:18]   [SID] OSPF動的取得: LER_Egress=16005
+[10:14:50]   [SID] OSPF動的取得: LER_Egress=16005
+[10:15:20]   [SID] OSPF動的取得: LER_Egress=16005
+[10:15:51]   [SID] OSPF動的取得: LER_Egress=16005
+[10:16:22]   [SID] OSPF動的取得: LER_Egress=16005
+[10:16:53]   [SID] OSPF動的取得: LER_Egress=16005
+[10:17:24]   [SID] OSPF動的取得: LER_Egress=16005
+[10:17:53]   [SID] OSPF動的取得: LER_Egress=16005
+[10:18:25]   [SID] OSPF動的取得: LER_Egress=16005
+[10:18:54]   [SID] OSPF動的取得: LER_Egress=16005
+[10:19:26]   [SID] OSPF動的取得: LER_Egress=16005
+[10:19:57]   [SID] OSPF動的取得: LER_Egress=16005
+[10:20:27]   [SID] OSPF動的取得: LER_Egress=16005
+[10:20:59]   [SID] OSPF動的取得: LER_Egress=16005
+[10:21:28]   [SID] OSPF動的取得: LER_Egress=16005
+[10:22:00]   [SID] OSPF動的取得: LER_Egress=16005
+[10:22:29]   [SID] OSPF動的取得: LER_Egress=16005
+[10:23:01]   [SID] OSPF動的取得: LER_Egress=16005
+[10:23:32]   [SID] OSPF動的取得: LER_Egress=16005
+[10:24:02]   [SID] OSPF動的取得: LER_Egress=16005
+[10:24:34]   [SID] OSPF動的取得: LER_Egress=16005
+[10:25:03]   [SID] OSPF動的取得: LER_Egress=16005
+[10:25:35]   [SID] OSPF動的取得: LER_Egress=16005
+[10:26:06]   [SID] OSPF動的取得: LER_Egress=16005
+[10:26:36]   [SID] OSPF動的取得: LER_Egress=16005
+[10:27:07]   [SID] OSPF動的取得: LER_Egress=16005
+[10:27:37]   [SID] OSPF動的取得: LER_Egress=16005
+[10:28:08]   [SID] OSPF動的取得: LER_Egress=16005
+[10:28:38]   [SID] OSPF動的取得: LER_Egress=16005
+[10:29:09]   [SID] OSPF動的取得: LER_Egress=16005
+[10:29:39]   [SID] OSPF動的取得: LER_Egress=16005
+[10:30:11]   [SID] OSPF動的取得: LER_Egress=16005
+[10:30:42]   [SID] OSPF動的取得: LER_Egress=16005
+[10:31:13]   [SID] OSPF動的取得: LER_Egress=16005
+[10:31:44]   [SID] OSPF動的取得: LER_Egress=16005
+[10:32:15]   [SID] OSPF動的取得: LER_Egress=16005
+[10:32:47]   [SID] OSPF動的取得: LER_Egress=16005
+[10:33:16]   [SID] OSPF動的取得: LER_Egress=16005
+[10:33:48]   [SID] OSPF動的取得: LER_Egress=16005
+[10:34:17]   [SID] OSPF動的取得: LER_Egress=16005
+[10:34:48]   [SID] OSPF動的取得: LER_Egress=16005
+[10:35:18]   [SID] OSPF動的取得: LER_Egress=16005
+[10:35:49]   [SID] OSPF動的取得: LER_Egress=16005
+[10:36:19]   [SID] OSPF動的取得: LER_Egress=16005
+[10:36:51]   [SID] OSPF動的取得: LER_Egress=16005
+[10:37:20]   [SID] OSPF動的取得: LER_Egress=16005
+[10:37:52]   [SID] OSPF動的取得: LER_Egress=16005
+[10:38:21]   [SID] OSPF動的取得: LER_Egress=16005
+[10:38:53]   [SID] OSPF動的取得: LER_Egress=16005
+[10:39:24]   [SID] OSPF動的取得: LER_Egress=16005
+[10:39:54]   [SID] OSPF動的取得: LER_Egress=16005
+[10:40:25]   [SID] OSPF動的取得: LER_Egress=16005
+[10:40:55]   [SID] OSPF動的取得: LER_Egress=16005
+[10:41:26]   [SID] OSPF動的取得: LER_Egress=16005
+[10:41:58]   [SID] OSPF動的取得: LER_Egress=16005
+[10:42:29]   [SID] OSPF動的取得: LER_Egress=16005
+[10:42:59]   [SID] OSPF動的取得: LER_Egress=16005
+[10:43:31]   [SID] OSPF動的取得: LER_Egress=16005
+[10:44:00]   [SID] OSPF動的取得: LER_Egress=16005
+[10:44:32]   [SID] OSPF動的取得: LER_Egress=16005
+[10:45:01]   [SID] OSPF動的取得: LER_Egress=16005
+[10:45:32]   [SID] OSPF動的取得: LER_Egress=16005
+[10:46:03]   [SID] OSPF動的取得: LER_Egress=16005
+[10:46:34]   [SID] OSPF動的取得: LER_Egress=16005
+[10:47:05]   [SID] OSPF動的取得: LER_Egress=16005
+[10:47:37]   [SID] OSPF動的取得: LER_Egress=16005
+[10:48:08]   [SID] OSPF動的取得: LER_Egress=16005
+[10:48:38]   [SID] OSPF動的取得: LER_Egress=16005
+[10:49:09]   [SID] OSPF動的取得: LER_Egress=16005
+[10:49:39]   [SID] OSPF動的取得: LER_Egress=16005
+[10:50:11]   [SID] OSPF動的取得: LER_Egress=16005
+[10:50:40]   [SID] OSPF動的取得: LER_Egress=16005
+[10:51:12]   [SID] OSPF動的取得: LER_Egress=16005
+[10:51:41]   [SID] OSPF動的取得: LER_Egress=16005
+[10:52:12]   [SID] OSPF動的取得: LER_Egress=16005
+[10:52:42]   [SID] OSPF動的取得: LER_Egress=16005
+[10:53:13]   [SID] OSPF動的取得: LER_Egress=16005
+[10:53:45]   [SID] OSPF動的取得: LER_Egress=16005
+[10:54:17]   [SID] OSPF動的取得: LER_Egress=16005
+[10:54:46]   [SID] OSPF動的取得: LER_Egress=16005
+[10:55:17]   [SID] OSPF動的取得: LER_Egress=16005
+[10:55:47]   [SID] OSPF動的取得: LER_Egress=16005
+[10:56:19]   [SID] OSPF動的取得: LER_Egress=16005
+[10:56:48]   [SID] OSPF動的取得: LER_Egress=16005
+[10:57:19]   [SID] OSPF動的取得: LER_Egress=16005
+[10:57:49]   [SID] OSPF動的取得: LER_Egress=16005
+[10:58:21]   [SID] OSPF動的取得: LER_Egress=16005
+[10:58:50]   [SID] OSPF動的取得: LER_Egress=16005
+[10:59:20]   [SID] OSPF動的取得: LER_Egress=16005
+[10:59:51]   [SID] OSPF動的取得: LER_Egress=16005
+[11:00:21]   [SID] OSPF動的取得: LER_Egress=16005
+[11:00:53]   [SID] OSPF動的取得: LER_Egress=16005
+[11:01:24]   [SID] OSPF動的取得: LER_Egress=16005
+[11:01:55]   [SID] OSPF動的取得: LER_Egress=16005
+[11:02:27]   [SID] OSPF動的取得: LER_Egress=16005
+[11:02:58]   [SID] OSPF動的取得: LER_Egress=16005
+[11:03:28]   [SID] OSPF動的取得: LER_Egress=16005
+[11:03:59]   [SID] OSPF動的取得: LER_Egress=16005
+[11:04:29]   [SID] OSPF動的取得: LER_Egress=16005
+[11:05:00]   [SID] OSPF動的取得: LER_Egress=16005
+[11:05:32]   [SID] OSPF動的取得: LER_Egress=16005
+[11:06:03]   [SID] OSPF動的取得: LER_Egress=16005
+[11:06:33]   [SID] OSPF動的取得: LER_Egress=16005
+[11:07:04]   [SID] OSPF動的取得: LER_Egress=16005
+[11:07:36]   [SID] OSPF動的取得: LER_Egress=16005
+[11:08:08]   [SID] OSPF動的取得: LER_Egress=16005
+[11:08:37]   [SID] OSPF動的取得: LER_Egress=16005
+[11:09:08]   [SID] OSPF動的取得: LER_Egress=16005
+[11:09:38]   [SID] OSPF動的取得: LER_Egress=16005
+[11:10:10]   [SID] OSPF動的取得: LER_Egress=16005
+[11:10:39]   [SID] OSPF動的取得: LER_Egress=16005
+[11:11:11]   [SID] OSPF動的取得: LER_Egress=16005
+[11:11:40]   [SID] OSPF動的取得: LER_Egress=16005
+[11:12:11]   [SID] OSPF動的取得: LER_Egress=16005
+[11:12:41]   [SID] OSPF動的取得: LER_Egress=16005
+[11:13:12]   [SID] OSPF動的取得: LER_Egress=16005
+[11:13:42]   [SID] OSPF動的取得: LER_Egress=16005
+[11:14:14]   [SID] OSPF動的取得: LER_Egress=16005
+[11:14:43]   [SID] OSPF動的取得: LER_Egress=16005
+[11:15:15]   [SID] OSPF動的取得: LER_Egress=16005
+[11:15:46]   [SID] OSPF動的取得: LER_Egress=16005
+[11:16:17]   [SID] OSPF動的取得: LER_Egress=16005
+[11:16:49]   [SID] OSPF動的取得: LER_Egress=16005
+[11:17:19]   [SID] OSPF動的取得: LER_Egress=16005
+[11:17:51]   [SID] OSPF動的取得: LER_Egress=16005
+[11:18:22]   [SID] OSPF動的取得: LER_Egress=16005
+[11:18:52]   [SID] OSPF動的取得: LER_Egress=16005
+[11:19:23]   [SID] OSPF動的取得: LER_Egress=16005
+[11:19:53]   [SID] OSPF動的取得: LER_Egress=16005
+[11:20:24]   [SID] OSPF動的取得: LER_Egress=16005
+[11:20:54]   [SID] OSPF動的取得: LER_Egress=16005
+[11:21:25]   [SID] OSPF動的取得: LER_Egress=16005
+[11:21:55]   [SID] OSPF動的取得: LER_Egress=16005
+[11:22:26]   [SID] OSPF動的取得: LER_Egress=16005
+[11:22:56]   [SID] OSPF動的取得: LER_Egress=16005
+[11:23:27]   [SID] OSPF動的取得: LER_Egress=16005
+[11:23:57]   [SID] OSPF動的取得: LER_Egress=16005
+[11:24:29]   [SID] OSPF動的取得: LER_Egress=16005
+[11:24:58]   [SID] OSPF動的取得: LER_Egress=16005
+[11:25:29]   [SID] OSPF動的取得: LER_Egress=16005
+[11:25:59]   [SID] OSPF動的取得: LER_Egress=16005
+[11:26:30]   [SID] OSPF動的取得: LER_Egress=16005
+[11:27:02]   [SID] OSPF動的取得: LER_Egress=16005
+[11:27:33]   [SID] OSPF動的取得: LER_Egress=16005
+[11:28:05]   [SID] OSPF動的取得: LER_Egress=16005
+[11:28:37]   [SID] OSPF動的取得: LER_Egress=16005
+[11:29:06]   [SID] OSPF動的取得: LER_Egress=16005
+[11:29:37]   [SID] OSPF動的取得: LER_Egress=16005
+[11:30:07]   [SID] OSPF動的取得: LER_Egress=16005
+[11:30:38]   [SID] OSPF動的取得: LER_Egress=16005
+[11:31:09]   [SID] OSPF動的取得: LER_Egress=16005
+[11:31:40]   [SID] OSPF動的取得: LER_Egress=16005
+[11:32:11]   [SID] OSPF動的取得: LER_Egress=16005
+[11:32:43]   [SID] OSPF動的取得: LER_Egress=16005
+[11:33:12]   [SID] OSPF動的取得: LER_Egress=16005
+[11:33:44]   [SID] OSPF動的取得: LER_Egress=16005
+[11:34:15]   [SID] OSPF動的取得: LER_Egress=16005
+[11:34:45]   [SID] OSPF動的取得: LER_Egress=16005
+[11:35:16]   [SID] OSPF動的取得: LER_Egress=16005
+[11:35:46]   [SID] OSPF動的取得: LER_Egress=16005
+[11:36:17]   [SID] OSPF動的取得: LER_Egress=16005
+[11:36:47]   [SID] OSPF動的取得: LER_Egress=16005
+[11:37:19]   [SID] OSPF動的取得: LER_Egress=16005
+[11:37:48]   [SID] OSPF動的取得: LER_Egress=16005
+[11:38:19]   [SID] OSPF動的取得: LER_Egress=16005
+[11:38:49]   [SID] OSPF動的取得: LER_Egress=16005
+[11:39:21]   [SID] OSPF動的取得: LER_Egress=16005
+[11:39:50]   [SID] OSPF動的取得: LER_Egress=16005
+[11:40:22]   [SID] OSPF動的取得: LER_Egress=16005
+[11:40:51]   [SID] OSPF動的取得: LER_Egress=16005
+[11:41:13] ⚖  重みの変化を検知 (13:100:100 → 16:100:100, dynamic) → 経路更新
+[11:41:13]   [SID] OSPF動的取得: LER_Egress=16005
+[11:41:13] 経路更新 [wcmp]: CR1(w=16) CR2(w=100) CR3(w=100)
+[11:41:13]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[11:41:16] ⚖  重みの変化を検知 (16:100:100 → 13:100:100, dynamic) → 経路更新
+[11:41:16]   [SID] OSPF動的取得: LER_Egress=16005
+[11:41:16] 経路更新 [wcmp]: CR1(w=13) CR2(w=100) CR3(w=100)
+[11:41:16]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[11:41:21]   [SID] OSPF動的取得: LER_Egress=16005
+[11:41:53]   [SID] OSPF動的取得: LER_Egress=16005
+[11:42:22]   [SID] OSPF動的取得: LER_Egress=16005
+[11:42:54]   [SID] OSPF動的取得: LER_Egress=16005
+[11:43:23]   [SID] OSPF動的取得: LER_Egress=16005
+[11:43:54]   [SID] OSPF動的取得: LER_Egress=16005
+[11:44:26]   [SID] OSPF動的取得: LER_Egress=16005
+[11:44:58]   [SID] OSPF動的取得: LER_Egress=16005
+[11:45:28]   [SID] OSPF動的取得: LER_Egress=16005
+[11:45:59]   [SID] OSPF動的取得: LER_Egress=16005
+[11:46:31]   [SID] OSPF動的取得: LER_Egress=16005
+[11:47:02]   [SID] OSPF動的取得: LER_Egress=16005
+[11:47:34]   [SID] OSPF動的取得: LER_Egress=16005
+[11:48:05]   [SID] OSPF動的取得: LER_Egress=16005
+[11:48:35]   [SID] OSPF動的取得: LER_Egress=16005
+[11:49:07]   [SID] OSPF動的取得: LER_Egress=16005
+[11:49:36]   [SID] OSPF動的取得: LER_Egress=16005
+[11:50:08]   [SID] OSPF動的取得: LER_Egress=16005
+[11:50:37]   [SID] OSPF動的取得: LER_Egress=16005
+[11:51:08]   [SID] OSPF動的取得: LER_Egress=16005
+[11:51:38]   [SID] OSPF動的取得: LER_Egress=16005
+[11:51:49] ⚖  重みの変化を検知 (13:100:100 → 16:100:100, dynamic) → 経路更新
+[11:51:49]   [SID] OSPF動的取得: LER_Egress=16005
+[11:51:49] 経路更新 [wcmp]: CR1(w=16) CR2(w=100) CR3(w=100)
+[11:51:49]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[11:52:00] ⚖  重みの変化を検知 (16:100:100 → 13:100:100, dynamic) → 経路更新
+[11:52:01]   [SID] OSPF動的取得: LER_Egress=16005
+[11:52:01] 経路更新 [wcmp]: CR1(w=13) CR2(w=100) CR3(w=100)
+[11:52:01]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[11:52:08]   [SID] OSPF動的取得: LER_Egress=16005
+[11:52:39]   [SID] OSPF動的取得: LER_Egress=16005
+[11:53:11]   [SID] OSPF動的取得: LER_Egress=16005
+[11:53:43]   [SID] OSPF動的取得: LER_Egress=16005
+[11:54:12]   [SID] OSPF動的取得: LER_Egress=16005
+[11:54:44]   [SID] OSPF動的取得: LER_Egress=16005
+[11:55:13]   [SID] OSPF動的取得: LER_Egress=16005
+[11:55:45]   [SID] OSPF動的取得: LER_Egress=16005
+[11:56:14]   [SID] OSPF動的取得: LER_Egress=16005
+[11:56:46]   [SID] OSPF動的取得: LER_Egress=16005
+[11:57:15]   [SID] OSPF動的取得: LER_Egress=16005
+[11:57:47]   [SID] OSPF動的取得: LER_Egress=16005
+[11:58:16]   [SID] OSPF動的取得: LER_Egress=16005
+[11:58:48]   [SID] OSPF動的取得: LER_Egress=16005
+[11:59:17]   [SID] OSPF動的取得: LER_Egress=16005
+[11:59:49]   [SID] OSPF動的取得: LER_Egress=16005
+[12:00:19]   [SID] OSPF動的取得: LER_Egress=16005
+[12:00:50]   [SID] OSPF動的取得: LER_Egress=16005
+[12:01:21]   [SID] OSPF動的取得: LER_Egress=16005
+[12:01:52]   [SID] OSPF動的取得: LER_Egress=16005
+[12:02:22]   [SID] OSPF動的取得: LER_Egress=16005
+[12:02:52]   [SID] OSPF動的取得: LER_Egress=16005
+[12:03:23]   [SID] OSPF動的取得: LER_Egress=16005
+[12:03:53]   [SID] OSPF動的取得: LER_Egress=16005
+[12:04:24]   [SID] OSPF動的取得: LER_Egress=16005
+[12:04:54]   [SID] OSPF動的取得: LER_Egress=16005
+[12:05:25]   [SID] OSPF動的取得: LER_Egress=16005
+[12:05:55]   [SID] OSPF動的取得: LER_Egress=16005
+[12:06:26]   [SID] OSPF動的取得: LER_Egress=16005
+[12:06:56]   [SID] OSPF動的取得: LER_Egress=16005
+[12:07:27]   [SID] OSPF動的取得: LER_Egress=16005
+[12:07:57]   [SID] OSPF動的取得: LER_Egress=16005
+[12:08:28]   [SID] OSPF動的取得: LER_Egress=16005
+[12:09:00]   [SID] OSPF動的取得: LER_Egress=16005
+[12:09:32]   [SID] OSPF動的取得: LER_Egress=16005
+[12:10:01]   [SID] OSPF動的取得: LER_Egress=16005
+[12:10:33]   [SID] OSPF動的取得: LER_Egress=16005
+[12:11:02]   [SID] OSPF動的取得: LER_Egress=16005
+[12:11:34]   [SID] OSPF動的取得: LER_Egress=16005
+[12:12:03]   [SID] OSPF動的取得: LER_Egress=16005
+[12:12:35]   [SID] OSPF動的取得: LER_Egress=16005
+[12:13:04]   [SID] OSPF動的取得: LER_Egress=16005
+[12:13:36]   [SID] OSPF動的取得: LER_Egress=16005
+[12:14:07]   [SID] OSPF動的取得: LER_Egress=16005
+[12:14:37]   [SID] OSPF動的取得: LER_Egress=16005
+[12:15:09]   [SID] OSPF動的取得: LER_Egress=16005
+[12:15:40]   [SID] OSPF動的取得: LER_Egress=16005
+[12:16:11]   [SID] OSPF動的取得: LER_Egress=16005
+[12:16:42]   [SID] OSPF動的取得: LER_Egress=16005
+[12:17:13]   [SID] OSPF動的取得: LER_Egress=16005
+[12:17:44]   [SID] OSPF動的取得: LER_Egress=16005
+[12:18:14]   [SID] OSPF動的取得: LER_Egress=16005
+[12:18:45]   [SID] OSPF動的取得: LER_Egress=16005
+[12:19:15]   [SID] OSPF動的取得: LER_Egress=16005
+[12:19:47]   [SID] OSPF動的取得: LER_Egress=16005
+[12:20:16]   [SID] OSPF動的取得: LER_Egress=16005
+[12:20:47]   [SID] OSPF動的取得: LER_Egress=16005
+[12:21:17]   [SID] OSPF動的取得: LER_Egress=16005
+[12:21:48]   [SID] OSPF動的取得: LER_Egress=16005
+[12:22:18]   [SID] OSPF動的取得: LER_Egress=16005
+[12:22:49]   [SID] OSPF動的取得: LER_Egress=16005
+[12:23:19]   [SID] OSPF動的取得: LER_Egress=16005
+[12:23:50]   [SID] OSPF動的取得: LER_Egress=16005
+[12:24:20]   [SID] OSPF動的取得: LER_Egress=16005
+[12:24:51]   [SID] OSPF動的取得: LER_Egress=16005
+[12:25:21]   [SID] OSPF動的取得: LER_Egress=16005
+[12:25:52]   [SID] OSPF動的取得: LER_Egress=16005
+[12:26:24]   [SID] OSPF動的取得: LER_Egress=16005
+[12:26:55]   [SID] OSPF動的取得: LER_Egress=16005
+[12:27:25]   [SID] OSPF動的取得: LER_Egress=16005
+[12:27:54] ⚖  重みの変化を検知 (13:100:100 → 16:100:100, dynamic) → 経路更新
+[12:27:54]   [SID] OSPF動的取得: LER_Egress=16005
+[12:27:54] 経路更新 [wcmp]: CR1(w=16) CR2(w=100) CR3(w=100)
+[12:27:54]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[12:27:56] ⚖  重みの変化を検知 (16:100:100 → 13:100:100, dynamic) → 経路更新
+[12:27:56]   [SID] OSPF動的取得: LER_Egress=16005
+[12:27:56] 経路更新 [wcmp]: CR1(w=13) CR2(w=100) CR3(w=100)
+[12:27:57]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[12:27:57]   [SID] OSPF動的取得: LER_Egress=16005
+[12:28:29]   [SID] OSPF動的取得: LER_Egress=16005
+[12:28:58]   [SID] OSPF動的取得: LER_Egress=16005
+[12:29:29]   [SID] OSPF動的取得: LER_Egress=16005
+[12:30:01]   [SID] OSPF動的取得: LER_Egress=16005
+[12:30:32]   [SID] OSPF動的取得: LER_Egress=16005
+[12:31:03]   [SID] OSPF動的取得: LER_Egress=16005
+[12:31:34]   [SID] OSPF動的取得: LER_Egress=16005
+[12:32:05]   [SID] OSPF動的取得: LER_Egress=16005
+[12:32:37]   [SID] OSPF動的取得: LER_Egress=16005
+[12:33:06]   [SID] OSPF動的取得: LER_Egress=16005
+[12:33:37]   [SID] OSPF動的取得: LER_Egress=16005
+[12:34:07]   [SID] OSPF動的取得: LER_Egress=16005
+[12:34:39]   [SID] OSPF動的取得: LER_Egress=16005
+[12:35:08]   [SID] OSPF動的取得: LER_Egress=16005
+[12:35:39]   [SID] OSPF動的取得: LER_Egress=16005
+[12:36:09]   [SID] OSPF動的取得: LER_Egress=16005
+[12:36:40]   [SID] OSPF動的取得: LER_Egress=16005
+[12:37:10]   [SID] OSPF動的取得: LER_Egress=16005
+[12:37:41]   [SID] OSPF動的取得: LER_Egress=16005
+[12:38:11]   [SID] OSPF動的取得: LER_Egress=16005
+[12:38:42]   [SID] OSPF動的取得: LER_Egress=16005
+[12:39:12]   [SID] OSPF動的取得: LER_Egress=16005
+[12:39:43]   [SID] OSPF動的取得: LER_Egress=16005
+[12:40:15]   [SID] OSPF動的取得: LER_Egress=16005
+[12:40:46]   [SID] OSPF動的取得: LER_Egress=16005
+[12:41:16]   [SID] OSPF動的取得: LER_Egress=16005
+[12:41:48]   [SID] OSPF動的取得: LER_Egress=16005
+[12:42:17]   [SID] OSPF動的取得: LER_Egress=16005
+[12:42:48]   [SID] OSPF動的取得: LER_Egress=16005
+[12:43:18]   [SID] OSPF動的取得: LER_Egress=16005
+[12:43:49]   [SID] OSPF動的取得: LER_Egress=16005
+[12:44:19]   [SID] OSPF動的取得: LER_Egress=16005
+[12:44:50]   [SID] OSPF動的取得: LER_Egress=16005
+[12:45:21]   [SID] OSPF動的取得: LER_Egress=16005
+[12:45:52]   [SID] OSPF動的取得: LER_Egress=16005
+[12:46:23]   [SID] OSPF動的取得: LER_Egress=16005
+[12:46:54]   [SID] OSPF動的取得: LER_Egress=16005
+[12:47:24]   [SID] OSPF動的取得: LER_Egress=16005
+[12:47:56]   [SID] OSPF動的取得: LER_Egress=16005
+[12:48:25]   [SID] OSPF動的取得: LER_Egress=16005
+[12:48:57]   [SID] OSPF動的取得: LER_Egress=16005
+[12:49:26]   [SID] OSPF動的取得: LER_Egress=16005
+[12:49:58]   [SID] OSPF動的取得: LER_Egress=16005
+[12:50:29]   [SID] OSPF動的取得: LER_Egress=16005
+[12:51:01]   [SID] OSPF動的取得: LER_Egress=16005
+[12:51:32]   [SID] OSPF動的取得: LER_Egress=16005
+[12:52:02]   [SID] OSPF動的取得: LER_Egress=16005
+[12:52:33]   [SID] OSPF動的取得: LER_Egress=16005
+[12:53:05]   [SID] OSPF動的取得: LER_Egress=16005
+[12:53:36]   [SID] OSPF動的取得: LER_Egress=16005
+[12:54:06]   [SID] OSPF動的取得: LER_Egress=16005
+[12:54:37]   [SID] OSPF動的取得: LER_Egress=16005
+[12:55:07]   [SID] OSPF動的取得: LER_Egress=16005
+[12:55:38]   [SID] OSPF動的取得: LER_Egress=16005
+[12:56:08]   [SID] OSPF動的取得: LER_Egress=16005
+[12:56:39]   [SID] OSPF動的取得: LER_Egress=16005
+[12:57:09]   [SID] OSPF動的取得: LER_Egress=16005
+[12:57:40]   [SID] OSPF動的取得: LER_Egress=16005
+[12:58:10]   [SID] OSPF動的取得: LER_Egress=16005
+[12:58:41]   [SID] OSPF動的取得: LER_Egress=16005
+[12:59:11]   [SID] OSPF動的取得: LER_Egress=16005
+[12:59:42]   [SID] OSPF動的取得: LER_Egress=16005
+[13:00:12]   [SID] OSPF動的取得: LER_Egress=16005
+[13:00:43]   [SID] OSPF動的取得: LER_Egress=16005
+[13:01:15]   [SID] OSPF動的取得: LER_Egress=16005
+[13:01:46]   [SID] OSPF動的取得: LER_Egress=16005
+[13:02:16]   [SID] OSPF動的取得: LER_Egress=16005
+[13:02:48]   [SID] OSPF動的取得: LER_Egress=16005
+[13:03:19]   [SID] OSPF動的取得: LER_Egress=16005
+[13:03:49]   [SID] OSPF動的取得: LER_Egress=16005
+[13:04:20]   [SID] OSPF動的取得: LER_Egress=16005
+[13:04:50]   [SID] OSPF動的取得: LER_Egress=16005
+[13:05:21]   [SID] OSPF動的取得: LER_Egress=16005
+[13:05:51]   [SID] OSPF動的取得: LER_Egress=16005
+[13:06:23]   [SID] OSPF動的取得: LER_Egress=16005
+[13:06:54]   [SID] OSPF動的取得: LER_Egress=16005
+[13:07:24]   [SID] OSPF動的取得: LER_Egress=16005
+[13:07:55]   [SID] OSPF動的取得: LER_Egress=16005
+[13:08:25]   [SID] OSPF動的取得: LER_Egress=16005
+[13:08:57]   [SID] OSPF動的取得: LER_Egress=16005
+[13:09:26]   [SID] OSPF動的取得: LER_Egress=16005
+[13:09:58]   [SID] OSPF動的取得: LER_Egress=16005
+[13:10:27]   [SID] OSPF動的取得: LER_Egress=16005
+[13:10:59]   [SID] OSPF動的取得: LER_Egress=16005
+[13:11:30]   [SID] OSPF動的取得: LER_Egress=16005
+[13:12:00]   [SID] OSPF動的取得: LER_Egress=16005
+[13:12:31]   [SID] OSPF動的取得: LER_Egress=16005
+[13:13:01]   [SID] OSPF動的取得: LER_Egress=16005
+[13:13:32]   [SID] OSPF動的取得: LER_Egress=16005
+[13:14:02]   [SID] OSPF動的取得: LER_Egress=16005
+[13:14:33]   [SID] OSPF動的取得: LER_Egress=16005
+[13:15:03]   [SID] OSPF動的取得: LER_Egress=16005
+[13:15:34]   [SID] OSPF動的取得: LER_Egress=16005
+[13:16:05]   [SID] OSPF動的取得: LER_Egress=16005
+[13:16:36]   [SID] OSPF動的取得: LER_Egress=16005
+[13:17:07]   [SID] OSPF動的取得: LER_Egress=16005
+[13:17:36]   [SID] OSPF動的取得: LER_Egress=16005
+[13:18:08]   [SID] OSPF動的取得: LER_Egress=16005
+[13:18:39]   [SID] OSPF動的取得: LER_Egress=16005
+[13:19:09]   [SID] OSPF動的取得: LER_Egress=16005
+[13:19:40]   [SID] OSPF動的取得: LER_Egress=16005
+[13:20:10]   [SID] OSPF動的取得: LER_Egress=16005
+[13:20:42]   [SID] OSPF動的取得: LER_Egress=16005
+[13:21:13]   [SID] OSPF動的取得: LER_Egress=16005
+[13:21:45]   [SID] OSPF動的取得: LER_Egress=16005
+[13:22:16]   [SID] OSPF動的取得: LER_Egress=16005
+[13:22:46]   [SID] OSPF動的取得: LER_Egress=16005
+[13:23:18]   [SID] OSPF動的取得: LER_Egress=16005
+[13:23:47]   [SID] OSPF動的取得: LER_Egress=16005
+[13:24:19]   [SID] OSPF動的取得: LER_Egress=16005
+[13:24:48]   [SID] OSPF動的取得: LER_Egress=16005
+[13:25:20]   [SID] OSPF動的取得: LER_Egress=16005
+[13:25:49]   [SID] OSPF動的取得: LER_Egress=16005
+[13:26:21]   [SID] OSPF動的取得: LER_Egress=16005
+[13:26:50]   [SID] OSPF動的取得: LER_Egress=16005
+[13:27:22]   [SID] OSPF動的取得: LER_Egress=16005
+[13:27:51]   [SID] OSPF動的取得: LER_Egress=16005
+[13:28:23]   [SID] OSPF動的取得: LER_Egress=16005
+[13:28:52]   [SID] OSPF動的取得: LER_Egress=16005
+[13:29:24]   [SID] OSPF動的取得: LER_Egress=16005
+[13:29:53]   [SID] OSPF動的取得: LER_Egress=16005
+[13:30:23]   [SID] OSPF動的取得: LER_Egress=16005
+[13:30:54]   [SID] OSPF動的取得: LER_Egress=16005
+[13:31:25]   [SID] OSPF動的取得: LER_Egress=16005
+[13:31:57]   [SID] OSPF動的取得: LER_Egress=16005
+[13:32:26]   [SID] OSPF動的取得: LER_Egress=16005
+[13:32:56]   [SID] OSPF動的取得: LER_Egress=16005
+[13:33:27]   [SID] OSPF動的取得: LER_Egress=16005
+[13:33:57]   [SID] OSPF動的取得: LER_Egress=16005
+[13:34:29]   [SID] OSPF動的取得: LER_Egress=16005
+[13:34:58]   [SID] OSPF動的取得: LER_Egress=16005
+[13:35:29]   [SID] OSPF動的取得: LER_Egress=16005
+[13:35:59]   [SID] OSPF動的取得: LER_Egress=16005
+[13:36:31]   [SID] OSPF動的取得: LER_Egress=16005
+[13:37:00]   [SID] OSPF動的取得: LER_Egress=16005
+[13:37:32]   [SID] OSPF動的取得: LER_Egress=16005
+[13:38:01]   [SID] OSPF動的取得: LER_Egress=16005
+[13:38:25] ⚖  重みの変化を検知 (13:100:100 → 16:100:100, dynamic) → 経路更新
+[13:38:25]   [SID] OSPF動的取得: LER_Egress=16005
+[13:38:26] 経路更新 [wcmp]: CR1(w=16) CR2(w=100) CR3(w=100)
+[13:38:26]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[13:38:28] ⚖  重みの変化を検知 (16:100:100 → 13:100:100, dynamic) → 経路更新
+[13:38:28]   [SID] OSPF動的取得: LER_Egress=16005
+[13:38:28] 経路更新 [wcmp]: CR1(w=13) CR2(w=100) CR3(w=100)
+[13:38:28]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[13:38:33]   [SID] OSPF動的取得: LER_Egress=16005
+[13:39:04]   [SID] OSPF動的取得: LER_Egress=16005
+[13:39:34]   [SID] OSPF動的取得: LER_Egress=16005
+[13:40:05]   [SID] OSPF動的取得: LER_Egress=16005
+[13:40:37]   [SID] OSPF動的取得: LER_Egress=16005
+[13:41:09]   [SID] OSPF動的取得: LER_Egress=16005
+[13:41:38]   [SID] OSPF動的取得: LER_Egress=16005
+[13:42:10]   [SID] OSPF動的取得: LER_Egress=16005
+[13:42:41]   [SID] OSPF動的取得: LER_Egress=16005
+[13:43:13]   [SID] OSPF動的取得: LER_Egress=16005
+[13:43:45]   [SID] OSPF動的取得: LER_Egress=16005
+[13:44:14]   [SID] OSPF動的取得: LER_Egress=16005
+[13:44:46]   [SID] OSPF動的取得: LER_Egress=16005
+[13:45:16]   [SID] OSPF動的取得: LER_Egress=16005
+[13:45:47]   [SID] OSPF動的取得: LER_Egress=16005
+[13:46:18]   [SID] OSPF動的取得: LER_Egress=16005
+[13:46:49]   [SID] OSPF動的取得: LER_Egress=16005
+[13:47:19]   [SID] OSPF動的取得: LER_Egress=16005
+[13:47:51]   [SID] OSPF動的取得: LER_Egress=16005
+[13:48:20]   [SID] OSPF動的取得: LER_Egress=16005
+[13:48:52]   [SID] OSPF動的取得: LER_Egress=16005
+[13:49:23]   [SID] OSPF動的取得: LER_Egress=16005
+[13:49:53]   [SID] OSPF動的取得: LER_Egress=16005
+[13:50:24]   [SID] OSPF動的取得: LER_Egress=16005
+[13:50:54]   [SID] OSPF動的取得: LER_Egress=16005
+[13:51:25]   [SID] OSPF動的取得: LER_Egress=16005
+[13:51:55]   [SID] OSPF動的取得: LER_Egress=16005
+[13:52:27]   [SID] OSPF動的取得: LER_Egress=16005
+[13:52:33] ⚖  重みの変化を検知 (13:100:100 → 16:100:100, dynamic) → 経路更新
+[13:52:33]   [SID] OSPF動的取得: LER_Egress=16005
+[13:52:33] 経路更新 [wcmp]: CR1(w=16) CR2(w=100) CR3(w=100)
+[13:52:33]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[13:52:36] ⚖  重みの変化を検知 (16:100:100 → 13:100:100, dynamic) → 経路更新
+[13:52:36]   [SID] OSPF動的取得: LER_Egress=16005
+[13:52:36] 経路更新 [wcmp]: CR1(w=13) CR2(w=100) CR3(w=100)
+[13:52:36]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[13:52:56]   [SID] OSPF動的取得: LER_Egress=16005
+[13:53:26]   [SID] OSPF動的取得: LER_Egress=16005
+[13:53:57]   [SID] OSPF動的取得: LER_Egress=16005
+[13:54:27]   [SID] OSPF動的取得: LER_Egress=16005
+[13:54:58]   [SID] OSPF動的取得: LER_Egress=16005
+[13:55:30]   [SID] OSPF動的取得: LER_Egress=16005
+[13:56:01]   [SID] OSPF動的取得: LER_Egress=16005
+[13:56:31]   [SID] OSPF動的取得: LER_Egress=16005
+[13:57:02]   [SID] OSPF動的取得: LER_Egress=16005
+[13:57:34]   [SID] OSPF動的取得: LER_Egress=16005
+[13:58:05]   [SID] OSPF動的取得: LER_Egress=16005
+[13:58:35]   [SID] OSPF動的取得: LER_Egress=16005
+[13:59:07]   [SID] OSPF動的取得: LER_Egress=16005
+[13:59:36]   [SID] OSPF動的取得: LER_Egress=16005
+[14:00:08]   [SID] OSPF動的取得: LER_Egress=16005
+[14:00:39]   [SID] OSPF動的取得: LER_Egress=16005
+[14:01:10]   [SID] OSPF動的取得: LER_Egress=16005
+[14:01:41]   [SID] OSPF動的取得: LER_Egress=16005
+[14:02:12]   [SID] OSPF動的取得: LER_Egress=16005
+[14:02:44]   [SID] OSPF動的取得: LER_Egress=16005
+[14:03:16]   [SID] OSPF動的取得: LER_Egress=16005
+[14:03:45]   [SID] OSPF動的取得: LER_Egress=16005
+[14:04:16]   [SID] OSPF動的取得: LER_Egress=16005
+[14:04:46]   [SID] OSPF動的取得: LER_Egress=16005
+[14:05:17]   [SID] OSPF動的取得: LER_Egress=16005
+[14:05:47]   [SID] OSPF動的取得: LER_Egress=16005
+[14:06:19]   [SID] OSPF動的取得: LER_Egress=16005
+[14:06:48]   [SID] OSPF動的取得: LER_Egress=16005
+[14:07:20]   [SID] OSPF動的取得: LER_Egress=16005
+[14:07:49]   [SID] OSPF動的取得: LER_Egress=16005
+[14:08:21]   [SID] OSPF動的取得: LER_Egress=16005
+[14:08:50]   [SID] OSPF動的取得: LER_Egress=16005
+[14:09:22]   [SID] OSPF動的取得: LER_Egress=16005
+[14:09:53]   [SID] OSPF動的取得: LER_Egress=16005
+[14:10:23]   [SID] OSPF動的取得: LER_Egress=16005
+[14:10:54]   [SID] OSPF動的取得: LER_Egress=16005
+[14:11:19] ⚖  重みの変化を検知 (13:100:100 → 16:100:100, dynamic) → 経路更新
+[14:11:19]   [SID] OSPF動的取得: LER_Egress=16005
+[14:11:19] 経路更新 [wcmp]: CR1(w=16) CR2(w=100) CR3(w=100)
+[14:11:19]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[14:11:24] ⚖  重みの変化を検知 (16:100:100 → 13:100:100, dynamic) → 経路更新
+[14:11:24]   [SID] OSPF動的取得: LER_Egress=16005
+[14:11:24] 経路更新 [wcmp]: CR1(w=13) CR2(w=100) CR3(w=100)
+[14:11:24]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[14:11:24]   [SID] OSPF動的取得: LER_Egress=16005
+[14:11:54]   [SID] OSPF動的取得: LER_Egress=16005
+[14:12:25]   [SID] OSPF動的取得: LER_Egress=16005
+[14:12:55]   [SID] OSPF動的取得: LER_Egress=16005
+[14:13:27]   [SID] OSPF動的取得: LER_Egress=16005
+[14:13:56]   [SID] OSPF動的取得: LER_Egress=16005
+[14:14:28]   [SID] OSPF動的取得: LER_Egress=16005
+[14:14:57]   [SID] OSPF動的取得: LER_Egress=16005
+[14:15:27]   [SID] OSPF動的取得: LER_Egress=16005
+[14:15:58]   [SID] OSPF動的取得: LER_Egress=16005
+[14:16:29]   [SID] OSPF動的取得: LER_Egress=16005
+[14:17:01]   [SID] OSPF動的取得: LER_Egress=16005
+[14:17:30]   [SID] OSPF動的取得: LER_Egress=16005
+[14:18:02]   [SID] OSPF動的取得: LER_Egress=16005
+[14:18:31]   [SID] OSPF動的取得: LER_Egress=16005
+[14:19:03]   [SID] OSPF動的取得: LER_Egress=16005
+[14:19:32]   [SID] OSPF動的取得: LER_Egress=16005
+[14:20:04]   [SID] OSPF動的取得: LER_Egress=16005
+[14:20:33]   [SID] OSPF動的取得: LER_Egress=16005
+[14:21:05]   [SID] OSPF動的取得: LER_Egress=16005
+[14:21:36]   [SID] OSPF動的取得: LER_Egress=16005
+[14:22:06]   [SID] OSPF動的取得: LER_Egress=16005
+[14:22:37]   [SID] OSPF動的取得: LER_Egress=16005
+[14:23:09]   [SID] OSPF動的取得: LER_Egress=16005
+[14:23:41]   [SID] OSPF動的取得: LER_Egress=16005
+[14:24:10] ⚖  重みの変化を検知 (13:100:100 → 16:100:100, dynamic) → 経路更新
+[14:24:10]   [SID] OSPF動的取得: LER_Egress=16005
+[14:24:10] 経路更新 [wcmp]: CR1(w=16) CR2(w=100) CR3(w=100)
+[14:24:10]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[14:24:10]   [SID] OSPF動的取得: LER_Egress=16005
+[14:24:12] ⚖  重みの変化を検知 (16:100:100 → 13:100:100, dynamic) → 経路更新
+[14:24:12]   [SID] OSPF動的取得: LER_Egress=16005
+[14:24:12] 経路更新 [wcmp]: CR1(w=13) CR2(w=100) CR3(w=100)
+[14:24:12]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[14:24:40]   [SID] OSPF動的取得: LER_Egress=16005
+[14:25:11]   [SID] OSPF動的取得: LER_Egress=16005
+[14:25:41]   [SID] OSPF動的取得: LER_Egress=16005
+[14:26:12]   [SID] OSPF動的取得: LER_Egress=16005
+[14:26:42]   [SID] OSPF動的取得: LER_Egress=16005
+[14:27:13]   [SID] OSPF動的取得: LER_Egress=16005
+[14:27:43]   [SID] OSPF動的取得: LER_Egress=16005
+[14:28:14]   [SID] OSPF動的取得: LER_Egress=16005
+[14:28:44]   [SID] OSPF動的取得: LER_Egress=16005
+[14:29:15]   [SID] OSPF動的取得: LER_Egress=16005
+[14:29:45]   [SID] OSPF動的取得: LER_Egress=16005
+[14:30:15]   [SID] OSPF動的取得: LER_Egress=16005
+[14:30:46]   [SID] OSPF動的取得: LER_Egress=16005
+[14:31:17]   [SID] OSPF動的取得: LER_Egress=16005
+[14:31:49]   [SID] OSPF動的取得: LER_Egress=16005
+[14:32:19]   [SID] OSPF動的取得: LER_Egress=16005
+[14:32:51]   [SID] OSPF動的取得: LER_Egress=16005
+[14:33:20]   [SID] OSPF動的取得: LER_Egress=16005
+[14:33:52]   [SID] OSPF動的取得: LER_Egress=16005
+[14:34:21]   [SID] OSPF動的取得: LER_Egress=16005
+[14:34:53]   [SID] OSPF動的取得: LER_Egress=16005
+[14:35:22]   [SID] OSPF動的取得: LER_Egress=16005
+[14:35:54]   [SID] OSPF動的取得: LER_Egress=16005
+[14:36:25]   [SID] OSPF動的取得: LER_Egress=16005
+[14:36:55]   [SID] OSPF動的取得: LER_Egress=16005
+[14:37:26]   [SID] OSPF動的取得: LER_Egress=16005
+[14:37:56]   [SID] OSPF動的取得: LER_Egress=16005
+[14:38:27]   [SID] OSPF動的取得: LER_Egress=16005
+[14:38:57]   [SID] OSPF動的取得: LER_Egress=16005
+[14:39:29]   [SID] OSPF動的取得: LER_Egress=16005
+[14:39:58]   [SID] OSPF動的取得: LER_Egress=16005
+[14:40:28]   [SID] OSPF動的取得: LER_Egress=16005
+[14:41:00]   [SID] OSPF動的取得: LER_Egress=16005
+[14:41:13] ⚖  重みの変化を検知 (13:100:100 → 16:100:100, dynamic) → 経路更新
+[14:41:14]   [SID] OSPF動的取得: LER_Egress=16005
+[14:41:14] 経路更新 [wcmp]: CR1(w=16) CR2(w=100) CR3(w=100)
+[14:41:14]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[14:41:16] ⚖  重みの変化を検知 (16:100:100 → 13:100:100, dynamic) → 経路更新
+[14:41:16]   [SID] OSPF動的取得: LER_Egress=16005
+[14:41:17] 経路更新 [wcmp]: CR1(w=13) CR2(w=100) CR3(w=100)
+[14:41:17]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[14:41:29]   [SID] OSPF動的取得: LER_Egress=16005
+[14:42:00]   [SID] OSPF動的取得: LER_Egress=16005
+[14:42:30]   [SID] OSPF動的取得: LER_Egress=16005
+[14:43:01]   [SID] OSPF動的取得: LER_Egress=16005
+[14:43:33]   [SID] OSPF動的取得: LER_Egress=16005
+[14:44:04]   [SID] OSPF動的取得: LER_Egress=16005
+[14:44:34]   [SID] OSPF動的取得: LER_Egress=16005
+[14:45:05]   [SID] OSPF動的取得: LER_Egress=16005
+[14:45:36]   [SID] OSPF動的取得: LER_Egress=16005
+[14:46:07]   [SID] OSPF動的取得: LER_Egress=16005
+[14:46:38]   [SID] OSPF動的取得: LER_Egress=16005
+[14:46:54]   [重み] 動的制御なし → 静的値 6:25:25 を使用
+[14:46:54] ⚖  重みの変化を検知 (13:100:100 → 6:25:25, static) → 経路更新
+[14:46:54]   [SID] OSPF動的取得: LER_Egress=16005
+[14:46:54] 経路更新 [wcmp]: CR1(w=6) CR2(w=25) CR3(w=25)
+[14:46:54]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[14:47:08]   [SID] OSPF動的取得: LER_Egress=16005
+[14:47:39]   [SID] OSPF動的取得: LER_Egress=16005
+[14:48:10]   [SID] OSPF動的取得: LER_Egress=16005
+[14:48:42]   [SID] OSPF動的取得: LER_Egress=16005
+[14:49:12]   [SID] OSPF動的取得: LER_Egress=16005
+[14:51:33] === OSPF-SR TE Monitor 起動 (netlink イベント駆動 / OSPF収束ベース動的ラベル版) ===
+[14:51:33]   検知方式: ip monitor link (netlink) / OSPF障害待ち: 6s / OSPF復旧待ち: 15s
+[14:51:33]   ログ: /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/observation/20261012_running_rainobs_02/04_control/te_monitor.log
+[14:51:33]   [SID] OSPF動的取得: LER_Egress=16005
+[14:51:33]   [重み] 動的制御なし → 静的値 6:25:25 を使用
+[14:51:33] 経路更新 [wcmp]: CR1(w=6) CR2(w=25) CR3(w=25)
+[14:51:33]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[14:51:33] 初期TE経路設定完了
+[14:51:33]   [netlink] nsenter ip monitor link 起動 PID=3553790 (NS pid=1557545)
+[14:51:33] === 監視ループ開始 (netlink + OSPF ポーリング 二重化) ===
+[14:51:35]   [重み] 動的制御の重みを採用: 13:100:100
+[14:51:35] ⚖  重みの変化を検知 (6:25:25 → 13:100:100, dynamic) → 経路更新
+[14:51:35]   [SID] OSPF動的取得: LER_Egress=16005
+[14:51:36] 経路更新 [wcmp]: CR1(w=13) CR2(w=100) CR3(w=100)
+[14:51:36]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[14:52:03]   [SID] OSPF動的取得: LER_Egress=16005
+[14:52:35]   [SID] OSPF動的取得: LER_Egress=16005
+[14:53:04]   [SID] OSPF動的取得: LER_Egress=16005
+[14:53:35]   [SID] OSPF動的取得: LER_Egress=16005
+[14:54:06]   [SID] OSPF動的取得: LER_Egress=16005
+[14:54:15] ⚠  CR1 OSPF隣接消失検知: 出口側 (CR─LER_Egress) (ポーリング) → テーブル更新
+[14:54:16]   [SID] OSPF動的取得: LER_Egress=16005
+[14:54:16] 経路更新 [wcmp]: CR2(w=100) CR3(w=100)
+[14:54:16]   TE更新: SID=16005 / OSPF隣接あり: CR2 CR3 (振り分けは上の経路更新行)
+[14:54:18] ⚖  重みの変化を検知 (13:100:100 → 2:100:100, dynamic) → 経路更新
+[14:54:18]   [SID] OSPF動的取得: LER_Egress=16005
+[14:54:18] 経路更新 [wcmp]: CR2(w=100) CR3(w=100)
+[14:54:18]   TE更新: SID=16005 / OSPF隣接あり: CR2 CR3 (振り分けは上の経路更新行)
+[14:54:18] ✓  CR1 OSPF Full回復検知 (ポーリング) → テーブル更新
+[14:54:19]   [SID] OSPF動的取得: LER_Egress=16005
+[14:54:19] 経路更新 [wcmp]: CR1(w=2) CR2(w=100) CR3(w=100)
+[14:54:19]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[14:54:26] ⚠  CR1 OSPF隣接消失検知: 出口側 (CR─LER_Egress) (ポーリング) → テーブル更新
+[14:54:26]   [SID] OSPF動的取得: LER_Egress=16005
+[14:54:26] 経路更新 [wcmp]: CR2(w=100) CR3(w=100)
+[14:54:26]   TE更新: SID=16005 / OSPF隣接あり: CR2 CR3 (振り分けは上の経路更新行)
+[14:54:28] ⚖  重みの変化を検知 (2:100:100 → 13:100:100, dynamic) → 経路更新
+[14:54:29]   [SID] OSPF動的取得: LER_Egress=16005
+[14:54:29] 経路更新 [wcmp]: CR2(w=100) CR3(w=100)
+[14:54:29]   TE更新: SID=16005 / OSPF隣接あり: CR2 CR3 (振り分けは上の経路更新行)
+[14:54:29] ✓  CR1 OSPF Full回復検知 (ポーリング) → テーブル更新
+[14:54:29]   [SID] OSPF動的取得: LER_Egress=16005
+[14:54:30] 経路更新 [wcmp]: CR1(w=13) CR2(w=100) CR3(w=100)
+[14:54:30]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[14:54:32] ⚠  CR1 OSPF隣接消失検知: 出口側 (CR─LER_Egress) (ポーリング) → テーブル更新
+[14:54:32]   [SID] OSPF動的取得: LER_Egress=16005
+[14:54:32] 経路更新 [wcmp]: CR2(w=100) CR3(w=100)
+[14:54:32]   TE更新: SID=16005 / OSPF隣接あり: CR2 CR3 (振り分けは上の経路更新行)
+[14:54:34] ⚖  重みの変化を検知 (13:100:100 → 2:100:100, dynamic) → 経路更新
+[14:54:35]   [SID] OSPF動的取得: LER_Egress=16005
+[14:54:35] 経路更新 [wcmp]: CR2(w=100) CR3(w=100)
+[14:54:35]   TE更新: SID=16005 / OSPF隣接あり: CR2 CR3 (振り分けは上の経路更新行)
+[14:54:35] ✓  CR1 OSPF Full回復検知 (ポーリング) → テーブル更新
+[14:54:35]   [SID] OSPF動的取得: LER_Egress=16005
+[14:54:35] 経路更新 [wcmp]: CR1(w=2) CR2(w=100) CR3(w=100)
+[14:54:35]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[14:54:38]   [SID] OSPF動的取得: LER_Egress=16005
+[14:54:50] ⚖  重みの変化を検知 (2:100:100 → 13:100:100, dynamic) → 経路更新
+[14:54:50]   [SID] OSPF動的取得: LER_Egress=16005
+[14:54:50] 経路更新 [wcmp]: CR1(w=13) CR2(w=100) CR3(w=100)
+[14:54:50]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[14:55:09]   [SID] OSPF動的取得: LER_Egress=16005
+[14:55:33] ⚠  CR1 OSPF隣接消失検知: 出口側 (CR─LER_Egress) (ポーリング) → テーブル更新
+[14:55:34]   [SID] OSPF動的取得: LER_Egress=16005
+[14:55:34] 経路更新 [wcmp]: CR2(w=100) CR3(w=100)
+[14:55:34]   TE更新: SID=16005 / OSPF隣接あり: CR2 CR3 (振り分けは上の経路更新行)
+[14:55:36] ✓  CR1 OSPF Full回復検知 (ポーリング) → テーブル更新
+[14:55:36]   [SID] OSPF動的取得: LER_Egress=16005
+[14:55:36] 経路更新 [wcmp]: CR1(w=2) CR2(w=100) CR3(w=100)
+[14:55:36]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[14:55:39]   [SID] OSPF動的取得: LER_Egress=16005
+[14:55:55] ⚖  重みの変化を検知 (2:100:100 → 10:100:100, dynamic) → 経路更新
+[14:55:55]   [SID] OSPF動的取得: LER_Egress=16005
+[14:55:55] 経路更新 [wcmp]: CR1(w=10) CR2(w=100) CR3(w=100)
+[14:55:55]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[14:56:00] ⚖  重みの変化を検知 (10:100:100 → 2:100:100, dynamic) → 経路更新
+[14:56:00]   [SID] OSPF動的取得: LER_Egress=16005
+[14:56:00] 経路更新 [wcmp]: CR1(w=2) CR2(w=100) CR3(w=100)
+[14:56:00]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[14:56:07] ⚖  重みの変化を検知 (2:100:100 → 13:100:100, dynamic) → 経路更新
+[14:56:07]   [SID] OSPF動的取得: LER_Egress=16005
+[14:56:07] 経路更新 [wcmp]: CR1(w=13) CR2(w=100) CR3(w=100)
+[14:56:07]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[14:56:10]   [SID] OSPF動的取得: LER_Egress=16005
+[14:56:41]   [SID] OSPF動的取得: LER_Egress=16005
+[14:57:12]   [SID] OSPF動的取得: LER_Egress=16005
+[14:57:17] ⚠  CR1 OSPF隣接消失検知: 出口側 (CR─LER_Egress) (ポーリング) → テーブル更新
+[14:57:17]   [SID] OSPF動的取得: LER_Egress=16005
+[14:57:17] 経路更新 [wcmp]: CR2(w=100) CR3(w=100)
+[14:57:17]   TE更新: SID=16005 / OSPF隣接あり: CR2 CR3 (振り分けは上の経路更新行)
+[14:57:19] ⚖  重みの変化を検知 (13:100:100 → 5:100:100, dynamic) → 経路更新
+[14:57:19]   [SID] OSPF動的取得: LER_Egress=16005
+[14:57:19] 経路更新 [wcmp]: CR2(w=100) CR3(w=100)
+[14:57:19]   TE更新: SID=16005 / OSPF隣接あり: CR2 CR3 (振り分けは上の経路更新行)
+[14:57:20] ✓  CR1 OSPF Full回復検知 (ポーリング) → テーブル更新
+[14:57:20]   [SID] OSPF動的取得: LER_Egress=16005
+[14:57:20] 経路更新 [wcmp]: CR1(w=5) CR2(w=100) CR3(w=100)
+[14:57:20]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[14:57:22] ⚠  CR1 OSPF隣接消失検知: 出口側 (CR─LER_Egress) (ポーリング) → テーブル更新
+[14:57:23]   [SID] OSPF動的取得: LER_Egress=16005
+[14:57:23] 経路更新 [wcmp]: CR2(w=100) CR3(w=100)
+[14:57:23]   TE更新: SID=16005 / OSPF隣接あり: CR2 CR3 (振り分けは上の経路更新行)
+[14:57:24] ⚖  重みの変化を検知 (5:100:100 → 2:100:100, dynamic) → 経路更新
+[14:57:24]   [SID] OSPF動的取得: LER_Egress=16005
+[14:57:25] 経路更新 [wcmp]: CR2(w=100) CR3(w=100)
+[14:57:25]   TE更新: SID=16005 / OSPF隣接あり: CR2 CR3 (振り分けは上の経路更新行)
+[14:57:25] ✓  CR1 OSPF Full回復検知 (ポーリング) → テーブル更新
+[14:57:25]   [SID] OSPF動的取得: LER_Egress=16005
+[14:57:25] 経路更新 [wcmp]: CR1(w=2) CR2(w=100) CR3(w=100)
+[14:57:25]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[14:57:28] ⚠  CR1 OSPF隣接消失検知: 出口側 (CR─LER_Egress) (ポーリング) → テーブル更新
+[14:57:28]   [SID] OSPF動的取得: LER_Egress=16005
+[14:57:28] 経路更新 [wcmp]: CR2(w=100) CR3(w=100)
+[14:57:28]   TE更新: SID=16005 / OSPF隣接あり: CR2 CR3 (振り分けは上の経路更新行)
+[14:57:30] ✓  CR1 OSPF Full回復検知 (ポーリング) → テーブル更新
+[14:57:31]   [SID] OSPF動的取得: LER_Egress=16005
+[14:57:31] 経路更新 [wcmp]: CR1(w=2) CR2(w=100) CR3(w=100)
+[14:57:31]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[14:57:35] ⚠  CR1 OSPF隣接消失検知: 出口側 (CR─LER_Egress) (ポーリング) → テーブル更新
+[14:57:36]   [SID] OSPF動的取得: LER_Egress=16005
+[14:57:36] 経路更新 [wcmp]: CR2(w=100) CR3(w=100)
+[14:57:36]   TE更新: SID=16005 / OSPF隣接あり: CR2 CR3 (振り分けは上の経路更新行)
+[14:57:38] ✓  CR1 OSPF Full回復検知 (ポーリング) → テーブル更新
+[14:57:38]   [SID] OSPF動的取得: LER_Egress=16005
+[14:57:39] 経路更新 [wcmp]: CR1(w=2) CR2(w=100) CR3(w=100)
+[14:57:39]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[14:57:42] ⚖  重みの変化を検知 (2:100:100 → 13:100:100, dynamic) → 経路更新
+[14:57:42]   [SID] OSPF動的取得: LER_Egress=16005
+[14:57:42] 経路更新 [wcmp]: CR1(w=13) CR2(w=100) CR3(w=100)
+[14:57:42]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[14:57:43]   [SID] OSPF動的取得: LER_Egress=16005
+[14:58:14]   [SID] OSPF動的取得: LER_Egress=16005
+[14:58:44]   [SID] OSPF動的取得: LER_Egress=16005
+[14:58:46] ⚖  重みの変化を検知 (13:100:100 → 4:100:100 AF41=0, dynamic) → 経路更新
+[14:58:46]   [SID] OSPF動的取得: LER_Egress=16005
+[14:58:46] 経路更新 [wcmp]: CR1(w=4) CR2(w=100) CR3(w=100) / AF41 は CR1(w=0:除外)
+[14:58:46]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[14:58:46] ⚠  CR1 OSPF隣接消失検知: 出口側 (CR─LER_Egress) (ポーリング) → テーブル更新
+[14:58:47]   [SID] OSPF動的取得: LER_Egress=16005
+[14:58:47] 経路更新 [wcmp]: CR2(w=100) CR3(w=100)
+[14:58:47]   TE更新: SID=16005 / OSPF隣接あり: CR2 CR3 (振り分けは上の経路更新行)
+[14:58:49] ✓  CR1 OSPF Full回復検知 (ポーリング) → テーブル更新
+[14:58:49]   [SID] OSPF動的取得: LER_Egress=16005
+[14:58:49] 経路更新 [wcmp]: CR1(w=4) CR2(w=100) CR3(w=100) / AF41 は CR1(w=0:除外)
+[14:58:49]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[14:58:54] ⚖  重みの変化を検知 (4:100:100 AF41=0 → 13:100:100, dynamic) → 経路更新
+[14:58:54]   [SID] OSPF動的取得: LER_Egress=16005
+[14:58:55] 経路更新 [wcmp]: CR1(w=13) CR2(w=100) CR3(w=100)
+[14:58:55]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[14:58:56] ⚖  重みの変化を検知 (13:100:100 → 4:100:100 AF41=0, dynamic) → 経路更新
+[14:58:57]   [SID] OSPF動的取得: LER_Egress=16005
+[14:58:57] 経路更新 [wcmp]: CR1(w=4) CR2(w=100) CR3(w=100) / AF41 は CR1(w=0:除外)
+[14:58:57]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[14:58:57] ⚠  CR1 OSPF隣接消失検知: 出口側 (CR─LER_Egress) (ポーリング) → テーブル更新
+[14:58:57]   [SID] OSPF動的取得: LER_Egress=16005
+[14:58:58] 経路更新 [wcmp]: CR2(w=100) CR3(w=100)
+[14:58:58]   TE更新: SID=16005 / OSPF隣接あり: CR2 CR3 (振り分けは上の経路更新行)
+[14:59:00] ✓  CR1 OSPF Full回復検知 (ポーリング) → テーブル更新
+[14:59:00]   [SID] OSPF動的取得: LER_Egress=16005
+[14:59:00] 経路更新 [wcmp]: CR1(w=4) CR2(w=100) CR3(w=100) / AF41 は CR1(w=0:除外)
+[14:59:00]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[14:59:03] ⚠  CR1 OSPF隣接消失検知: 出口側 (CR─LER_Egress) (ポーリング) → テーブル更新
+[14:59:03]   [SID] OSPF動的取得: LER_Egress=16005
+[14:59:03] 経路更新 [wcmp]: CR2(w=100) CR3(w=100)
+[14:59:03]   TE更新: SID=16005 / OSPF隣接あり: CR2 CR3 (振り分けは上の経路更新行)
+[14:59:04] ⚖  重みの変化を検知 (4:100:100 AF41=0 → 2:100:100 AF41=0, dynamic) → 経路更新
+[14:59:04]   [SID] OSPF動的取得: LER_Egress=16005
+[14:59:04] 経路更新 [wcmp]: CR2(w=100) CR3(w=100)
+[14:59:04]   TE更新: SID=16005 / OSPF隣接あり: CR2 CR3 (振り分けは上の経路更新行)
+[14:59:04] ✓  CR1 OSPF Full回復検知 (ポーリング) → テーブル更新
+[14:59:05]   [SID] OSPF動的取得: LER_Egress=16005
+[14:59:05] 経路更新 [wcmp]: CR1(w=2) CR2(w=100) CR3(w=100) / AF41 は CR1(w=0:除外)
+[14:59:05]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[14:59:12] ⚖  重みの変化を検知 (2:100:100 AF41=0 → 8:100:100, dynamic) → 経路更新
+[14:59:12]   [SID] OSPF動的取得: LER_Egress=16005
+[14:59:12] 経路更新 [wcmp]: CR1(w=8) CR2(w=100) CR3(w=100)
+[14:59:12]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[14:59:15]   [SID] OSPF動的取得: LER_Egress=16005
+[14:59:18] ⚖  重みの変化を検知 (8:100:100 → 13:100:100, dynamic) → 経路更新
+[14:59:18]   [SID] OSPF動的取得: LER_Egress=16005
+[14:59:18] 経路更新 [wcmp]: CR1(w=13) CR2(w=100) CR3(w=100)
+[14:59:18]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[14:59:45]   [SID] OSPF動的取得: LER_Egress=16005
+[15:00:16]   [SID] OSPF動的取得: LER_Egress=16005
+[15:00:36]   [重み] 動的制御なし → 静的値 6:25:25 を使用
+[15:00:36] ⚖  重みの変化を検知 (13:100:100 → 6:25:25, static) → 経路更新
+[15:00:37]   [SID] OSPF動的取得: LER_Egress=16005
+[15:00:37] 経路更新 [wcmp]: CR1(w=6) CR2(w=25) CR3(w=25)
+[15:00:37]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[15:00:46]   [SID] OSPF動的取得: LER_Egress=16005
+[15:01:10] ⚠  CR1 OSPF隣接消失検知: 出口側 (CR─LER_Egress) (ポーリング) → テーブル更新
+[15:01:10]   [SID] OSPF動的取得: LER_Egress=16005
+[15:01:10] 経路更新 [wcmp]: CR2(w=25) CR3(w=25)
+[15:01:10]   TE更新: SID=16005 / OSPF隣接あり: CR2 CR3 (振り分けは上の経路更新行)
+[15:01:13] ✓  CR1 OSPF Full回復検知 (ポーリング) → テーブル更新
+[15:01:13]   [SID] OSPF動的取得: LER_Egress=16005
+[15:01:13] 経路更新 [wcmp]: CR1(w=6) CR2(w=25) CR3(w=25)
+[15:01:13]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[15:01:18]   [SID] OSPF動的取得: LER_Egress=16005
+[15:01:20] ⚠  CR1 OSPF隣接消失検知: 出口側 (CR─LER_Egress) (ポーリング) → テーブル更新
+[15:01:21]   [SID] OSPF動的取得: LER_Egress=16005
+[15:01:21] 経路更新 [wcmp]: CR2(w=25) CR3(w=25)
+[15:01:21]   TE更新: SID=16005 / OSPF隣接あり: CR2 CR3 (振り分けは上の経路更新行)
+[15:01:23] ✓  CR1 OSPF Full回復検知 (ポーリング) → テーブル更新
+[15:01:24]   [SID] OSPF動的取得: LER_Egress=16005
+[15:01:24] 経路更新 [wcmp]: CR1(w=6) CR2(w=25) CR3(w=25)
+[15:01:24]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[15:01:26] ⚠  CR1 OSPF隣接消失検知: 出口側 (CR─LER_Egress) (ポーリング) → テーブル更新
+[15:01:26]   [SID] OSPF動的取得: LER_Egress=16005
+[15:01:26] 経路更新 [wcmp]: CR2(w=25) CR3(w=25)
+[15:01:26]   TE更新: SID=16005 / OSPF隣接あり: CR2 CR3 (振り分けは上の経路更新行)
+[15:01:29] ✓  CR1 OSPF Full回復検知 (ポーリング) → テーブル更新
+[15:01:29]   [SID] OSPF動的取得: LER_Egress=16005
+[15:01:29] 経路更新 [wcmp]: CR1(w=6) CR2(w=25) CR3(w=25)
+[15:01:29]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[15:01:31] ⚠  CR1 OSPF隣接消失検知: 出口側 (CR─LER_Egress) (ポーリング) → テーブル更新
+[15:01:32]   [SID] OSPF動的取得: LER_Egress=16005
+[15:01:32] 経路更新 [wcmp]: CR2(w=25) CR3(w=25)
+[15:01:32]   TE更新: SID=16005 / OSPF隣接あり: CR2 CR3 (振り分けは上の経路更新行)
+[15:01:34] ✓  CR1 OSPF Full回復検知 (ポーリング) → テーブル更新
+[15:01:34]   [SID] OSPF動的取得: LER_Egress=16005
+[15:01:35] 経路更新 [wcmp]: CR1(w=6) CR2(w=25) CR3(w=25)
+[15:01:35]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[15:01:37] ⚠  CR1 OSPF隣接消失検知: 出口側 (CR─LER_Egress) (ポーリング) → テーブル更新
+[15:01:37]   [SID] OSPF動的取得: LER_Egress=16005
+[15:01:37] 経路更新 [wcmp]: CR2(w=25) CR3(w=25)
+[15:01:37]   TE更新: SID=16005 / OSPF隣接あり: CR2 CR3 (振り分けは上の経路更新行)
+[15:01:40] ✓  CR1 OSPF Full回復検知 (ポーリング) → テーブル更新
+[15:01:40]   [SID] OSPF動的取得: LER_Egress=16005
+[15:01:40] 経路更新 [wcmp]: CR1(w=6) CR2(w=25) CR3(w=25)
+[15:01:40]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[15:01:42] ⚠  CR1 OSPF隣接消失検知: 出口側 (CR─LER_Egress) (ポーリング) → テーブル更新
+[15:01:43]   [SID] OSPF動的取得: LER_Egress=16005
+[15:01:43] 経路更新 [wcmp]: CR2(w=25) CR3(w=25)
+[15:01:43]   TE更新: SID=16005 / OSPF隣接あり: CR2 CR3 (振り分けは上の経路更新行)
+[15:01:45] ✓  CR1 OSPF Full回復検知 (ポーリング) → テーブル更新
+[15:01:45]   [SID] OSPF動的取得: LER_Egress=16005
+[15:01:46] 経路更新 [wcmp]: CR1(w=6) CR2(w=25) CR3(w=25)
+[15:01:46]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[15:01:48]   [SID] OSPF動的取得: LER_Egress=16005
+[15:02:19]   [SID] OSPF動的取得: LER_Egress=16005
+[15:02:50]   [SID] OSPF動的取得: LER_Egress=16005
+[15:02:55]   [重み] 動的制御の重みを採用: 13:100:100
+[15:02:55] ⚖  重みの変化を検知 (6:25:25 → 13:100:100, dynamic) → 経路更新
+[15:02:55]   [SID] OSPF動的取得: LER_Egress=16005
+[15:02:55] 経路更新 [wcmp]: CR1(w=13) CR2(w=100) CR3(w=100)
+[15:02:55]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[15:05:15] === OSPF-SR TE Monitor 起動 (netlink イベント駆動 / OSPF収束ベース動的ラベル版) ===
+[15:05:15]   検知方式: ip monitor link (netlink) / OSPF障害待ち: 6s / OSPF復旧待ち: 15s
+[15:05:15]   ログ: /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/observation/20261012_running_rainobs_02/04_control/te_monitor.log
+[15:05:15]   [SID] OSPF動的取得: LER_Egress=16005
+[15:05:15]   [重み] 動的制御なし → 静的値 6:25:25 を使用
+[15:05:15] 経路更新 [wcmp]: CR1(w=6) CR2(w=25) CR3(w=25)
+[15:05:15]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[15:05:15] 初期TE経路設定完了
+[15:05:15]   [netlink] nsenter ip monitor link 起動 PID=3611754 (NS pid=1557545)
+[15:05:15] === 監視ループ開始 (netlink + OSPF ポーリング 二重化) ===
+[15:05:17]   [重み] 動的制御の重みを採用: 13:100:100
+[15:05:17] ⚖  重みの変化を検知 (6:25:25 → 13:100:100, dynamic) → 経路更新
+[15:05:17]   [SID] OSPF動的取得: LER_Egress=16005
+[15:05:17] 経路更新 [wcmp]: CR1(w=13) CR2(w=100) CR3(w=100)
+[15:05:17]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[15:05:45]   [SID] OSPF動的取得: LER_Egress=16005
+[15:06:16]   [SID] OSPF動的取得: LER_Egress=16005
+[15:06:48]   [SID] OSPF動的取得: LER_Egress=16005
+[15:07:20]   [SID] OSPF動的取得: LER_Egress=16005
+[15:07:49]   [SID] OSPF動的取得: LER_Egress=16005
+[15:08:19]   [SID] OSPF動的取得: LER_Egress=16005
+[15:08:50]   [SID] OSPF動的取得: LER_Egress=16005
+[15:09:21]   [SID] OSPF動的取得: LER_Egress=16005
+[15:09:52]   [SID] OSPF動的取得: LER_Egress=16005
+[15:10:22]   [SID] OSPF動的取得: LER_Egress=16005
+[15:10:53]   [SID] OSPF動的取得: LER_Egress=16005
+[15:11:23]   [SID] OSPF動的取得: LER_Egress=16005
+[15:11:54]   [SID] OSPF動的取得: LER_Egress=16005
+[15:12:26]   [SID] OSPF動的取得: LER_Egress=16005
+[15:12:28] ⚖  重みの変化を検知 (13:100:100 → 16:100:100, dynamic) → 経路更新
+[15:12:28]   [SID] OSPF動的取得: LER_Egress=16005
+[15:12:28] 経路更新 [wcmp]: CR1(w=16) CR2(w=100) CR3(w=100)
+[15:12:28]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[15:12:30] ⚖  重みの変化を検知 (16:100:100 → 13:100:100, dynamic) → 経路更新
+[15:12:30]   [SID] OSPF動的取得: LER_Egress=16005
+[15:12:31] 経路更新 [wcmp]: CR1(w=13) CR2(w=100) CR3(w=100)
+[15:12:31]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
+[15:12:58]   [SID] OSPF動的取得: LER_Egress=16005
+[15:13:29]   [SID] OSPF動的取得: LER_Egress=16005
+[15:13:59]   [SID] OSPF動的取得: LER_Egress=16005
+[15:14:30]   [SID] OSPF動的取得: LER_Egress=16005
+[15:15:00]   [SID] OSPF動的取得: LER_Egress=16005
+[15:15:31]   [SID] OSPF動的取得: LER_Egress=16005
+[15:16:02]   [SID] OSPF動的取得: LER_Egress=16005
+[15:16:33]   [SID] OSPF動的取得: LER_Egress=16005
+[15:17:05]   [SID] OSPF動的取得: LER_Egress=16005
+[15:17:34]   [SID] OSPF動的取得: LER_Egress=16005
+[15:18:06]   [SID] OSPF動的取得: LER_Egress=16005
+[15:18:37]   [SID] OSPF動的取得: LER_Egress=16005
+[15:19:07]   [SID] OSPF動的取得: LER_Egress=16005
+[15:19:38]   [SID] OSPF動的取得: LER_Egress=16005
+[15:20:08]   [SID] OSPF動的取得: LER_Egress=16005
+[15:20:39]   [SID] OSPF動的取得: LER_Egress=16005
+[15:21:09]   [SID] OSPF動的取得: LER_Egress=16005
+[15:21:41]   [SID] OSPF動的取得: LER_Egress=16005
+[15:22:12]   [SID] OSPF動的取得: LER_Egress=16005
+[15:22:44]   [SID] OSPF動的取得: LER_Egress=16005
+[15:23:16]   [SID] OSPF動的取得: LER_Egress=16005
+[15:23:45]   [SID] OSPF動的取得: LER_Egress=16005
+[15:24:17]   [SID] OSPF動的取得: LER_Egress=16005
+[15:24:48]   [SID] OSPF動的取得: LER_Egress=16005
+[15:25:18]   [SID] OSPF動的取得: LER_Egress=16005
+[15:25:49]   [SID] OSPF動的取得: LER_Egress=16005
+[15:26:19]   [SID] OSPF動的取得: LER_Egress=16005
+[15:26:50]   [SID] OSPF動的取得: LER_Egress=16005
+[15:27:20]   [SID] OSPF動的取得: LER_Egress=16005
+[15:27:51]   [SID] OSPF動的取得: LER_Egress=16005
+[15:28:21]   [SID] OSPF動的取得: LER_Egress=16005
+[15:28:52]   [SID] OSPF動的取得: LER_Egress=16005
+[15:29:22]   [SID] OSPF動的取得: LER_Egress=16005
+[15:29:53]   [SID] OSPF動的取得: LER_Egress=16005
+[15:30:24]   [SID] OSPF動的取得: LER_Egress=16005
+[15:30:55]   [SID] OSPF動的取得: LER_Egress=16005
+[15:31:26]   [SID] OSPF動的取得: LER_Egress=16005
+[15:31:58]   [SID] OSPF動的取得: LER_Egress=16005
+[15:32:23]   [重み] 動的制御なし → 静的値 6:25:25 を使用
+[15:32:23] ⚖  重みの変化を検知 (13:100:100 → 6:25:25, static) → 経路更新
+[15:32:23]   [SID] OSPF動的取得: LER_Egress=16005
+[15:32:23] 経路更新 [wcmp]: CR1(w=6) CR2(w=25) CR3(w=25)
+[15:32:23]   TE更新: SID=16005 / OSPF隣接あり: CR1 CR2 CR3 (振り分けは上の経路更新行)
