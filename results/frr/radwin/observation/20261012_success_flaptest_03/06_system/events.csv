@@ -1,0 +1,30 @@
+time,event,detail
+1791788697.100,observe_start,/home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/observation/20261012_running_flaptest_03
+1791788697.101,child_start,te_monitor pid=3888186
+1791788697.102,child_start,controller pid=3888187
+1791788697.102,child_start,odu_logger pid=3888188
+1791788697.102,child_start,state_logger pid=3888190
+1791788697.103,child_start,load_server pid=3888191
+1791788697.103,child_start,weather_logger pid=3888193
+1791788697.104,child_start,nowcast_logger pid=3888194
+1791788697.104,child_start,ping_logger pid=3888195
+1791788701.111,child_start,load_client pid=3888639
+1791788723.168,child_start,controller pid=3889405
+1791788723.669,condition_enter,P3 制御を --pprime --efficiency-table /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/scripts/radwin_mcs_efficiency.json --af41-guard 0.05 で起動し直した
+1791788723.670,load_pause,全負荷計測のため軽い負荷を止める
+1791788726.673,probe_start,fault:flap@P3
+1791788798.038,probe_end,fault:flap@P3 code=0 success
+1791788798.046,child_start,controller pid=3900298
+1791788798.046,condition_leave,P3 → P
+1791788798.046,load_resume,
+1791788800.050,child_start,load_client pid=3900337
+1791788804.074,child_start,controller pid=3900473
+1791788804.575,condition_enter,P4 制御を --pprime --efficiency-table /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/scripts/radwin_mcs_efficiency.json --af41-guard 0.05 --hold-down 10 で起動し直した
+1791788804.576,load_pause,全負荷計測のため軽い負荷を止める
+1791788807.581,probe_start,fault:flap@P4
+1791788879.117,probe_end,fault:flap@P4 code=0 success
+1791788879.133,child_start,controller pid=3910314
+1791788879.134,condition_leave,P4 → P
+1791788879.134,load_resume,
+1791788881.137,child_start,load_client pid=3910532
+1791788884.643,observe_stop,

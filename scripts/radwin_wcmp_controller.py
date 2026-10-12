@@ -81,8 +81,10 @@ def get_label() -> str:
     """
     _, out = sh(["ip", "netns", "exec", "LER_Ingress",
                  "ip", "route", "show", "table", "41"])
-    m = re.search(r"encap mpls (\d+)", out)
-    return m.group(1) if m else "16005"
+    # 有線の経路は隣接 SID (16000 未満) なので、Node SID の範囲 (16000 以上) のものを取る。
+    # CR1 が経路から外れていると table 41 に Node SID が無いこともあるので、そのときは既定値
+    node = [m for m in re.findall(r"encap mpls (\d+)", out) if int(m) >= 16000]
+    return node[0] if node else "16005"
 
 
 def burst_bytes(kbps: int) -> int:
@@ -187,19 +189,40 @@ def apply_route(mbps: int, label: str = "16005", af41_w1: int | None = None) -> 
     return apply_weights(weights_for(mbps), label, af41_w1)
 
 
+# 有線の経路 (CR2 / CR3) に付ける隣接 SID (frr_dscp_te.sh・frr_te_monitor.sh と同じ規則、2026-10-12〜)。
+# LER_Egress の Node SID は、無線の隣接が上下するたびに OSPF-SR が CR2/CR3 で消して入れ直すため。
+WIRED_ADJ = [("CR2", "10.0.4.2", "cr2-lere"), ("CR3", "10.0.6.2", "cr3-lere")]
+
+
+def adj_label(cr: str, via: str, dev: str) -> str | None:
+    """CR の LER_Egress への隣接 SID (15000〜15999 の pop の行)。読めなければ None。"""
+    _, out = sh(["ip", "netns", "exec", cr, "ip", "-M", "route", "show"])
+    labels = [int(m.group(1)) for m in re.finditer(
+        rf"^(\d+) via inet {re.escape(via)} dev {re.escape(dev)}\b", out, re.M) if int(m.group(1)) < 16000]
+    return str(min(labels)) if labels else None
+
+
+def path_labels(label: str) -> list[str]:
+    """3 経路それぞれに付けるラベル。CR1 は Node SID、CR2/CR3 は隣接 SID (SR_WIRED_SID=node なら全部 Node SID)。"""
+    if os.environ.get("SR_WIRED_SID", "adj") != "adj":
+        return [label] * 3
+    return [label] + [adj_label(*a) or label for a in WIRED_ADJ]
+
+
 def apply_weights(w: tuple[int, int, int], label: str = "16005",
                   af41_w1: int | None = None) -> tuple[tuple[int, int, int], bool]:
     """経路表に重みを書く。重み 0 の経路は nexthop から外す (Linux は weight 0 を受け付けない)。
     af41_w1 を渡すと、table 41 (AF41) の CR1 だけその重みにする。"""
     ok = True
+    labels = path_labels(label)
     for tbl in TABLES:
         cmd = ["ip", "netns", "exec", "LER_Ingress", "ip", "route", "replace",
                "table", str(tbl), "10.20.0.0/16"]
         ws = (af41_w1, *w[1:]) if tbl == 41 and af41_w1 is not None else w
-        for (via, dev), wt in zip(NEXTHOPS, ws):
+        for (via, dev), wt, lb in zip(NEXTHOPS, ws, labels):
             if wt <= 0:
                 continue
-            cmd += ["nexthop", "encap", "mpls", label, "via", via,
+            cmd += ["nexthop", "encap", "mpls", lb, "via", via,
                     "dev", dev, "weight", str(wt)]
         code, out = sh(cmd)
         if code != 0:

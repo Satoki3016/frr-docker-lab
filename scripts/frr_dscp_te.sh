@@ -42,7 +42,30 @@ CR1_LABEL=${CR1_LABEL:-16002}
 CR2_LABEL=${CR2_LABEL:-16003}
 CR3_LABEL=${CR3_LABEL:-16004}
 
+# 有線の経路 (CR2 / CR3) に付けるラベル (2026-10-12 追加、SR_WIRED_SID=adj が既定)。
+# LER_Egress の Node SID (16005) を使うと、無線 (CR1) の隣接が上下するたびに FRR 8.4 の OSPF-SR が
+# CR2/CR3 の 16005 を消して約 10 ms 後に入れ直し、その間の有線の AF41 が全部落ちていた
+# (veth flaptest: 途切れ 1 回ごとに約 1440 個)。CR2/CR3 の「LER_Egress への隣接 SID」は
+# その隣接が変わらない限り触られないので、有線の経路はこちらで送る (SR-TE の明示経路)。
+# 隣接 SID は CR がその場で割り当てる番号 (15000〜15999) なので、CR の転送表から読む。
+# CR1 (無線) は従来どおり Node SID。SR_WIRED_SID=node なら全経路 Node SID (以前の動き)。
+adj_label() {   # $1=CR のコンテナ $2=LER_Egress 側の IP $3=CR の出口
+    dc "$1" ip -M route show 2>/dev/null \
+        | awk -v v="$2" -v d="$3" '$1 ~ /^[0-9]+$/ && $1 < 16000 && $2 == "via" && $4 == v && $6 == d {print $1}' \
+        | sort -n | head -1
+}
+CR2_PATH_LABEL=$LERE_LABEL; CR3_PATH_LABEL=$LERE_LABEL
+if [ "${SR_WIRED_SID:-adj}" = "adj" ]; then
+    _a2=$(adj_label CR2 10.0.4.2 cr2-lere); _a3=$(adj_label CR3 10.0.6.2 cr3-lere)
+    if [ -n "$_a2" ] && [ -n "$_a3" ]; then
+        CR2_PATH_LABEL=$_a2; CR3_PATH_LABEL=$_a3
+    else
+        echo "  [WARN] CR2/CR3 の隣接 SID を読めない → 有線も Node SID ${LERE_LABEL} を使う"
+    fi
+fi
+
 echo "  LER_Egress SID : ${LERE_LABEL}"
+echo "  経路のラベル   : CR1 ${LERE_LABEL} / CR2 ${CR2_PATH_LABEL} / CR3 ${CR3_PATH_LABEL} (SR_WIRED_SID=${SR_WIRED_SID:-adj})"
 echo "  CR1 SID        : ${CR1_LABEL}"
 echo "  CR2 SID        : ${CR2_LABEL}"
 echo "  CR3 SID        : ${CR3_LABEL}"
@@ -144,8 +167,8 @@ _add_sr_multipath() {
     local table=$1 dst=$2 label=$3 w1=$4 w2=$5 w3=$6
     dc LER_Ingress ip route replace table "$table" "$dst" \
         nexthop encap mpls "$label" via 10.0.1.2 dev leri-cr1 weight "$w1" \
-        nexthop encap mpls "$label" via 10.0.3.2 dev leri-cr2 weight "$w2" \
-        nexthop encap mpls "$label" via 10.0.5.2 dev leri-cr3 weight "$w3"
+        nexthop encap mpls "$CR2_PATH_LABEL" via 10.0.3.2 dev leri-cr2 weight "$w2" \
+        nexthop encap mpls "$CR3_PATH_LABEL" via 10.0.5.2 dev leri-cr3 weight "$w3"
 }
 
 case "${ROUTE_MODE:-primary}" in
@@ -164,16 +187,16 @@ case "${ROUTE_MODE:-primary}" in
   *)
     # 従来方式: 全クラス CR1 主経路 + フォールバック
     _add_sr_route 41 10.20.0.0/16 "${LERE_LABEL}" 10.0.1.2 leri-cr1 1
-    _add_sr_route 41 10.20.0.0/16 "${LERE_LABEL}" 10.0.3.2 leri-cr2 2
+    _add_sr_route 41 10.20.0.0/16 "${CR2_PATH_LABEL}" 10.0.3.2 leri-cr2 2
     echo "  table41 AF41: CR1(primary) / CR2(fallback) → label=${LERE_LABEL}"
 
     _add_sr_route 42 10.20.0.0/16 "${LERE_LABEL}" 10.0.1.2 leri-cr1 1
-    _add_sr_route 42 10.20.0.0/16 "${LERE_LABEL}" 10.0.3.2 leri-cr2 2
+    _add_sr_route 42 10.20.0.0/16 "${CR2_PATH_LABEL}" 10.0.3.2 leri-cr2 2
     echo "  table42 AF42: CR1(primary) / CR2(fallback) → label=${LERE_LABEL}"
 
     _add_sr_route 43 10.20.0.0/16 "${LERE_LABEL}" 10.0.1.2 leri-cr1 1
-    _add_sr_route 43 10.20.0.0/16 "${LERE_LABEL}" 10.0.3.2 leri-cr2 2
-    _add_sr_route 43 10.20.0.0/16 "${LERE_LABEL}" 10.0.5.2 leri-cr3 3
+    _add_sr_route 43 10.20.0.0/16 "${CR2_PATH_LABEL}" 10.0.3.2 leri-cr2 2
+    _add_sr_route 43 10.20.0.0/16 "${CR3_PATH_LABEL}" 10.0.5.2 leri-cr3 3
     echo "  table43 AF43: CR1(primary) / CR2,CR3(fallback) → label=${LERE_LABEL}"
     ;;
 esac
@@ -265,6 +288,14 @@ add_htb_wrr() {
             u32 match u32 0x00900000 0x00FC0000 at 4 flowid 1:2
         dc "$cname" tc filter add dev "$dev" parent 1: protocol 0x8847 prio 1 \
             u32 match u32 0x00980000 0x00FC0000 at 4 flowid 1:3
+        # 隣接 SID で届いた通信は、CR がラベルを外して IP のまま出す (2026-10-12〜)。
+        # IP の DSCP でも分類しないと、整形も AF41 優先も効かなくなる
+        dc "$cname" tc filter add dev "$dev" parent 1: protocol ip prio 2 \
+            u32 match ip dsfield 0x88 0xfc flowid 1:1
+        dc "$cname" tc filter add dev "$dev" parent 1: protocol ip prio 2 \
+            u32 match ip dsfield 0x90 0xfc flowid 1:2
+        dc "$cname" tc filter add dev "$dev" parent 1: protocol ip prio 2 \
+            u32 match ip dsfield 0x98 0xfc flowid 1:3
     fi
     echo "  [ok] $cname:$dev  SP+WRR(${WRR_HI}:${WRR_ME}:${WRR_LO})  ${r_hi}/${r_me}/${r_lo}kbit"
 }

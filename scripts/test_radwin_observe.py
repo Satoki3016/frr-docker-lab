@@ -885,7 +885,8 @@ class Af41GuardTests(unittest.TestCase):
 
     def test_apply_weights_drops_cr1_only_from_table_41(self):
         cmds = []
-        with patch.object(self.ctl, "sh", side_effect=lambda c: cmds.append(c) or (0, "")):
+        with patch.object(self.ctl, "sh", side_effect=lambda c: cmds.append(c) or (0, "")), \
+             patch.object(self.ctl, "path_labels", return_value=["16005"] * 3):
             self.ctl.apply_weights((2, 100, 100), "16005", af41_w1=0)
         by_table = {c[c.index("table") + 1]: " ".join(c) for c in cmds}
         self.assertNotIn("leri-cr1", by_table["41"])
@@ -1123,3 +1124,56 @@ class FaultAnalysisTests(unittest.TestCase):
         for name in ("rx_drops.csv", "route_state.csv", "route_events.log", '"CR2:$CR2_PID:cr2-lere"', '"CR3:$CR3_PID:cr3-lere"',
                      'kill "${RX_MONITOR_PID:-}"'):
             self.assertIn(name, text)
+
+
+class AdjacencySidTests(unittest.TestCase):
+    """案 A: 有線の経路 (CR2/CR3) は LER_Egress への隣接 SID で送る (Node SID の入れ直しを避ける)。"""
+
+    LFIB = ("15000 via inet 10.0.4.2 dev cr2-lere proto ospf\n"
+            "15001 via inet 10.0.4.2 dev cr2-lere proto ospf\n"
+            "15002 via inet 10.0.3.1 dev cr2-leri proto ospf\n"
+            "16005 as to 16005 via inet 10.0.4.2 dev cr2-lere proto ospf\n")
+
+    def setUp(self):
+        import radwin_wcmp_controller as ctl
+        self.ctl = ctl
+
+    def test_controller_reads_adjacency_sid(self):
+        with patch.object(self.ctl, "sh", return_value=(0, self.LFIB)):
+            self.assertEqual(self.ctl.adj_label("CR2", "10.0.4.2", "cr2-lere"), "15000")
+            self.assertIsNone(self.ctl.adj_label("CR3", "10.0.6.2", "cr3-lere"))
+
+    def test_path_labels_and_fallback(self):
+        def fake(cmd):
+            return (0, self.LFIB.replace("cr2", "cr3").replace("10.0.4.2", "10.0.6.2").replace("150", "151")
+                    if "CR3" in cmd else self.LFIB)
+        with patch.object(self.ctl, "sh", side_effect=fake):
+            self.assertEqual(self.ctl.path_labels("16005"), ["16005", "15000", "15100"])
+        with patch.object(self.ctl, "sh", return_value=(0, "")):
+            self.assertEqual(self.ctl.path_labels("16005"), ["16005"] * 3)   # 読めなければ Node SID
+        with patch.dict(os.environ, {"SR_WIRED_SID": "node"}), patch.object(self.ctl, "sh", side_effect=fake):
+            self.assertEqual(self.ctl.path_labels("16005"), ["16005"] * 3)
+
+    def test_get_label_ignores_adjacency_sids(self):
+        t41 = ("10.20.0.0/16 proto static\n\tnexthop encap mpls 15000 via 10.0.3.2 dev leri-cr2 weight 100\n"
+               "\tnexthop encap mpls 15100 via 10.0.5.2 dev leri-cr3 weight 100\n")
+        with patch.object(self.ctl, "sh", return_value=(0, t41)):
+            self.assertEqual(self.ctl.get_label(), "16005")
+        with patch.object(self.ctl, "sh", return_value=(0, "nexthop encap mpls 16007 via x\n" + t41)):
+            self.assertEqual(self.ctl.get_label(), "16007")
+
+    def test_shell_scripts_read_adjacency_sid_the_same_way(self):
+        for name, fn in (("frr_te_monitor.sh", "_adj_label"), ("frr_dscp_te.sh", "adj_label")):
+            text = (SCRIPTS / name).read_text()
+            func = re.search(rf"^{fn}\(\) \{{.*?^\}}", text, re.S | re.M).group(0)
+            # docker exec / dc を、転送表を出すだけの偽物に置き換えて動かす
+            script = (f'docker() {{ printf "%s" "$LFIB"; }}; dc() {{ printf "%s" "$LFIB"; }}\n{func}\n'
+                      f'{fn} CR2 10.0.4.2 cr2-lere; echo; {fn} CR2 10.0.6.2 cr3-lere; echo')
+            out = subprocess.run(["bash", "-c", script], capture_output=True, text=True,
+                                 env=dict(os.environ, LFIB=self.LFIB)).stdout.split("\n")
+            self.assertEqual(out[:2], ["15000", ""], name)
+
+    def test_cr_egress_classifies_plain_ip_too(self):
+        text = (SCRIPTS / "frr_dscp_te.sh").read_text()
+        for tos, cls in (("0x88", "1:1"), ("0x90", "1:2"), ("0x98", "1:3")):
+            self.assertIn(f"u32 match ip dsfield {tos} 0xfc flowid {cls}", text)

@@ -136,7 +136,8 @@ class ControllerTests(unittest.TestCase):
         self.assertEqual(rows[-1]["action"], "link_up")
 
     def test_route_command_skips_zero_weight_nexthop(self):
-        with patch.object(controller, "sh", return_value=(0, "")) as shell:
+        with patch.object(controller, "sh", return_value=(0, "")) as shell, \
+             patch.object(controller, "path_labels", return_value=["16005"] * 3):
             controller.apply_weights((0, 100, 100), "16005")
         self.assertEqual(len(shell.call_args_list), 3)
         for call in shell.call_args_list:

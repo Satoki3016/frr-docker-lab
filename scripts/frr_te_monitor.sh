@@ -106,6 +106,12 @@ _load_weights() {
 #   2. カーネルルートの encap mpls エントリ (FRR が OSPF-SR で自動設定)
 #   3. vtysh show ip route のラベルアノテーション
 #   4. SRGB_BASE + 静的インデックス (フォールバック)
+_adj_label() {   # $1=CR のコンテナ $2=LER_Egress 側の IP $3=CR の出口。隣接 SID (15000〜15999、pop)
+    docker exec "$1" ip -M route show 2>/dev/null \
+        | awk -v v="$2" -v d="$3" '$1 ~ /^[0-9]+$/ && $1 < 16000 && $2 == "via" && $4 == v && $6 == d {print $1}' \
+        | sort -n | head -1
+}
+
 refresh_labels() {
     local new_lere=""
 
@@ -127,10 +133,23 @@ refresh_labels() {
         new_lere=$(( SRGB_BASE + 5 ))
         log "  [SID] OSPF問い合わせ失敗 → フォールバック: LER_Egress=${new_lere}"
     else
-        log "  [SID] OSPF動的取得: LER_Egress=${new_lere}"
+        _sid_msg="OSPF動的取得: LER_Egress=${new_lere}"
     fi
 
     LERE_LABEL=$new_lere
+    # 経路ごとに付けるラベル (2026-10-12〜)。有線 (CR2/CR3) は LER_Egress への隣接 SID。
+    # Node SID 16005 は、無線の隣接が上下するたびに OSPF-SR が CR2/CR3 で消して入れ直し、
+    # その約 10 ms の間の有線の AF41 が全部落ちていた (frr_dscp_te.sh の説明を参照)。
+    # 隣接 SID は隣接が張り直されると番号が変わるので、経路を書くたびに読み直す。
+    PATH_LABELS=("$LERE_LABEL" "$LERE_LABEL" "$LERE_LABEL")
+    if [ "${SR_WIRED_SID:-adj}" = "adj" ]; then
+        local a2 a3
+        a2=$(_adj_label CR2 10.0.4.2 cr2-lere); a3=$(_adj_label CR3 10.0.6.2 cr3-lere)
+        [ -n "$a2" ] && PATH_LABELS[1]=$a2 || log "  [SID] CR2 の隣接 SID を読めない → Node SID ${LERE_LABEL}"
+        [ -n "$a3" ] && PATH_LABELS[2]=$a3 || log "  [SID] CR3 の隣接 SID を読めない → Node SID ${LERE_LABEL}"
+    fi
+    [ -n "${_sid_msg:-}" ] && log "  [SID] ${_sid_msg} / 経路のラベル CR1 ${PATH_LABELS[0]} CR2 ${PATH_LABELS[1]} CR3 ${PATH_LABELS[2]}"
+    _sid_msg=""
     # CR SID はログ表示用のみ (ルーティングには単一ラベル方式で使用しない)
     CR1_LABEL=$(( SRGB_BASE + 2 ))
     CR2_LABEL=$(( SRGB_BASE + 3 ))
@@ -289,12 +308,12 @@ update_tables() {
         local _nh="" _nh41="" _up=""
         for i in 0 1 2; do
             [ "${state[$i]}" -eq 0 ] || continue
-            local _vd="${cr_vias[$i]}" _wa="${_ws[$i]}"
+            local _vd="${cr_vias[$i]}" _wa="${_ws[$i]}" _lb="${PATH_LABELS[$i]:-$lbl}"
             [ "$i" -eq 0 ] && _wa=$_w1a
             # AF41 の表 (table 41)。CR1 だけ W1_AF41 で別に決められる
-            [ "$_wa" -gt 0 ] && _nh41="${_nh41} nexthop encap mpls ${lbl} via ${_vd% *} dev ${_vd#* } weight ${_wa}"
+            [ "$_wa" -gt 0 ] && _nh41="${_nh41} nexthop encap mpls ${_lb} via ${_vd% *} dev ${_vd#* } weight ${_wa}"
             [ "${_ws[$i]}" -gt 0 ] || { _up="${_up} ${cr_names[$i]}(w=0:除外)"; continue; }
-            _nh="${_nh} nexthop encap mpls ${lbl} via ${_vd% *} dev ${_vd#* } weight ${_ws[$i]}"
+            _nh="${_nh} nexthop encap mpls ${_lb} via ${_vd% *} dev ${_vd#* } weight ${_ws[$i]}"
             _up="${_up} ${cr_names[$i]}(w=${_ws[$i]})"
         done
         # 有線が両方 down で AF41 の行き先が無くなるときは、外すより CR1 に流すほうがよい
@@ -523,10 +542,10 @@ while true; do
     # 定期ラベル再確認 (30秒ごと): OSPF再収束でSIDが変わった場合に対応
     now=$(date +%s)
     if (( now - label_refresh_last >= 30 )); then
-        old_label=${LERE_LABEL:-}
+        old_label="${LERE_LABEL:-} ${PATH_LABELS[*]:-}"
         refresh_labels
-        if [ "${LERE_LABEL}" != "$old_label" ] && [ -n "$old_label" ]; then
-            log "⚡ SID変更検知: ${old_label} → ${LERE_LABEL} → TE再設定"
+        if [ "${LERE_LABEL} ${PATH_LABELS[*]}" != "$old_label" ] && [ -n "${old_label// /}" ]; then
+            log "⚡ SID変更検知: ${old_label} → ${LERE_LABEL} ${PATH_LABELS[*]} → TE再設定"
             update_tables
         fi
         label_refresh_last=$now

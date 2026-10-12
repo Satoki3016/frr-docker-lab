@@ -142,7 +142,7 @@ ROUTE_MODE=wcmp                      # 重み CR1:CR2:CR3 = 6:25:25（容量比�
 | BFD | 全 OSPF インタフェースで FRR 既定値（300ms×3 ≈ 0.9 秒）。OSPF 隣接を速く落とす |
 | `frr_te_monitor.sh` | 各経路の入口側（LER_Ingress─CRn）と出口側（CRn─LER_Egress）の OSPF 隣接を監視し、落ちた経路を table 41〜43 から外す |
 | `radwin_wcmp_controller.py` | 無線の MCS から容量を推定し、HTB と WCMP の重みを決める。重みは `/run/radwin/weights.env` で te_monitor に渡す。無線断（未接続2回連続）では重み 0 で CR1 を外す |
-| MPLS | 3経路とも同じラベル 16005（「LER_Egress へ」）。経路は入口の送出インタフェースで決まる。優先度は MPLS TC ではなく内側 IP の DSCP で分類 |
+| MPLS | CR1（無線）は Node SID 16005（「LER_Egress へ」）、有線の CR2・CR3 は各 CR の LER_Egress への隣接 SID（15000 台、2026-10-12〜、`SR_WIRED_SID=node` で全経路 16005 に戻る）。Node SID は無線の隣接が上下するたびに FRR 8.4 が CR2/CR3 で消して約 10 ms 後に入れ直し、有線の AF41 まで落ちていたため。経路は入口の送出インタフェースで決まる。優先度は MPLS TC ではなく内側 IP の DSCP で分類（CR の出口は MPLS と IP の両方を分類） |
 
 ## OSPF-SR（FRR 8.4）設定必須事項
 
