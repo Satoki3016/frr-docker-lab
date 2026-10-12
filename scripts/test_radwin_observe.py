@@ -1177,3 +1177,23 @@ class AdjacencySidTests(unittest.TestCase):
         text = (SCRIPTS / "frr_dscp_te.sh").read_text()
         for tos, cls in (("0x88", "1:1"), ("0x90", "1:2"), ("0x98", "1:3")):
             self.assertIn(f"u32 match ip dsfield {tos} 0xfc flowid {cls}", text)
+
+
+class FaultPlanTests(unittest.TestCase):
+    """金属板の実験: 条件の順番の入れ替えと、外す合図。"""
+
+    def test_runs_without_shuffle_keep_order(self):
+        self.assertEqual(obs.fault_runs(["P", "P4"], 2), ["P", "P4", "P", "P4"])
+
+    def test_shuffle_has_each_condition_once_per_round_and_is_reproducible(self):
+        conds = ["P", "P3", "P4", "S", "N"]
+        runs = obs.fault_runs(conds, 3, seed=12345)
+        for k in range(3):
+            self.assertEqual(sorted(runs[5 * k:5 * k + 5]), sorted(conds))
+        self.assertEqual(runs, obs.fault_runs(conds, 3, seed=12345))     # 種から同じ順番を再現できる
+        self.assertNotEqual(runs, conds * 3)
+
+    def test_fault_has_duration_and_shuffle_options(self):
+        text = (SCRIPTS / "radwin_observe.py").read_text()
+        for s in ('"--shuffle"', '"--duration"', "← 今、置く", "← 今、外す", "fault_plan.csv"):
+            self.assertIn(s, text)

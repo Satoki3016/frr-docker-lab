@@ -53,6 +53,7 @@ import csv
 import fcntl
 import json
 import os
+import random
 import re
 import shutil
 import signal
@@ -789,6 +790,14 @@ def _wait(cond, timeout: float, step: float = 0.5):
     return None
 
 
+def fault_runs(conds: list[str], count: int, seed: int | None = None) -> list[str]:
+    """障害の実験の順番。seed が無ければ並べたとおりの繰り返し、あれば 1 巡ごとに並べ替える。"""
+    if seed is None:
+        return [c for _ in range(count) for c in conds]
+    rng = random.Random(seed)
+    return [c for _ in range(count) for c in rng.sample(conds, len(conds))]
+
+
 def cmd_fault(a) -> int:
     """障害の実験の 1 回 (または --count 回)。人が立つ・窓を濡らすなどの操作は、表示に合わせて人が行う。
 
@@ -809,6 +818,21 @@ def cmd_fault(a) -> int:
     loaddir = lay.sub(obs, lay.FULLLOAD)
     length = _probe_seconds(obs)
     runs = [c for _ in range(a.count) for c in conds]   # 例 --count 2 --condition P2,P3 → P2 P3 P2 P3
+    if a.shuffle:
+        # 回ごとに条件の順番を入れ替える (人の慣れ・疲れ・時間帯の変化が、条件の差に混ざらないように)。
+        # 1 巡ごとに並べ替えるので、どの条件も各巡に 1 回ずつ入る。順番は記録に残す
+        seed = int(time.time())
+        runs = fault_runs(conds, a.count, seed)
+        plan = lay.sub(obs, lay.SYSTEM) / "fault_plan.csv"
+        new = not plan.exists()
+        with plan.open("a") as f:
+            if new:
+                f.write("time,label,seed,order\n")
+            f.write(f"{time.time():.0f},{a.label},{seed},{' '.join(runs)}\n")
+    if len(runs) > 1:
+        print(f"順番: {' → '.join(runs)} (全 {len(runs)} 回、1 回 約 {length + 20} 秒)", flush=True)
+    if a.duration and not 0 < a.duration <= length - 30:
+        sys.exit(f"[NG] --duration は 1〜{length - 30} 秒にしてください (通信 {length} 秒の 20 秒後から置くため)")
     for i, cond in enumerate(runs):
         rid = f"{time.time():.3f}"
         FAULT_ACK.unlink(missing_ok=True)
@@ -830,16 +854,24 @@ def cmd_fault(a) -> int:
         print(f"  {time.strftime('%H:%M:%S')} 通信が始まりました ({length} 秒間)。")
         if a.label == "none":
             print("  ▶ 基準の計測です。障害は起こさず、窓と三脚に近づかないでください。", flush=True)
+        elif a.duration:
+            print(f"  ▶ 約 20 秒後に障害を起こし ({a.label})、ちょうど {a.duration:.0f} 秒で元に戻してください。"
+                  "合図を出します。", flush=True)
         else:
             print(f"  ▶ 今から約 20 秒後に障害を起こし ({a.label})、通信の終わり (約 {length - 20} 秒後) までに元に戻してください。")
             print("    時刻はぴったりでなくてよい (実際の時刻は記録から割り出す)。", flush=True)
         # 合図は計測の長さに合わせる (120 秒なら 20・60・100 秒)。以前は 100 秒の決め打ちで、
-        # 60 秒の計測のあとも約 40 秒むだに待っていた
-        last = length - 20
-        for mark in (20, length // 2, last):
+        # 60 秒の計測のあとも約 40 秒むだに待っていた。--duration があれば「戻す」はちょうどその秒数後
+        last = 20 + int(a.duration) if a.duration and a.label != "none" else length - 20
+        marks = (10, 20, last) if a.duration and a.label != "none" else (20, length // 2, last)
+        for mark in marks:
             time.sleep(max(0.0, t0 + mark - time.time()))
-            hint = "" if a.label == "none" else (" ← このあたりで障害を起こす" if mark == 20
-                                                  else " ← これまでに元に戻す" if mark == last else "")
+            if a.duration and a.label != "none":
+                hint = (" ← あと 10 秒で置く。準備" if mark == 10 else " ← 今、置く" if mark == 20
+                        else " ← 今、外す")
+            else:
+                hint = "" if a.label == "none" else (" ← このあたりで障害を起こす" if mark == 20
+                                                      else " ← これまでに元に戻す" if mark == last else "")
             print(f"  {time.strftime('%H:%M:%S')} 通信開始から {mark} 秒{hint}", flush=True)
         done = _wait(lambda: not json.loads((lay.sub(obs, lay.SYSTEM) / "status.json").read_text())
                      .get("probe_running"), 120, 1.0)
@@ -921,6 +953,10 @@ def main() -> int:
     fa.add_argument("--count", type=int, default=1, help="続けて行う回数 (窓が乾くまで追うときなど)")
     fa.add_argument("--every", type=float, default=0,
                     help="回の始まりどうしの間隔 [秒]。既定 0 = 前の回が終わったらすぐ (窓が乾くのを追うときは 300 など)")
+    fa.add_argument("--shuffle", action="store_true",
+                    help="1 巡ごとに条件の順番を入れ替える (順番は 06_system/fault_plan.csv に残す)")
+    fa.add_argument("--duration", type=float, default=0,
+                    help="障害を起こしておく秒数。通信開始から 20 秒で「置く」、20+秒数で「外す」の合図を出す (例 30)")
     fa.add_argument("--condition", default="P",
                     help="P 今の方式 / P2 改良版 P′ / P3 P′ + AF41 の振り分けの判定 / P4 P3 + 戻すのを待つ / "
                          "S 動的制御なし / N 迂回も動的制御もなし (その回だけ)。"
