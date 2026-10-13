@@ -45,7 +45,7 @@ matplotlib.rcParams.update({
     "legend.framealpha": 0.95, "legend.edgecolor": "0.8"})
 
 CLS = [("af41", "AF41 (高)", "#0072B2"), ("af42", "AF42 (中)", "#E69F00"), ("af43", "AF43 (低)", "#CC79A7")]
-HOP = [("192.168.1.31", "無線 1 (.31→.32)", "#009E73", "-"), ("192.168.1.33", "無線 2 (.33→.34)", "#D55E00", "--")]
+HOP = [("192.168.1.31", "第1ホップ", "#009E73", "-"), ("192.168.1.33", "第2ホップ", "#D55E00", "--")]
 CONDS = [("P", "P"), ("P3", "P3"), ("P4", "P4"), ("S", "S"), ("N", "N")]
 PLATE_ON, PLATE_OFF = 20, 50          # fault --duration 30 の合図 (通信開始から)。--plate-seconds で変える
 LABEL = "plate30"                   # 障害ありの回の fault のラベル。--label で変える
@@ -105,14 +105,15 @@ def representative(runs: list[dict], cond: str) -> dict:
     return g[len(g) // 2]
 
 
-COND_STYLE = {"P4": ("P4 (改良+待つ)", "#0072B2", "-"), "S": ("S (動的制御なし)", "#E69F00", "--"),
-              "N": ("N (迂回も動的制御もなし)", "#D55E00", ":")}
+# 図の中の言葉は論文の用語だけにする (条件の記号 P・S・N や機器の番号は使わない)
+COND_STYLE = {"P": ("動的制御あり", "#0072B2", "-"), "S": ("動的制御なし", "#E69F00", "--"),
+              "N": ("動的制御・経路監視なし", "#D55E00", ":")}
 
 
 def _single(xlabel: str, ylabel: str):
     fig, ax = plt.subplots(figsize=(5.0, 2.9))
     shade(ax)
-    ax.text((PLATE_ON + PLATE_OFF) / 2, 1.0, "金属板", transform=ax.get_xaxis_transform(),
+    ax.text((PLATE_ON + PLATE_OFF) / 2, 1.0, "遮蔽操作", transform=ax.get_xaxis_transform(),
             ha="center", va="bottom", fontsize=8, color="0.3")
     ax.grid(axis="y", lw=0.4, color="0.9", zorder=0)
     ax.set_xlim(0, 120)
@@ -135,18 +136,19 @@ def _trim(t, *series):
 
 def simple_figures(runs: list[dict], odu: list[dict], out: Path) -> None:
     reps = {c: representative(runs, c) for c in COND_STYLE}
-    X = "時間 [s]"
+    X = "経過時間 [s]"
     # 1. MCS
-    fig, ax = _single(X, "無線 1 の送信 MCS")
+    fig, ax = _single(X, "第1ホップのMCS")
     for c, (lab, col, ls) in COND_STYLE.items():
         x, y = mcs_series(odu, HOP[0][0], reps[c]["t0"])
         ax.step(x, y, where="post", color=col, ls=ls, lw=1.6, label=lab)
     ax.set_ylim(-0.5, 12.8)
     ax.set_yticks([0, 3, 6, 9, 12])
-    ax.legend(loc="lower right", fontsize=8)
+    ax.set_ylim(-0.5, 17.5)
+    ax.legend(loc="upper center", ncol=2, fontsize=7.5)
     _save(fig, out / "fig1_mcs")
     # 2. AF41 のスループット
-    fig, ax = _single(X, "AF41 受信スループット [Gbit/s]")
+    fig, ax = _single(X, "AF41受信レート [Gbps]")
     for c, (lab, col, ls) in COND_STYLE.items():
         t, thr = throughput(reps[c]["dir"])
         t, y = _trim(t, thr["af41"])
@@ -155,29 +157,29 @@ def simple_figures(runs: list[dict], odu: list[dict], out: Path) -> None:
     ax.legend(loc="lower right", fontsize=8)
     _save(fig, out / "fig2_af41_throughput")
     # 3. 3 クラスのスループット (P4)
-    fig, ax = _single(X, "受信スループット [Gbit/s]")
-    t, thr = throughput(reps["P4"]["dir"])
+    fig, ax = _single(X, "受信レート [Gbps]")
+    t, thr = throughput(reps["P"]["dir"])
     for k, lab, col in CLS:
         tt, y = _trim(t, thr[k])
         ax.plot(tt, y, color=col, lw=1.4, label=lab)
     ax.set_ylim(0, 9)
-    ax.legend(loc="lower right", fontsize=8, title="P4 (改良+待つ)", title_fontsize=8)
+    ax.legend(loc="lower right", fontsize=8, title="動的制御あり", title_fontsize=8)
     _save(fig, out / "fig3_class_throughput")
     # 4. 片方向遅延 (P4)
     fig, ax = _single(X, "片方向遅延 [ms]")
     for k, lab, col in CLS:
-        pts = [(x, v) for x, v in owd(reps["P4"]["dir"], k, reps["P4"]["t0"]) if 2 <= x <= 118]
+        pts = [(x, v) for x, v in owd(reps["P"]["dir"], k, reps["P"]["t0"]) if 2 <= x <= 118]
         xs, med = per_second(pts, st.median)
         ax.plot(xs, med, color=col, lw=1.4, label=lab)
     ax.set_yscale("log")
     ax.set_ylim(0.05, 1000)
     ax.legend(loc="lower right", bbox_to_anchor=(1.0, 0.16), fontsize=8, ncol=3, columnspacing=0.8,
-              title="P4 (改良+待つ)、1 秒ごとの中央値", title_fontsize=7.5)
+              title="動的制御あり，1秒ごとの中央値", title_fontsize=7.5)
     _save(fig, out / "fig4_owd")
     # 5. AF41 の損失率 (全条件・全回)
     fig, ax = plt.subplots(figsize=(5.0, 2.9))
     xs = {c: i for i, (c, _) in enumerate(CONDS)}
-    for state, dx, face, lab in (("none", -0.15, "white", "障害なし"), ("fault", 0.15, "#333333", f"金属板 {PLATE_OFF - PLATE_ON} 秒")):
+    for state, dx, face, lab in (("none", -0.15, "white", "障害なし"), ("fault", 0.15, "#333333", f"障害あり（遮蔽{PLATE_OFF - PLATE_ON}秒）")):
         first = True
         for c, _ in CONDS:
             g = [r for r in runs if r["cond"] == c and r["state"] == state]
@@ -188,7 +190,7 @@ def simple_figures(runs: list[dict], odu: list[dict], out: Path) -> None:
     ax.set_yscale("log")
     ax.set_ylim(1e-3, 5)
     ax.set_xticks(range(len(CONDS)))
-    ax.set_xticklabels(["P\n今の方式", "P3\n改良", "P4\n改良+待つ", "S\n制御なし", "N\n迂回も\n制御もなし"], fontsize=8)
+    ax.set_xticklabels(["動的制御\nあり", "分配判定\nを追加", "復帰時の\n待機を追加", "動的制御\nなし", "動的制御・\n経路監視なし"], fontsize=7)
     ax.set_xlim(-0.6, len(CONDS) - 0.4)
     ax.set_ylabel("AF41 損失率 [%]")
     ax.grid(axis="y", lw=0.4, color="0.9")
