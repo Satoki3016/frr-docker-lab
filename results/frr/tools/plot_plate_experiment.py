@@ -223,9 +223,9 @@ def paper_figures(runs: list[dict], odu: list[dict], out: Path) -> dict:
     for c, (lab, col, ls) in PAPER_COND.items():
         x, y = mcs_series(odu, HOP[0][0], reps[c]["t0"])
         ax.step(x, y, where="post", color=col, ls=ls, lw=1.4, label=lab)
-    ax.set_ylim(-0.5, 12.8)
+    ax.set_ylim(-0.5, 17.5)                     # 上の 13〜17 は凡例の帯 (データは 0〜12)
     ax.set_yticks([0, 3, 6, 9, 12])
-    ax.legend(loc="center right", bbox_to_anchor=(1.0, 0.45), fontsize=6.5, handlelength=2.2)
+    ax.legend(loc="upper center", ncol=2, fontsize=6.3, handlelength=2.0, columnspacing=0.8, borderaxespad=0.2)
     _save(fig, out / "pn_mcs")
     # AF41 の受信レート
     fig, ax = _paper_axes("AF41受信レート [Gbps]")
@@ -233,8 +233,9 @@ def paper_figures(runs: list[dict], odu: list[dict], out: Path) -> dict:
         t, thr = throughput(reps[c]["dir"])
         t, y = _trim(t, thr["af41"])
         ax.plot(t, y, color=col, ls=ls, lw=1.2, label=lab)
-    ax.set_ylim(6.9, 8.25)
-    ax.legend(loc="lower right", fontsize=6.5, handlelength=2.2, borderaxespad=0.3)
+    ax.set_ylim(6.3, 8.25)                      # 下の 6.3〜6.9 は凡例の帯 (データは 7.0 以上)
+    ax.set_yticks([6.4, 6.8, 7.2, 7.6, 8.0])
+    ax.legend(loc="lower center", ncol=2, fontsize=6.3, handlelength=2.0, columnspacing=0.8, borderaxespad=0.2)
     _save(fig, out / "pn_af41_rate")
     # 3 クラスの受信レート (動的制御あり)
     fig, ax = _paper_axes("受信レート [Gbps]")
@@ -274,7 +275,8 @@ def paper_figures(runs: list[dict], odu: list[dict], out: Path) -> dict:
     ax.set_xticks(range(len(conds)))
     ax.set_xticklabels([lab for _, lab in conds], fontsize=6.6)
     ax.set_ylabel("AF41損失率 [%]", fontsize=8)
-    ax.set_ylim(0, 2.25)
+    top = max(r["loss"] for r in runs)
+    ax.set_ylim(0, top * 1.18)                  # 最大のひげと数値が収まる高さ
     ax.tick_params(axis="y", labelsize=7.5)
     ax.grid(axis="y", lw=0.4, color="0.88", zorder=0)
     ax.legend(loc="upper left", fontsize=7)
@@ -309,7 +311,9 @@ def main() -> int:
     for r in runs:
         n[(r["cond"], r["state"])] += 1
     print("回数:", ", ".join(f"{c}/{s}={v}" for (c, s), v in sorted(n.items())))
-    print("除外:", "; ".join(f"{k[-3:]} {v}" for k, v in EXCLUDE.items()))
+    names = {r["folder"] for r in csv.DictReader((lay.sub(obs, lay.FULLLOAD) / "probes.csv").open())}
+    used = {k: v for k, v in EXCLUDE.items() if k in names}           # この観測フォルダに当てはまる除外だけ表示
+    print("除外:", "; ".join(f"{k[-3:]} {v}" for k, v in used.items()) or "なし")
     print("出力:", out)
     return 0
 

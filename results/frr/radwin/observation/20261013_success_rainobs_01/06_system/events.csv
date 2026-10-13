@@ -1,0 +1,272 @@
+time,event,detail
+1791869679.574,observe_start,/home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/results/frr/radwin/observation/20261013_running_rainobs_01
+1791869679.575,child_start,te_monitor pid=482905
+1791869679.575,child_start,controller pid=482906
+1791869679.576,child_start,odu_logger pid=482907
+1791869679.576,child_start,state_logger pid=482908
+1791869679.577,child_start,load_server pid=482910
+1791869679.577,child_start,weather_logger pid=482912
+1791869679.577,child_start,nowcast_logger pid=482913
+1791869679.578,child_start,ping_logger pid=482915
+1791869683.585,child_start,load_client pid=483561
+1791869763.725,load_pause,全負荷計測のため軽い負荷を止める
+1791869766.729,probe_start,fault:plate80test@P
+1791869898.373,probe_end,fault:plate80test@P code=0 success
+1791869898.373,load_resume,
+1791869900.378,child_start,load_client pid=502951
+1791870038.645,child_start,controller pid=508933
+1791870039.146,condition_enter,P4 制御を --pprime --efficiency-table /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/scripts/radwin_mcs_efficiency.json --af41-guard 0.05 --hold-down 10 で起動し直した
+1791870039.148,load_pause,全負荷計測のため軽い負荷を止める
+1791870042.152,probe_start,fault:none@P4
+1791870173.757,probe_end,fault:none@P4 code=0 success
+1791870173.773,child_start,controller pid=521888
+1791870173.773,condition_leave,P4 → P
+1791870173.773,load_resume,
+1791870175.778,child_start,load_client pid=522125
+1791870175.779,load_pause,全負荷計測のため軽い負荷を止める
+1791870178.784,probe_start,fault:none@P
+1791870310.352,probe_end,fault:none@P code=0 success
+1791870310.352,load_resume,
+1791870312.356,child_start,load_client pid=535011
+1791870312.389,child_start,controller pid=535012
+1791870312.890,condition_enter,P3 制御を --pprime --efficiency-table /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/scripts/radwin_mcs_efficiency.json --af41-guard 0.05 で起動し直した
+1791870312.891,load_pause,全負荷計測のため軽い負荷を止める
+1791870315.896,probe_start,fault:none@P3
+1791870447.572,probe_end,fault:none@P3 code=0 success
+1791870447.589,child_start,controller pid=547831
+1791870447.589,condition_leave,P3 → P
+1791870447.589,load_resume,
+1791870449.594,child_start,load_client pid=547927
+1791870453.730,condition_enter,"N 停止=controller,te_monitor 整形=2160M 重み=(6, 25, 25) code=0"
+1791870453.731,load_pause,全負荷計測のため軽い負荷を止める
+1791870456.735,probe_start,fault:none@N
+1791870588.371,probe_end,fault:none@N code=0 success
+1791870588.372,child_start,te_monitor pid=555900
+1791870588.373,child_start,controller pid=555901
+1791870588.373,condition_leave,N → P
+1791870588.373,load_resume,
+1791870590.378,child_start,load_client pid=556211
+1791870594.455,condition_enter,"S 停止=controller 整形=2160M 重み=(6, 25, 25) code=0"
+1791870594.456,load_pause,全負荷計測のため軽い負荷を止める
+1791870597.461,probe_start,fault:none@S
+1791870729.133,probe_end,fault:none@S code=0 success
+1791870729.134,child_start,controller pid=568935
+1791870729.134,condition_leave,S → P
+1791870729.134,load_resume,
+1791870731.138,child_start,load_client pid=568989
+1791870731.154,child_start,controller pid=569002
+1791870731.655,condition_enter,P3 制御を --pprime --efficiency-table /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/scripts/radwin_mcs_efficiency.json --af41-guard 0.05 で起動し直した
+1791870731.658,load_pause,全負荷計測のため軽い負荷を止める
+1791870734.663,probe_start,fault:none@P3
+1791870866.308,probe_end,fault:none@P3 code=0 success
+1791870866.325,child_start,controller pid=582070
+1791870866.325,condition_leave,P3 → P
+1791870866.325,load_resume,
+1791870868.330,child_start,load_client pid=582296
+1791870868.363,child_start,controller pid=582297
+1791870868.864,condition_enter,P4 制御を --pprime --efficiency-table /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/scripts/radwin_mcs_efficiency.json --af41-guard 0.05 --hold-down 10 で起動し直した
+1791870868.865,load_pause,全負荷計測のため軽い負荷を止める
+1791870871.870,probe_start,fault:none@P4
+1791871003.518,probe_end,fault:none@P4 code=0 success
+1791871003.534,child_start,controller pid=595154
+1791871003.534,condition_leave,P4 → P
+1791871003.534,load_resume,
+1791871005.539,child_start,load_client pid=595213
+1791871009.631,condition_enter,"S 停止=controller 整形=2160M 重み=(6, 25, 25) code=0"
+1791871009.632,load_pause,全負荷計測のため軽い負荷を止める
+1791871012.637,probe_start,fault:none@S
+1791871144.265,probe_end,fault:none@S code=0 success
+1791871144.266,child_start,controller pid=608205
+1791871144.266,condition_leave,S → P
+1791871144.266,load_resume,
+1791871146.271,child_start,load_client pid=608606
+1791871150.394,condition_enter,"N 停止=controller,te_monitor 整形=2160M 重み=(6, 25, 25) code=0"
+1791871150.395,load_pause,全負荷計測のため軽い負荷を止める
+1791871153.400,probe_start,fault:none@N
+1791871285.372,probe_end,fault:none@N code=0 success
+1791871285.373,child_start,te_monitor pid=616562
+1791871285.374,child_start,controller pid=616563
+1791871285.374,condition_leave,N → P
+1791871285.374,load_resume,
+1791871287.379,child_start,load_client pid=616882
+1791871287.381,load_pause,全負荷計測のため軽い負荷を止める
+1791871290.384,probe_start,fault:none@P
+1791871422.073,probe_end,fault:none@P code=0 success
+1791871422.073,load_resume,
+1791871424.078,child_start,load_client pid=629987
+1791871588.364,load_pause,全負荷計測のため軽い負荷を止める
+1791871591.368,probe_start,recovered
+1791871722.916,probe_end,recovered code=0 success
+1791871722.916,load_resume,
+1791871724.921,child_start,load_client pid=650296
+1791872101.594,load_pause,全負荷計測のため軽い負荷を止める
+1791872104.597,probe_start,periodic
+1791872236.324,probe_end,periodic code=0 success
+1791872236.324,load_resume,
+1791872238.328,child_start,load_client pid=679688
+1791873001.721,load_pause,全負荷計測のため軽い負荷を止める
+1791873004.726,probe_start,periodic
+1791873136.344,probe_end,periodic code=0 success
+1791873136.344,load_resume,
+1791873138.349,child_start,load_client pid=725799
+1791873787.630,condition_enter,"S 停止=controller 整形=2160M 重み=(6, 25, 25) code=0"
+1791873787.631,load_pause,全負荷計測のため軽い負荷を止める
+1791873790.636,probe_start,fault:plate80@S
+1791873922.290,probe_end,fault:plate80@S code=0 success
+1791873922.291,child_start,controller pid=770061
+1791873922.291,condition_leave,S → P
+1791873922.291,load_resume,
+1791873924.296,child_start,load_client pid=770329
+1791873976.514,condition_enter,"N 停止=controller,te_monitor 整形=2160M 重み=(6, 25, 25) code=0"
+1791873976.515,load_pause,全負荷計測のため軽い負荷を止める
+1791873979.520,probe_start,fault:plate80@N
+1791874111.086,probe_end,fault:plate80@N code=0 success
+1791874111.087,child_start,te_monitor pid=780339
+1791874111.088,child_start,controller pid=780340
+1791874111.088,condition_leave,N → P
+1791874111.088,load_resume,
+1791874113.092,child_start,load_client pid=780648
+1791874161.218,child_start,controller pid=782800
+1791874161.719,condition_enter,P4 制御を --pprime --efficiency-table /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/scripts/radwin_mcs_efficiency.json --af41-guard 0.05 --hold-down 10 で起動し直した
+1791874161.720,load_pause,全負荷計測のため軽い負荷を止める
+1791874164.725,probe_start,fault:plate80@P4
+1791874296.351,probe_end,fault:plate80@P4 code=0 success
+1791874296.368,child_start,controller pid=797862
+1791874296.368,condition_leave,P4 → P
+1791874296.368,load_resume,
+1791874298.372,child_start,load_client pid=798078
+1791874346.481,child_start,controller pid=800067
+1791874346.982,condition_enter,P3 制御を --pprime --efficiency-table /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/scripts/radwin_mcs_efficiency.json --af41-guard 0.05 で起動し直した
+1791874346.984,load_pause,全負荷計測のため軽い負荷を止める
+1791874349.989,probe_start,fault:plate80@P3
+1791874481.607,probe_end,fault:plate80@P3 code=0 success
+1791874481.624,child_start,controller pid=816611
+1791874481.624,condition_leave,P3 → P
+1791874481.624,load_resume,
+1791874483.629,child_start,load_client pid=816709
+1791874531.726,load_pause,全負荷計測のため軽い負荷を止める
+1791874534.730,probe_start,fault:plate80@P
+1791874666.386,probe_end,fault:plate80@P code=0 success
+1791874666.386,load_resume,
+1791874668.390,child_start,load_client pid=834257
+1791874720.581,condition_enter,"S 停止=controller 整形=2160M 重み=(6, 25, 25) code=0"
+1791874720.583,load_pause,全負荷計測のため軽い負荷を止める
+1791874723.587,probe_start,fault:plate80@S
+1791874855.861,probe_end,fault:plate80@S code=0 success
+1791874855.862,child_start,controller pid=852460
+1791874855.862,condition_leave,S → P
+1791874855.862,load_resume,
+1791874857.867,child_start,load_client pid=852618
+1791874903.971,child_start,controller pid=854565
+1791874904.472,condition_enter,P4 制御を --pprime --efficiency-table /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/scripts/radwin_mcs_efficiency.json --af41-guard 0.05 --hold-down 10 で起動し直した
+1791874904.473,load_pause,全負荷計測のため軽い負荷を止める
+1791874907.478,probe_start,fault:plate80@P4
+1791875039.144,probe_end,fault:plate80@P4 code=0 success
+1791875039.161,child_start,controller pid=870951
+1791875039.161,condition_leave,P4 → P
+1791875039.161,load_resume,
+1791875041.166,child_start,load_client pid=871053
+1791875089.292,child_start,controller pid=872983
+1791875089.793,condition_enter,P3 制御を --pprime --efficiency-table /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/scripts/radwin_mcs_efficiency.json --af41-guard 0.05 で起動し直した
+1791875089.795,load_pause,全負荷計測のため軽い負荷を止める
+1791875092.796,probe_start,fault:plate80@P3
+1791875225.135,probe_end,fault:plate80@P3 code=0 success
+1791875225.152,child_start,controller pid=889487
+1791875225.152,condition_leave,P3 → P
+1791875225.152,load_resume,
+1791875227.157,child_start,load_client pid=889586
+1791875277.360,condition_enter,"N 停止=controller,te_monitor 整形=2160M 重み=(6, 25, 25) code=0"
+1791875277.361,load_pause,全負荷計測のため軽い負荷を止める
+1791875280.365,probe_start,fault:plate80@N
+1791875411.988,probe_end,fault:plate80@N code=0 success
+1791875411.989,child_start,te_monitor pid=899441
+1791875411.990,child_start,controller pid=899442
+1791875411.990,condition_leave,N → P
+1791875411.990,load_resume,
+1791875413.996,child_start,load_client pid=899761
+1791875462.092,load_pause,全負荷計測のため軽い負荷を止める
+1791875465.096,probe_start,fault:plate80@P
+1791875596.781,probe_end,fault:plate80@P code=0 success
+1791875596.781,load_resume,
+1791875598.786,child_start,load_client pid=916417
+1791875646.895,child_start,controller pid=918520
+1791875647.396,condition_enter,P3 制御を --pprime --efficiency-table /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/scripts/radwin_mcs_efficiency.json --af41-guard 0.05 で起動し直した
+1791875647.397,load_pause,全負荷計測のため軽い負荷を止める
+1791875650.402,probe_start,fault:plate80@P3
+1791875781.972,probe_end,fault:plate80@P3 code=0 success
+1791875782.004,child_start,controller pid=934074
+1791875782.004,condition_leave,P3 → P
+1791875782.004,load_resume,
+1791875784.009,child_start,load_client pid=934282
+1791875832.103,load_pause,全負荷計測のため軽い負荷を止める
+1791875835.108,probe_start,fault:plate80@P
+1791875966.669,probe_end,fault:plate80@P code=0 success
+1791875966.669,load_resume,
+1791875968.673,child_start,load_client pid=951662
+1791876020.845,condition_enter,"S 停止=controller 整形=2160M 重み=(6, 25, 25) code=0"
+1791876020.847,load_pause,全負荷計測のため軽い負荷を止める
+1791876023.848,probe_start,fault:plate80@S
+1791876155.627,probe_end,fault:plate80@S code=0 success
+1791876155.628,child_start,controller pid=969329
+1791876155.628,condition_leave,S → P
+1791876155.628,load_resume,
+1791876157.632,child_start,load_client pid=969550
+1791876205.760,child_start,controller pid=971584
+1791876206.261,condition_enter,P4 制御を --pprime --efficiency-table /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/scripts/radwin_mcs_efficiency.json --af41-guard 0.05 --hold-down 10 で起動し直した
+1791876206.262,load_pause,全負荷計測のため軽い負荷を止める
+1791876209.267,probe_start,fault:plate80@P4
+1791876340.984,probe_end,fault:plate80@P4 code=0 success
+1791876341.017,child_start,controller pid=987255
+1791876341.017,condition_leave,P4 → P
+1791876341.017,load_resume,
+1791876343.021,child_start,load_client pid=987351
+1791876395.228,condition_enter,"N 停止=controller,te_monitor 整形=2160M 重み=(6, 25, 25) code=0"
+1791876395.230,load_pause,全負荷計測のため軽い負荷を止める
+1791876398.234,probe_start,fault:plate80@N
+1791876529.871,probe_end,fault:plate80@N code=0 success
+1791876529.873,child_start,te_monitor pid=997386
+1791876529.873,child_start,controller pid=997387
+1791876529.873,condition_leave,N → P
+1791876529.874,load_resume,
+1791876531.879,child_start,load_client pid=997697
+1791876630.201,condition_enter,"N 停止=controller,te_monitor 整形=2160M 重み=(6, 25, 25) code=0"
+1791876630.202,load_pause,全負荷計測のため軽い負荷を止める
+1791876633.207,probe_start,fault:none@N
+1791876764.948,probe_end,fault:none@N code=0 success
+1791876764.949,child_start,te_monitor pid=1010088
+1791876764.950,child_start,controller pid=1010089
+1791876764.950,condition_leave,N → P
+1791876764.951,load_resume,
+1791876766.956,child_start,load_client pid=1010392
+1791876766.957,load_pause,全負荷計測のため軽い負荷を止める
+1791876769.961,probe_start,fault:none@P
+1791876901.604,probe_end,fault:none@P code=0 success
+1791876901.604,load_resume,
+1791876903.608,child_start,load_client pid=1023937
+1791876907.693,condition_enter,"S 停止=controller 整形=2160M 重み=(6, 25, 25) code=0"
+1791876907.694,load_pause,全負荷計測のため軽い負荷を止める
+1791876910.698,probe_start,fault:none@S
+1791877042.467,probe_end,fault:none@S code=0 success
+1791877042.468,child_start,controller pid=1036995
+1791877042.468,condition_leave,S → P
+1791877042.468,load_resume,
+1791877044.473,child_start,load_client pid=1037067
+1791877044.505,child_start,controller pid=1037068
+1791877045.006,condition_enter,P4 制御を --pprime --efficiency-table /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/scripts/radwin_mcs_efficiency.json --af41-guard 0.05 --hold-down 10 で起動し直した
+1791877045.007,load_pause,全負荷計測のため軽い負荷を止める
+1791877048.012,probe_start,fault:none@P4
+1791877179.715,probe_end,fault:none@P4 code=0 success
+1791877179.748,child_start,controller pid=1050368
+1791877179.748,condition_leave,P4 → P
+1791877179.748,load_resume,
+1791877181.753,child_start,load_client pid=1050459
+1791877181.770,child_start,controller pid=1050460
+1791877182.271,condition_enter,P3 制御を --pprime --efficiency-table /home/kannolab/デスクトップ/Ichikawa_projects/frr-docker-lab-main2/scripts/radwin_mcs_efficiency.json --af41-guard 0.05 で起動し直した
+1791877182.272,load_pause,全負荷計測のため軽い負荷を止める
+1791877185.277,probe_start,fault:none@P3
+1791877316.996,probe_end,fault:none@P3 code=0 success
+1791877317.013,child_start,controller pid=1063441
+1791877317.013,condition_leave,P3 → P
+1791877317.013,load_resume,
+1791877319.018,child_start,load_client pid=1063544
+1791877418.718,observe_stop,
